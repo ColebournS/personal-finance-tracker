@@ -16,7 +16,7 @@ import { Trash2, PlusCircle } from "lucide-react";
 
 function Budget() {
   const [categories, setCategories] = useState([]);
-  const [income, setIncome] = useState(2200);
+  const [income, setIncome] = useState(2500);
   const [purchases, setPurchases] = useState([]);
 
   // Fetch categories and purchases in real-time
@@ -205,13 +205,20 @@ function Budget() {
             <div className="flex space-x-2">
               <button
                 onClick={() => handleAddItem(category.id)}
-                className="flex items-center ml-10 bg-green-500 text-white px-3 py-1 rounded-md hover:bg-green-600 transition-colors"
+                className="flex items-center ml-10 bg-blue-500 text-white px-3 py-1 rounded-md hover:bg-blue-600 transition-colors"
               >
                 <PlusCircle className="mr-2" size={40} />
                 <span className="text-sm">Add Item</span>
               </button>
               <button
-                onClick={() => handleDeleteGroup(category.id)}
+                onClick={() => {
+                  const isConfirmed = window.confirm(
+                    "Are you sure you want to delete this group?"
+                  );
+                  if (isConfirmed) {
+                    handleDeleteGroup(category.id);
+                  }
+                }}
                 className="flex items-center bg-red-500 text-white px-3 py-1 rounded-md hover:bg-red-600 transition-colors"
               >
                 <Trash2 className="mr-1" size={40} />
@@ -223,16 +230,17 @@ function Budget() {
           <div className="overflow-x-auto">
             <table className="w-full border bg-blue-50">
               <thead>
-                <tr className="bg-blue-100">
+                <tr className="bg-blue-100 ">
                   <th className="w-full p-3 font-semibold text-gray-700">
                     Group
                   </th>
-                  <th className="w-10 p-3 font-semibold text-gray-700">
+                  <th className="w-15 p-3 font-semibold text-gray-700">
                     Budget
                   </th>
-                  <th className="w-10 p-3 font-semibold text-gray-700">
+                  <th className="w-15 p-3 font-semibold text-gray-700">
                     Spent
                   </th>
+                  <th className="w-10 p-3 font-semibold text-gray-700"></th>
                 </tr>
               </thead>
               <tbody>
@@ -241,7 +249,7 @@ function Budget() {
                     key={item.id}
                     className="border-b hover:bg-gray-200 transition-colors"
                   >
-                    <td className="p-3">
+                    <td className="p-1">
                       <input
                         type="text"
                         value={item.name}
@@ -256,7 +264,7 @@ function Budget() {
                         className="w-full bg-transparent border-b border-gray-300 focus:border-blue-500"
                       />
                     </td>
-                    <td className="p-3">
+                    <td className="p-1">
                       <input
                         type="number"
                         value={item.budget}
@@ -268,10 +276,10 @@ function Budget() {
                             e.target.value
                           )
                         }
-                        className="w-10 bg-transparent border-b border-gray-300 focus:border-blue-500"
+                        className="w-full bg-transparent border-b border-gray-300 focus:border-blue-500"
                       />
                     </td>
-                    <td className="p-3 w-10">
+                    <td className="p-1 w-10">
                       <span
                         className={`font-semibold ${
                           calculateSpent(item.name) > item.budget
@@ -282,9 +290,16 @@ function Budget() {
                         ${calculateSpent(item.name)}
                       </span>
                     </td>
-                    <td className="p-3 w-8 flex justify-center items-center">
+                    <td className="p-1 w-8 flex justify-center items-center">
                       <button
-                        onClick={() => handleDeleteItem(category.id, item.id)}
+                        onClick={() => {
+                          const isConfirmed = window.confirm(
+                            "Are you sure you want to delete this item?"
+                          );
+                          if (isConfirmed) {
+                            handleDeleteItem(category.id, item.id);
+                          }
+                        }}
                         className="text-red-500 hover:text-red-700 transition-colors"
                       >
                         <Trash2 size={20} />

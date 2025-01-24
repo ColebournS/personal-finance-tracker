@@ -25,24 +25,32 @@ const Purchases = () => {
   const [editableField, setEditableField] = useState(null);
 
   useEffect(() => {
-    const fetchCategories = async () => {
-      const categoriesSnapshot = await getDocs(collection(db, "categories"));
-      const categoriesData = categoriesSnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-      setCategories(categoriesData);
+    const unsubscribeCategories = onSnapshot(
+      collection(db, "categories"),
+      (snapshot) => {
+        const categoriesData = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+        setCategories(categoriesData);
+      }
+    );
+  
+    const unsubscribePurchases = onSnapshot(
+      collection(db, "purchases"),
+      (snapshot) => {
+        const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+        setPurchases(data);
+      }
+    );
+  
+    // Clean up the listeners on component unmount
+    return () => {
+      unsubscribeCategories();
+      unsubscribePurchases();
     };
-
-    fetchCategories();
-
-    const unsubscribe = onSnapshot(collection(db, "purchases"), (snapshot) => {
-      const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-      setPurchases(data);
-    });
-
-    return () => unsubscribe();
   }, []);
+
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -116,6 +124,14 @@ const Purchases = () => {
 
       await updateDoc(purchaseRef, {
         [field]: updatedValue,
+      });
+
+      setFormData({
+        itemName: "",
+        cost: "",
+        budgetGroup: "",
+        selectedItem: "",
+        timestamp: "",
       });
       setEditableField(null);
     }
@@ -202,6 +218,7 @@ const Purchases = () => {
               <th className="p-3 text-left">Item Name</th>
               <th className="p-3 text-left">Cost</th>
               <th className="p-3 text-left">Budget Group</th>
+              <th className="w-10 p-3 font-semibold text-gray-700"></th>
             </tr>
           </thead>
           <tbody>
@@ -298,7 +315,14 @@ const Purchases = () => {
                 </td>
                 <td className="p-3">
                   <button
-                    onClick={() => handleDelete(purchase.id)}
+                    onClick={() => {
+                      const isConfirmed = window.confirm(
+                        "Are you sure you want to delete this purchase?"
+                      );
+                      if (isConfirmed) {
+                        handleDelete(purchase.id);
+                      }
+                    }}
                     className="text-red-500 hover:text-red-700 mr-2"
                   >
                     <Trash2 size={20} />
