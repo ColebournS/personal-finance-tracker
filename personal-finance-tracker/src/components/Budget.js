@@ -14,9 +14,9 @@ import {
 } from "firebase/firestore";
 import { Trash2, PlusCircle } from "lucide-react";
 
-function Budget() {
+function Budget({ takeHomePay }) {
+  const [income, setIncome] = useState(takeHomePay);
   const [categories, setCategories] = useState([]);
-  const [income, setIncome] = useState(2500);
   const [purchases, setPurchases] = useState([]);
 
   // Fetch categories and purchases in real-time
@@ -175,11 +175,13 @@ function Budget() {
   return (
     <div className="max-w-4xl mx-auto p-6 mx-5 my-5 bg-white shadow-lg rounded-lg">
       <h1 className="text-3xl font-bold text-center text-gray-800 mb-6">
-        Budget Tracker
+        Budget
       </h1>
 
       <div className="flex justify-between items-center mb-6">
-        <div className="text-xl font-semibold">Income: ${income}</div>
+        <div className="text-xl font-semibold">
+          Income: ${takeHomePay.toFixed(2)}
+        </div>
         <button
           onClick={handleAddGroup}
           className="flex items-center bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition-colors"
