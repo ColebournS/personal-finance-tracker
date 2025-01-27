@@ -138,7 +138,7 @@ const Purchases = () => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-6 mx-5 my-5 bg-white shadow-lg rounded-lg">
+    <div className="w-full mx-auto p-6 bg-white shadow-lg rounded-lg">
       <h1 className="text-3xl font-bold text-center text-gray-800 mb-6">
         Purchases
       </h1>
@@ -153,7 +153,7 @@ const Purchases = () => {
               value={formData.itemName}
               onChange={handleChange}
               required
-              className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border rounded-md hover:bg-blue-200 rounded-sm pl-2"
             />
           </div>
           <div>
@@ -164,7 +164,7 @@ const Purchases = () => {
               value={formData.cost}
               onChange={handleChange}
               required
-              className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border rounded-md hover:bg-blue-200 rounded-sm pl-2"
             />
           </div>
           <div>
@@ -174,7 +174,7 @@ const Purchases = () => {
               value={formData.budgetGroup}
               onChange={handleChange}
               required
-              className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border rounded-md hover:bg-blue-200 rounded-sm pl-2"
             >
               <option value="">Select a group</option>
               {categories.map((category) => (
@@ -196,7 +196,7 @@ const Purchases = () => {
               value={formData.timestamp}
               onChange={handleChange}
               required
-              className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border hover:bg-blue-200 rounded-sm pl-2"
             />
           </div>
         </div>
@@ -210,26 +210,31 @@ const Purchases = () => {
         </button>
       </form>
 
-      <div className="overflow-x-auto">
-        <table className="w-full border bg-blue-50">
+      <div className="overflow-x-auto rounded-md">
+        <table className="w-full border bg-blue-50 rounded-md">
           <thead>
             <tr className="bg-blue-100">
-              <th className="p-3 text-left">Date</th>
-              <th className="p-3 text-left">Item Name</th>
-              <th className="p-3 text-left">Cost</th>
-              <th className="p-3 text-left">Budget Group</th>
+              <th className="p-3 font-semibold text-left text-gray-700">
+                Date
+              </th>
+              <th className="p-3 font-semibold text-left text-gray-700">
+                Item Name
+              </th>
+              <th className="p-3 font-semibold text-left text-gray-700">
+                Cost
+              </th>
+              <th className="p-3 font-semibold text-left text-gray-700">
+                Group
+              </th>
               <th className="w-10 p-3 font-semibold text-gray-700"></th>
             </tr>
           </thead>
           <tbody>
             {purchases.map((purchase) => (
-              <tr
-                key={purchase.id}
-                className="border-b hover:bg-blue-200 transition-colors"
-              >
+              <tr key={purchase.id} className="border-b transition-colors">
                 <td
                   onClick={() => handleCellClick("timestamp", purchase)}
-                  className="p-3 cursor-pointer hover:bg-blue-300 hover:text-blue-900 transition-colors"
+                  className="w-10 px-2 bg-transparent hover:bg-blue-200 rounded-sm"
                 >
                   {editableField === "timestamp" &&
                   editingId === purchase.id ? (
@@ -250,7 +255,7 @@ const Purchases = () => {
                 </td>
                 <td
                   onClick={() => handleCellClick("itemName", purchase)}
-                  className="p-3 cursor-pointer hover:bg-blue-300 hover:text-blue-900 transition-colors"
+                  className="w-full px-2 bg-transparent hover:bg-blue-200 rounded-sm"
                 >
                   {editableField === "itemName" && editingId === purchase.id ? (
                     <input
@@ -268,7 +273,7 @@ const Purchases = () => {
                 </td>
                 <td
                   onClick={() => handleCellClick("cost", purchase)}
-                  className="p-3 cursor-pointer hover:bg-blue-300 hover:text-blue-900 transition-colors"
+                  className="w-12 px-2 bg-transparent hover:bg-blue-200 rounded-sm"
                 >
                   {editableField === "cost" && editingId === purchase.id ? (
                     <input
@@ -286,7 +291,7 @@ const Purchases = () => {
                 </td>
                 <td
                   onClick={() => handleCellClick("budgetGroup", purchase)}
-                  className="p-3 cursor-pointer hover:bg-blue-300 hover:text-blue-900 transition-colors"
+                  className="w-16 px-2 bg-transparent hover:bg-blue-200 rounded-sm"
                 >
                   {editableField === "budgetGroup" &&
                   editingId === purchase.id ? (
@@ -313,7 +318,7 @@ const Purchases = () => {
                     purchase.budgetGroup
                   )}
                 </td>
-                <td className="p-3">
+                <td className="p-1 w-8 flex justify-center items-center">
                   <button
                     onClick={() => {
                       const isConfirmed = window.confirm(
@@ -323,7 +328,7 @@ const Purchases = () => {
                         handleDelete(purchase.id);
                       }
                     }}
-                    className="text-red-500 hover:text-red-700 mr-2"
+                    className="text-red-500 hover:text-red-700 transition-colors"
                   >
                     <Trash2 size={20} />
                   </button>

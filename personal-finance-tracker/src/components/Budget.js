@@ -18,6 +18,23 @@ function Budget({ takeHomePay }) {
   const [income, setIncome] = useState(takeHomePay);
   const [categories, setCategories] = useState([]);
   const [purchases, setPurchases] = useState([]);
+  const [isSmallScreen, setIsSmallScreen] = useState(false);
+
+  useEffect(() => {
+    const checkScreenSize = () => {
+      // Adjust these breakpoints as needed
+      setIsSmallScreen(window.innerWidth < 1650);
+    };
+
+    // Check initial screen size
+    checkScreenSize();
+
+    // Add event listener for window resize
+    window.addEventListener("resize", checkScreenSize);
+
+    // Cleanup listener on component unmount
+    return () => window.removeEventListener("resize", checkScreenSize);
+  }, []);
 
   // Fetch categories and purchases in real-time
   useEffect(() => {
@@ -173,7 +190,7 @@ function Budget({ takeHomePay }) {
   const totals = calculateTotals();
 
   return (
-    <div className="max-w-4xl mx-auto p-6 mx-5 my-5 bg-white shadow-lg rounded-lg">
+    <div className="w-full mx-auto p-6 bg-white shadow-lg rounded-lg">
       <h1 className="text-3xl font-bold text-center text-gray-800 mb-6">
         Budget
       </h1>
@@ -202,15 +219,15 @@ function Budget({ takeHomePay }) {
               onChange={(e) =>
                 handleInputChange(category.id, null, "group", e.target.value)
               }
-              className="text-xl font-semibold text-gray-700 bg-transparent border-b border-gray-300 focus:border-blue-500 w-full hover:bg-gray-200"
+              className="text-xl font-semibold text-gray-700 bg-transparent border-b border-gray-300 w-full hover:bg-blue-200 rounded-sm pl-2"
             />
             <div className="flex space-x-2">
               <button
                 onClick={() => handleAddItem(category.id)}
                 className="flex items-center ml-10 bg-blue-500 text-white px-3 py-1 rounded-md hover:bg-blue-600 transition-colors"
               >
-                <PlusCircle className="mr-2" size={40} />
-                <span className="text-sm">Add Item</span>
+                <PlusCircle className="mr-2" size={isSmallScreen ? 24 : 40} />
+                {!isSmallScreen && <span className="text-sm">Add Item</span>}
               </button>
               <button
                 onClick={() => {
@@ -223,23 +240,25 @@ function Budget({ takeHomePay }) {
                 }}
                 className="flex items-center bg-red-500 text-white px-3 py-1 rounded-md hover:bg-red-600 transition-colors"
               >
-                <Trash2 className="mr-1" size={40} />
-                <span className="text-sm">Delete {category.group}</span>
+                <Trash2 className="mr-1" size={isSmallScreen ? 24 : 40} />
+                {!isSmallScreen && (
+                  <span className="text-sm">Delete {category.group}</span>
+                )}
               </button>
             </div>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full border bg-blue-50">
+          <div className="overflow-x-auto rounded-md">
+            <table className="w-full border bg-blue-50 rounded-md">
               <thead>
                 <tr className="bg-blue-100 ">
-                  <th className="w-full p-3 font-semibold text-gray-700">
+                  <th className="w-full p-3 font-semibold text-left text-gray-700">
                     Group
                   </th>
-                  <th className="w-15 p-3 font-semibold text-gray-700">
+                  <th className="w-15 p-3 font-semibold text-left text-gray-700">
                     Budget
                   </th>
-                  <th className="w-15 p-3 font-semibold text-gray-700">
+                  <th className="w-15 p-3 font-semibold text-left text-gray-700">
                     Spent
                   </th>
                   <th className="w-10 p-3 font-semibold text-gray-700"></th>
@@ -247,10 +266,7 @@ function Budget({ takeHomePay }) {
               </thead>
               <tbody>
                 {category.items.map((item) => (
-                  <tr
-                    key={item.id}
-                    className="border-b hover:bg-gray-200 transition-colors"
-                  >
+                  <tr key={item.id} className="transition-colors">
                     <td className="p-1">
                       <input
                         type="text"
@@ -263,7 +279,7 @@ function Budget({ takeHomePay }) {
                             e.target.value
                           )
                         }
-                        className="w-full bg-transparent border-b border-gray-300 focus:border-blue-500"
+                        className="w-full px-2 bg-transparent hover:bg-blue-200 rounded-sm"
                       />
                     </td>
                     <td className="p-1">
@@ -278,7 +294,7 @@ function Budget({ takeHomePay }) {
                             e.target.value
                           )
                         }
-                        className="w-full bg-transparent border-b border-gray-300 focus:border-blue-500"
+                        className="w-full px-2 bg-transparent hover:bg-blue-200 rounded-sm"
                       />
                     </td>
                     <td className="p-1 w-10">

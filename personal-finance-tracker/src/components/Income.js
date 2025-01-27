@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { db } from "../firebase";
-import { doc, updateDoc, collection, onSnapshot } from "firebase/firestore";
+import { doc, updateDoc, onSnapshot } from "firebase/firestore";
 
 function Income() {
   const [incomeData, setIncomeData] = useState({
-    payFrequency: "Monthly",
+    payFrequency: "Bi-Weekly",
     yearlySalary: 0,
     retirementContribution: 0,
     employerMatch: 0,
@@ -24,7 +24,7 @@ function Income() {
     );
 
     return () => unsubscribeIncome();
-  }, []);
+  }, [incomeData]);
 
   const handleInputChange = async (field, value) => {
     const incomeRef = doc(db, "income", "6fDvqsiVa12iasAeX9x3");
@@ -78,7 +78,7 @@ function Income() {
   } = calculateTaxes();
 
   return (
-    <div className="max-w-4xl mx-auto p-6 mx-5 my-5 bg-white shadow-lg rounded-lg">
+    <div className="w-full mx-auto p-6 bg-white shadow-lg rounded-lg">
       <h1 className="text-3xl font-bold text-center text-gray-800 mb-6">
         Income
       </h1>
