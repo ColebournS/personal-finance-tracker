@@ -1,48 +1,147 @@
 import React, { useState, useEffect } from "react";
-import { db } from "../firebase";
-import { doc, updateDoc, onSnapshot } from "firebase/firestore";
+import supabase from "../supabaseClient";
 
 function Income() {
-  const [incomeData, setIncomeData] = useState({
-    payFrequency: "Bi-Weekly",
-    yearlySalary: 0,
-    retirementContribution: 0,
-    employerMatch: 0,
-    federalTaxRate: 0,
-    medicareTaxRate: 0,
-    socialSecurityTaxRate: 0,
-    stateTaxRate: 0,
-  });
+  const [incomeData, setIncomeData] = useState({});
+  const [editableField, setEditableField] = useState(null);
+  const [tempValue, setTempValue] = useState(null);
+  const [userId, setUserId] = useState(null);
 
   useEffect(() => {
-    const unsubscribeIncome = onSnapshot(
-      doc(db, "income", "6fDvqsiVa12iasAeX9x3"),
-      (snapshot) => {
-        const data = snapshot.data() || incomeData;
-        setIncomeData(data);
+    // Get the current user's ID when component mounts
+    const getCurrentUser = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (user) {
+        setUserId(user.id);
+        await checkAndCreateIncomeRecord(user.id);
       }
-    );
+    };
+    getCurrentUser();
+  }, []);
 
-    return () => unsubscribeIncome();
-  }, [incomeData]);
+  // Check if user has an income record, create one if they don't
+  const checkAndCreateIncomeRecord = async (uid) => {
+    const { error } = await supabase
+      .from("income")
+      .select("*")
+      .eq("user_id", uid)
+      .single();
+    
+    if (error && error.code === "PGRST116") {
+      // no rows returned
+      // Create default income record for new user
+      const defaultIncomeData = {
+        user_id: uid,
+        yearlySalary: 50000,
+        retirementContribution: 3,
+        employerMatch: 3,
+        federalTaxRate: 10.59,
+        medicareTaxRate: 1.45,
+        socialSecurityTaxRate: 6.2,
+        stateTaxRate: 5,
+        monthlyTakeHome: 3073.33,
+      };
 
-  const handleInputChange = async (field, value) => {
-    const incomeRef = doc(db, "income", "6fDvqsiVa12iasAeX9x3");
-    await updateDoc(incomeRef, {
-      [field]: field === "payFrequency" ? value : Number(value),
-    });
+      const { error: insertError } = await supabase
+        .from("income")
+        .insert([defaultIncomeData]);
+
+      if (insertError) {
+        console.error("Error creating income record:", insertError);
+      }
+    }
   };
 
-  const calculateTaxes = () => {
+  useEffect(() => {
+    if (userId) {
+      fetchIncomeData();
+
+      const incomeChannel = supabase
+        .channel(`income_changes_${userId}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "income",
+            match: { user_id: userId },
+          },
+          () => fetchIncomeData()
+        )
+        .subscribe();
+
+      return () => {
+        incomeChannel.unsubscribe();
+      };
+    }
+  }, [userId]);
+
+  const fetchIncomeData = async () => {
+    if (!userId) return;
+
+    try {
+      const { data, error } = await supabase
+        .from("income")
+        .select("*")
+        .eq("user_id", userId)
+        .single();
+
+      if (error) {
+        console.error("Error fetching income data:", error);
+      } else if (data) {
+        setIncomeData(data);
+      }
+    } catch (err) {
+      console.error("Error:", err);
+    }
+  };
+
+  const handleInputChange = async (field) => {
+    if (!userId) return;
+
+    try {
+      const updatedValue =
+        field === "payFrequency" ? tempValue : Number(tempValue);
+      
+      const updatedIncomeData = { ...incomeData, [field]: updatedValue };
+      const { monthlyTakeHomePay } = calculateTaxes(updatedIncomeData);
+
+
+      const { error } = await supabase
+        .from("income")
+        .update({ [field]: updatedValue, monthlyTakeHome: monthlyTakeHomePay })
+        .eq("id", incomeData.id)
+        .eq("user_id", userId); // Ensure we're only updating this user's record
+
+      if (error) {
+        console.error("Error updating income data:", error);
+      } else {
+        setEditableField(null);
+        await fetchIncomeData(); // Refresh data after update
+      }
+    } catch (err) {
+      console.error("Unexpected error:", err);
+    }
+  };
+
+  const handleCellClick = (field) => {
+    setTempValue(incomeData[field]);
+    setEditableField(field);
+
+  };
+
+  const calculateTaxes = (data = incomeData) => {
     const {
-      yearlySalary,
-      retirementContribution,
-      employerMatch,
-      federalTaxRate,
-      medicareTaxRate,
-      socialSecurityTaxRate,
-      stateTaxRate,
-    } = incomeData;
+      yearlySalary = 0,
+      retirementContribution = 0,
+      employerMatch = 0,
+      federalTaxRate = 0,
+      medicareTaxRate = 0,
+      socialSecurityTaxRate = 0,
+      stateTaxRate = 0,
+    } = data;
 
     const annualRetirementContribution =
       yearlySalary * (retirementContribution / 100);
@@ -61,6 +160,7 @@ function Income() {
     return {
       totalAnnual401K: Number(totalAnnual401K.toFixed(2)),
       takeHomePay: Number(takeHomePay.toFixed(2)),
+      monthlyTakeHomePay: Number((takeHomePay / 12).toFixed(4)),
       federalTax: Number(federalTax.toFixed(2)),
       medicareTax: Number(medicareTax.toFixed(2)),
       socialSecurityTax: Number(socialSecurityTax.toFixed(2)),
@@ -71,6 +171,7 @@ function Income() {
   const {
     totalAnnual401K,
     takeHomePay,
+    monthlyTakeHomePay,
     federalTax,
     medicareTax,
     socialSecurityTax,
@@ -90,10 +191,16 @@ function Income() {
             <div>
               <label className="block text-gray-600 mb-2">Pay Frequency</label>
               <select
-                value={incomeData.payFrequency}
-                onChange={(e) =>
-                  handleInputChange("payFrequency", e.target.value)
+                value={
+                  editableField === "payFrequency"
+                    ? tempValue
+                    : incomeData.payFrequency
                 }
+                onChange={(e) => {
+                  setEditableField("payFrequency");
+                  setTempValue(e.target.value);
+                  handleInputChange("payFrequency");
+                }}
                 className="w-full p-2 border rounded-md"
               >
                 {["Weekly", "Bi-Weekly", "Monthly", "Semi-Monthly"].map(
@@ -109,10 +216,14 @@ function Income() {
               <label className="block text-gray-600 mb-2">Yearly Salary</label>
               <input
                 type="number"
-                value={incomeData.yearlySalary}
-                onChange={(e) =>
-                  handleInputChange("yearlySalary", e.target.value)
+                value={
+                  editableField === "yearlySalary"
+                    ? tempValue
+                    : incomeData.yearlySalary
                 }
+                onChange={(e) => setTempValue(e.target.value)}
+                onBlur={() => handleInputChange("yearlySalary")}
+                onClick={() => handleCellClick("yearlySalary")}
                 className="w-full p-2 border rounded-md"
               />
             </div>
@@ -130,10 +241,14 @@ function Income() {
               </label>
               <input
                 type="number"
-                value={incomeData.retirementContribution}
-                onChange={(e) =>
-                  handleInputChange("retirementContribution", e.target.value)
+                value={
+                  editableField === "retirementContribution"
+                    ? tempValue
+                    : incomeData.retirementContribution
                 }
+                onChange={(e) => setTempValue(e.target.value)}
+                onBlur={() => handleInputChange("retirementContribution")}
+                onClick={() => handleCellClick("retirementContribution")}
                 className="w-full p-2 border rounded-md"
               />
             </div>
@@ -143,10 +258,14 @@ function Income() {
               </label>
               <input
                 type="number"
-                value={incomeData.employerMatch}
-                onChange={(e) =>
-                  handleInputChange("employerMatch", e.target.value)
+                value={
+                  editableField === "employerMatch"
+                    ? tempValue
+                    : incomeData.employerMatch
                 }
+                onChange={(e) => setTempValue(e.target.value)}
+                onBlur={() => handleInputChange("employerMatch")}
+                onClick={() => handleCellClick("employerMatch")}
                 className="w-full p-2 border rounded-md"
               />
             </div>
@@ -176,10 +295,14 @@ function Income() {
                 </label>
                 <input
                   type="number"
-                  value={incomeData.federalTaxRate}
-                  onChange={(e) =>
-                    handleInputChange("federalTaxRate", e.target.value)
+                  value={
+                    editableField === "federalTaxRate"
+                      ? tempValue
+                      : incomeData.federalTaxRate
                   }
+                  onChange={(e) => setTempValue(e.target.value)}
+                  onBlur={() => handleInputChange("federalTaxRate")}
+                  onClick={() => handleCellClick("federalTaxRate")}
                   className="w-full p-2 border rounded-md"
                 />
               </div>
@@ -201,10 +324,14 @@ function Income() {
                 </label>
                 <input
                   type="number"
-                  value={incomeData.medicareTaxRate}
-                  onChange={(e) =>
-                    handleInputChange("medicareTaxRate", e.target.value)
+                  value={
+                    editableField === "medicareTaxRate"
+                      ? tempValue
+                      : incomeData.medicareTaxRate
                   }
+                  onChange={(e) => setTempValue(e.target.value)}
+                  onBlur={() => handleInputChange("medicareTaxRate")}
+                  onClick={() => handleCellClick("medicareTaxRate")}
                   className="w-full p-2 border rounded-md"
                 />
               </div>
@@ -219,17 +346,21 @@ function Income() {
               </div>
             </div>
 
-            <div className="flex items-center space-x-2 ">
+            <div className="flex items-center space-x-2">
               <div className="flex-grow">
                 <label className="block text-gray-600 mb-2">
                   Social Security Tax (%)
                 </label>
                 <input
                   type="number"
-                  value={incomeData.socialSecurityTaxRate}
-                  onChange={(e) =>
-                    handleInputChange("socialSecurityTaxRate", e.target.value)
+                  value={
+                    editableField === "socialSecurityTaxRate"
+                      ? tempValue
+                      : incomeData.socialSecurityTaxRate
                   }
+                  onChange={(e) => setTempValue(e.target.value)}
+                  onBlur={() => handleInputChange("socialSecurityTaxRate")}
+                  onClick={() => handleCellClick("socialSecurityTaxRate")}
                   className="w-full p-2 border rounded-md"
                 />
               </div>
@@ -251,10 +382,14 @@ function Income() {
                 </label>
                 <input
                   type="number"
-                  value={incomeData.stateTaxRate}
-                  onChange={(e) =>
-                    handleInputChange("stateTaxRate", e.target.value)
+                  value={
+                    editableField === "stateTaxRate"
+                      ? tempValue
+                      : incomeData.stateTaxRate
                   }
+                  onChange={(e) => setTempValue(e.target.value)}
+                  onBlur={() => handleInputChange("stateTaxRate")}
+                  onClick={() => handleCellClick("stateTaxRate")}
                   className="w-full p-2 border rounded-md"
                 />
               </div>
@@ -268,25 +403,25 @@ function Income() {
                 />
               </div>
             </div>
-          </div>
-          <div className="flex items-center space-x-2 mt-4 pt-4 border-t">
-            <div className="flex-grow">
-              <label className="block text-gray-600 mb-2 font-semibold">
-                Total Annual Taxes
-              </label>
-            </div>
-            <div className="flex-grow">
-              <input
-                type="text"
-                value={`$${(
-                  federalTax +
-                  medicareTax +
-                  socialSecurityTax +
-                  stateTax
-                ).toFixed(2)}`}
-                readOnly
-                className="w-full p-2 border rounded-md bg-gray-200"
-              />
+            <div className="flex items-center space-x-2 mt-4 pt-4 border-t">
+              <div className="flex-grow">
+                <label className="block text-gray-600 mb-2 font-semibold">
+                  Total Annual Taxes
+                </label>
+              </div>
+              <div className="flex-grow">
+                <input
+                  type="text"
+                  value={`$${(
+                    federalTax +
+                    medicareTax +
+                    socialSecurityTax +
+                    stateTax
+                  ).toFixed(2)}`}
+                  readOnly
+                  className="w-full p-2 border rounded-md bg-gray-200"
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -303,14 +438,14 @@ function Income() {
               <input
                 type="text"
                 value={`$${(() => {
-                  switch(incomeData.payFrequency) {
-                    case 'Weekly':
+                  switch (incomeData.payFrequency) {
+                    case "Weekly":
                       return (takeHomePay / 52).toFixed(2);
-                    case 'Bi-Weekly':
+                    case "Bi-Weekly":
                       return (takeHomePay / 26).toFixed(2);
-                    case 'Semi-Monthly':
+                    case "Semi-Monthly":
                       return (takeHomePay / 24).toFixed(2);
-                    case 'Monthly':
+                    case "Monthly":
                     default:
                       return (takeHomePay / 12).toFixed(2);
                   }

@@ -1,24 +1,178 @@
 import React, { useState, useEffect } from "react";
-import { db } from "../firebase";
-import {
-  doc,
-  updateDoc,
-  query,
-  where,
-  writeBatch,
-  getDocs,
-  addDoc,
-  deleteDoc,
-  onSnapshot,
-  collection,
-} from "firebase/firestore";
+import supabase from "../supabaseClient";
 import { Trash2, PlusCircle } from "lucide-react";
 
-function Budget({ takeHomePay }) {
-  const [income, setIncome] = useState(takeHomePay);
-  const [categories, setCategories] = useState([]);
+function Budget() {
+  const [income, setIncome] = useState(0);
+  const [groups, setGroups] = useState([]);
   const [purchases, setPurchases] = useState([]);
   const [isSmallScreen, setIsSmallScreen] = useState(false);
+  const [tempGroupNames, setTempGroupNames] = useState({});
+  const [tempItemNames, setTempItemNames] = useState({});
+  const [userId, setUserId] = useState(null);
+
+  useEffect(() => {
+    // Get the current user's ID when component mounts
+    const getCurrentUser = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (user) {
+        setUserId(user.id);
+      }
+    };
+    getCurrentUser();
+  }, []);
+
+
+  const fetchData = async () => {
+    if (!userId) return; // Don't fetch if we don't have a user ID
+
+    fetchIncomeData();
+
+    const { data: groupsData, error: groupsError } = await supabase
+      .from("budget_groups")
+      .select(
+        `
+        id,
+        name,
+        budget_items (
+          id,
+          name,
+          budget
+        )
+      `
+      )
+      .eq("user_id", userId) // Filter by user_id
+      .order("name");
+
+    if (groupsError) {
+      console.error("Error fetching budget groups:", groupsError);
+    } else {
+      setGroups(groupsData);
+    }
+
+    const { data: purchasesData, error: purchasesError } = await supabase
+      .from("purchases")
+      .select(
+        `
+        *,
+        budget_items (
+          id,
+          name,
+          budget_groups (
+            id,
+            name
+          )
+        )
+      `
+      )
+      .eq("user_id", userId) // Filter by user_id
+      .order("timestamp", { ascending: false });
+
+    if (purchasesError) {
+      console.error("Error fetching purchases:", purchasesError);
+    } else {
+      setPurchases(purchasesData);
+    }
+  };
+
+  useEffect(() => {
+    if (userId) {
+      fetchData();
+    }
+  }, [userId]);
+
+  useEffect(() => {
+    if (!userId) return;
+
+    const budgetGroupsSubscription = supabase
+      .channel(`budget_groups_${userId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "budget_groups",
+          match: { user_id: userId }, // Only listen to this user's changes
+        },
+        fetchData
+      )
+      .subscribe();
+
+    const budgetItemsSubscription = supabase
+      .channel(`budget_items_${userId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "budget_items",
+          match: { user_id: userId }, // Only listen to this user's changes
+        },
+        fetchData
+      )
+      .subscribe();
+
+    const purchasesSubscription = supabase
+      .channel(`purchases__${userId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "purchases",
+          match: { user_id: userId }, // Only listen to this user's changes
+        },
+        fetchData
+      )
+      .subscribe();
+
+    const incomeChannel = supabase
+      .channel(`income_changes_${userId}`) // Unique name per user
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "income",
+          match: { user_id: userId },
+        },
+        (payload) => {
+          setIncome(payload.new?.monthlyTakeHome || 0);
+        }
+      )
+      .subscribe();
+
+
+    return () => {
+      supabase.removeChannel(budgetGroupsSubscription);
+      supabase.removeChannel(budgetItemsSubscription);
+      supabase.removeChannel(purchasesSubscription);
+      supabase.removeChannel(incomeChannel);
+    };
+  }, [userId]);
+
+  const fetchIncomeData = async () => {
+    if (!userId) return;
+
+    try {
+      const { data, error } = await supabase
+        .from("income")
+        .select("monthlyTakeHome")
+        .eq("user_id", userId) // Filter by user_id
+        .single();
+      if (error) {
+        console.error("Error fetching income data:", error);
+        return;
+      }
+      if (data?.monthlyTakeHome !== undefined) {
+        setIncome(data.monthlyTakeHome || 0);
+      }
+    } catch (err) {
+      console.error("Unexpected error:", err);
+    }
+  };
 
   useEffect(() => {
     const checkScreenSize = () => {
@@ -36,147 +190,119 @@ function Budget({ takeHomePay }) {
     return () => window.removeEventListener("resize", checkScreenSize);
   }, []);
 
-  // Fetch categories and purchases in real-time
-  useEffect(() => {
-    const unsubscribeCategories = onSnapshot(
-      collection(db, "categories"),
-      (snapshot) => {
-        const data = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
-        setCategories(data);
-      }
-    );
-
-    const unsubscribePurchases = onSnapshot(
-      collection(db, "purchases"),
-      (snapshot) => {
-        const data = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
-        setPurchases(data);
-      }
-    );
-
-    return () => {
-      unsubscribeCategories();
-      unsubscribePurchases();
-    };
-  }, []);
-
-  // Calculate total spent for a given budgetGroup (category name)
-  const calculateSpent = (groupName) => {
+  const calculateSpent = (itemId) => {
     const filteredPurchases = purchases.filter(
-      (purchase) => purchase.budgetGroup === groupName
+      (purchase) => purchase.budget_item_id === itemId
     );
-
     return filteredPurchases.reduce(
       (sum, purchase) => sum + (purchase.cost || 0),
       0
     );
   };
 
-  // Handle changes to category/group/item fields
-  const handleInputChange = async (groupId, itemId, field, value) => {
-    const groupRef = doc(db, "categories", groupId);
-
-    if (itemId) {
-      const category = categories.find((category) => category.id === groupId);
-      if (!category) {
-        console.error("Category not found for groupId:", groupId);
-        return;
-      }
-
-      const item = category.items.find((item) => item.id === itemId);
-      if (!item) {
-        console.error("Item not found for itemId:", itemId);
-        return;
-      }
-
-      const prevValue = item[field];
-      const updatedItems = category.items.map((item) =>
-        item.id === itemId
-          ? { ...item, [field]: field === "name" ? value : Number(value) }
-          : item
-      );
-      await updateDoc(groupRef, { items: updatedItems });
-
-      if (field === "name") {
-        if (!prevValue) {
-          console.error("Category name is undefined for groupId:", groupId);
-          return;
-        }
-
-        const purchasesRef = collection(db, "purchases");
-        const purchasesQuery = query(
-          purchasesRef,
-          where("budgetGroup", "==", prevValue)
-        );
-
-        const purchasesSnapshot = await getDocs(purchasesQuery);
-        const batch = writeBatch(db);
-        purchasesSnapshot.forEach((doc) => {
-          batch.update(doc.ref, { budgetGroup: value });
-        });
-        await batch.commit();
-      }
-    } else {
-      await updateDoc(groupRef, { [field]: value });
-    }
+  const handleGroupInputChange = async (groupId, value) => {
+    await supabase
+      .from("budget_groups")
+      .update({ name: value })
+      .eq("id", groupId);
+    fetchData();
   };
 
-  // Handle adding new item to a group
+  const handleGroupInputBlur = (groupId, value) => {
+    setTempGroupNames((prev) => ({
+      ...prev,
+      [groupId]: value === "" ? "" : value,
+    }));
+  };
+
+  const handleItemInputChange = async (itemId, value) => {
+    await supabase
+      .from("budget_items")
+      .update({ name: value })
+      .eq("id", itemId);
+    fetchData();
+  };
+
+  const handleItemInputBlur = (itemId, value) => {
+    setTempItemNames((prev) => ({
+      ...prev,
+      [itemId]: value === "" ? "" : value,
+    }));
+  };
+
+  const handleItemBudgetChange = async (itemId, value) => {
+      const numericValue = parseFloat(value) || 0;
+      await supabase
+        .from("budget_items")
+        .update({ budget: numericValue })
+        .eq("id", itemId);
+      fetchData();
+    };
+    
   const handleAddItem = async (groupId) => {
-    const groupRef = doc(db, "categories", groupId);
+    if (!userId) return;
+
+    const { data: existingItems } = await supabase
+      .from("budget_items")
+      .select("name")
+      .eq("group_id", groupId)
+      .eq("user_id", userId)
+      .like("name", "New Item%");
+
+    const numbers = existingItems
+      .map((item) => {
+        const match = item.name.match(/New Item (\d+)/);
+        return match ? parseInt(match[1]) : 0;
+      })
+      .filter((num) => !isNaN(num));
+
+    const nextNumber = numbers.length > 0 ? Math.max(...numbers) + 1 : 1;
+
     const newItem = {
-      id: Date.now().toString(),
-      name: "New Item",
+      name: `New Item ${nextNumber}`,
       budget: 0,
-      spent: 0,
+      group_id: groupId,
+      user_id: userId, // Add user_id
     };
 
-    const updatedItems = [
-      ...categories.find((category) => category.id === groupId).items,
-      newItem,
-    ];
-
-    await updateDoc(groupRef, { items: updatedItems });
+    await supabase.from("budget_items").insert([newItem]);
+    fetchData();
   };
 
-  // Handle adding a new group
   const handleAddGroup = async () => {
-    const newGroup = { group: "New Group", items: [] };
-    await addDoc(collection(db, "categories"), newGroup);
+    if (!userId) return;
+
+    const newGroup = {
+      name: "New Group",
+      user_id: userId, // Add user_id
+    };
+    await supabase.from("budget_groups").insert([newGroup]);
+    fetchData();
   };
 
-  // Handle deleting an item
-  const handleDeleteItem = async (groupId, itemId) => {
-    const groupRef = doc(db, "categories", groupId);
-    const updatedItems = categories
-      .find((category) => category.id === groupId)
-      .items.filter((item) => item.id !== itemId);
-
-    await updateDoc(groupRef, { items: updatedItems });
+  const handleDeleteItem = async (itemId) => {
+    await supabase.from("budget_items").delete().eq("id", itemId);
+    fetchData();
   };
 
-  // Handle deleting a group
   const handleDeleteGroup = async (groupId) => {
-    await deleteDoc(doc(db, "categories", groupId));
+    await supabase.from("budget_groups").delete().eq("id", groupId);
+    fetchData();
   };
 
-  // Calculate total budget, total spent, and remaining budget/spent
   const calculateTotals = () => {
     let totalBudget = 0;
     let totalSpent = 0;
 
-    categories.forEach((category) => {
-      category.items.forEach((item) => {
-        totalBudget += item.budget;
-        item.spent = calculateSpent(item.name);
-        totalSpent += item.spent;
-      });
+    groups.forEach((group) => {
+      if (Array.isArray(group.budget_items)) {
+        group.budget_items.forEach((item) => {
+          totalBudget += Number(item.budget) || 0;
+          item.spent = calculateSpent(item.name);
+          totalSpent += item.spent;
+        });
+        
+      }
     });
 
     return {
@@ -194,55 +320,54 @@ function Budget({ takeHomePay }) {
       <h1 className="text-3xl font-bold text-center text-gray-800 mb-6">
         Budget
       </h1>
-
-      <div className="flex justify-between items-center mb-6">
-        <div className="text-xl font-semibold">
-          Income: ${takeHomePay.toFixed(2)}
-        </div>
+      <div className="flex justify-between items-start mb-6">
+        <div className="text-xl font-semibold">Income: ${income}</div>
         <button
           onClick={handleAddGroup}
           className="flex items-center bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition-colors"
         >
-          <PlusCircle className="mr-2" size={20} /> Add Group
+          {!isSmallScreen && <PlusCircle className="mr-2" size={20} />}
+          Add Group
         </button>
       </div>
 
-      {categories.map((category) => (
-        <div
-          key={category.id}
-          className="mb-6 bg-gray-50 p-4 rounded-lg border"
-        >
-          <div className="flex justify-between items-center mb-4 ">
+      {groups.map((group) => (
+        <div key={group.id} className="mb-6 bg-gray-50 p-4 rounded-lg border">
+          <div className="flex justify-between items-center mb-4">
             <input
               type="text"
-              value={category.group}
-              onChange={(e) =>
-                handleInputChange(category.id, null, "group", e.target.value)
-              }
+              value={tempGroupNames[group.id] ?? group.name}
+              onChange={(e) => handleGroupInputBlur(group.id, e.target.value)}
+              onBlur={(e) => handleGroupInputChange(group.id, e.target.value)}
               className="text-xl font-semibold text-gray-700 bg-transparent border-b border-gray-300 w-full hover:bg-blue-200 rounded-sm pl-2"
             />
-            <div className="flex space-x-2">
+            <div className="flex space-x-1">
+              <div className="flex items-center ml-2 px-3 py-1 border rounded-md bg-gray-200">
+                {group.budget_items.reduce((sum, item) => sum + item.budget, 0)}
+                $
+              </div>
               <button
-                onClick={() => handleAddItem(category.id)}
-                className="flex items-center ml-10 bg-blue-500 text-white px-3 py-1 rounded-md hover:bg-blue-600 transition-colors"
+                onClick={() => handleAddItem(group.id)}
+                className="flex items-center bg-blue-500 text-white px-2 py-1 rounded-md hover:bg-blue-600 transition-colors"
               >
-                <PlusCircle className="mr-2" size={isSmallScreen ? 24 : 40} />
+                <PlusCircle size={isSmallScreen ? 24 : 30} />
                 {!isSmallScreen && <span className="text-sm">Add Item</span>}
               </button>
               <button
                 onClick={() => {
-                  const isConfirmed = window.confirm(
-                    "Are you sure you want to delete this group?"
-                  );
-                  if (isConfirmed) {
-                    handleDeleteGroup(category.id);
+                  if (
+                    window.confirm(
+                      "Are you sure you want to delete this group?"
+                    )
+                  ) {
+                    handleDeleteGroup(group.id);
                   }
                 }}
-                className="flex items-center bg-red-500 text-white px-3 py-1 rounded-md hover:bg-red-600 transition-colors"
+                className="flex items-center bg-red-500 text-white px-2 py-1 rounded-md hover:bg-red-600 transition-colors"
               >
-                <Trash2 className="mr-1" size={isSmallScreen ? 24 : 40} />
+                <Trash2 size={isSmallScreen ? 24 : 30} />
                 {!isSmallScreen && (
-                  <span className="text-sm">Delete {category.group}</span>
+                  <span className="text-sm">Delete {group.name}</span>
                 )}
               </button>
             </div>
@@ -251,9 +376,9 @@ function Budget({ takeHomePay }) {
           <div className="overflow-x-auto rounded-md">
             <table className="w-full border bg-blue-50 rounded-md">
               <thead>
-                <tr className="bg-blue-100 ">
+                <tr className="bg-blue-100">
                   <th className="w-full p-3 font-semibold text-left text-gray-700">
-                    Group
+                    Item
                   </th>
                   <th className="w-15 p-3 font-semibold text-left text-gray-700">
                     Budget
@@ -265,19 +390,17 @@ function Budget({ takeHomePay }) {
                 </tr>
               </thead>
               <tbody>
-                {category.items.map((item) => (
+                {group.budget_items?.map((item) => (
                   <tr key={item.id} className="transition-colors">
                     <td className="p-1">
                       <input
                         type="text"
-                        value={item.name}
+                        value={tempItemNames[item.id] ?? item.name}
                         onChange={(e) =>
-                          handleInputChange(
-                            category.id,
-                            item.id,
-                            "name",
-                            e.target.value
-                          )
+                          handleItemInputBlur(item.id, e.target.value)
+                        }
+                        onBlur={(e) =>
+                          handleItemInputChange(item.id, e.target.value)
                         }
                         className="w-full px-2 bg-transparent hover:bg-blue-200 rounded-sm"
                       />
@@ -285,42 +408,32 @@ function Budget({ takeHomePay }) {
                     <td className="p-1">
                       <input
                         type="number"
-                        value={item.budget}
-                        onChange={(e) =>
-                          handleInputChange(
-                            category.id,
-                            item.id,
-                            "budget",
-                            e.target.value
-                          )
+                        defaultValue={item.budget}
+                        onBlur={(e) =>
+                          handleItemBudgetChange(item.id, e.target.value)
                         }
                         className="w-full px-2 bg-transparent hover:bg-blue-200 rounded-sm"
                       />
                     </td>
                     <td className="p-1 w-10">
                       <span
-                        className={`font-semibold ${
-                          calculateSpent(item.name) > item.budget
+                        className={`text-sm ${
+                          calculateSpent(item.id) > item.budget
                             ? "text-red-500"
-                            : "text-green-600"
+                            : calculateSpent(item.id) === item.budget
+                            ? "text-yellow-500"
+                            : "text-green-500"
                         }`}
                       >
-                        ${calculateSpent(item.name)}
+                        ${calculateSpent(item.id).toFixed(2)}
                       </span>
                     </td>
-                    <td className="p-1 w-8 flex justify-center items-center">
+                    <td className="p-1">
                       <button
-                        onClick={() => {
-                          const isConfirmed = window.confirm(
-                            "Are you sure you want to delete this item?"
-                          );
-                          if (isConfirmed) {
-                            handleDeleteItem(category.id, item.id);
-                          }
-                        }}
-                        className="text-red-500 hover:text-red-700 transition-colors"
+                        onClick={() => handleDeleteItem(item.id)}
+                        className="text-red-500 hover:text-red-700"
                       >
-                        <Trash2 size={20} />
+                        <Trash2 size={isSmallScreen ? 20 : 24} />
                       </button>
                     </td>
                   </tr>
@@ -331,46 +444,33 @@ function Budget({ takeHomePay }) {
         </div>
       ))}
 
-      <div className="bg-gray-100 p-4 rounded-lg mt-6">
-        <h3 className="text-2xl font-bold mb-4 text-gray-800">
-          Budget Summary
-        </h3>
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <p className="text-gray-600">
-              Allocated Budget:{" "}
-              <span className="font-semibold text-blue-600">
-                ${totals.totalBudget}
-              </span>
-            </p>
-            <p className="text-gray-600">
-              Budget Remaining:{" "}
-              <span
-                className={`font-semibold ${
-                  totals.remainingBudget < 0 ? "text-red-500" : "text-green-600"
-                }`}
-              >
-                ${totals.remainingBudget}
-              </span>
-            </p>
+      <div className="grid sm:grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-4 bg-white p-4 rounded-lg shadow">
+          <div className="flex justify-between">
+            <span className="text-gray-600">Total Budget:</span>
+            <span className="font-semibold">
+              ${totals.totalBudget.toFixed(2)}
+            </span>
           </div>
-          <div>
-            <p className="text-gray-600">
-              Total Spent:{" "}
-              <span className="font-semibold text-blue-600">
-                ${totals.totalSpent}
-              </span>
-            </p>
-            <p className="text-gray-600">
-              Total Remaining:{" "}
-              <span
-                className={`font-semibold ${
-                  totals.remainingSpent < 0 ? "text-red-500" : "text-green-600"
-                }`}
-              >
-                ${totals.remainingSpent}
-              </span>
-            </p>
+          <div className="flex justify-between">
+            <span className="text-gray-600">Remaining Budget:</span>
+            <span className="font-semibold">
+              ${totals.remainingBudget.toFixed(2)}
+            </span>
+          </div>
+        </div>
+        <div className="space-y-4 bg-white p-4 rounded-lg shadow">
+          <div className="flex justify-between">
+            <span className="text-gray-600">Total Spent:</span>
+            <span className="font-semibold">
+              ${totals.totalSpent.toFixed(2)}
+            </span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-gray-600">Remaining Spent:</span>
+            <span className="font-semibold">
+              ${totals.remainingSpent.toFixed(2)}
+            </span>
           </div>
         </div>
       </div>

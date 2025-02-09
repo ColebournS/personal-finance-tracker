@@ -1,139 +1,178 @@
 import React, { useState, useEffect } from "react";
-import { db } from "../firebase";
-import {
-  collection,
-  addDoc,
-  onSnapshot,
-  updateDoc,
-  deleteDoc,
-  doc,
-  getDocs,
-} from "firebase/firestore";
-import { Trash2, Save } from "lucide-react";
+import supabase from "../supabaseClient.js";
+import { Trash2 } from "lucide-react";
+import AddPurchase from "./AddPurchase";
 
-const Purchases = () => {
-  const [formData, setFormData] = useState({
-    itemName: "",
-    cost: "",
-    budgetGroup: "",
-    selectedItem: "",
-    timestamp: "",
-  });
+const PurchasesList = () => {
   const [purchases, setPurchases] = useState([]);
-  const [categories, setCategories] = useState([]);
+  const [budgetGroups, setBudgetGroups] = useState([]);
   const [editingId, setEditingId] = useState(null);
   const [editableField, setEditableField] = useState(null);
+  const [userId, setUserId] = useState(null);
 
   useEffect(() => {
-    const unsubscribeCategories = onSnapshot(
-      collection(db, "categories"),
-      (snapshot) => {
-        const categoriesData = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
-        setCategories(categoriesData);
+    const getCurrentUser = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (user) {
+        setUserId(user.id);
       }
-    );
-  
-    const unsubscribePurchases = onSnapshot(
-      collection(db, "purchases"),
-      (snapshot) => {
-        const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-        setPurchases(data);
-      }
-    );
-  
-    // Clean up the listeners on component unmount
-    return () => {
-      unsubscribeCategories();
-      unsubscribePurchases();
     };
+    getCurrentUser();
   }, []);
 
+  useEffect(() => {
+    const fetchInitialData = async () => {
+      await fetchBudgetGroups();
+      await fetchPurchases();
+    };
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
+    if (!userId) return;
+
+    fetchInitialData();
+
+    const purchasesChannel = supabase.channel(`purchases_changes_${userId}`);
+    const budgetGroupsChannel = supabase.channel(
+      `budget_groups_changes_${userId}`
+    );
+
+    purchasesChannel
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "purchases",
+          match: { user_id: userId },
+        },
+        () => fetchPurchases()
+      )
+      .subscribe();
+
+    budgetGroupsChannel
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "budget_groups",
+          match: { user_id: userId },
+        },
+        () => fetchBudgetGroups()
+      )
+      .subscribe();
+
+    return () => {
+      purchasesChannel.unsubscribe();
+      budgetGroupsChannel.unsubscribe();
+    };
+  }, [userId]);
+
+  const fetchBudgetGroups = async () => {
+    const { data, error } = await supabase
+      .from("budget_groups")
+      .select(
+        `
+        id,
+        name,
+        budget_items (
+          id,
+          name
+        )
+      `
+      )
+      .eq("user_id", userId)
+      .order("name");
+
+    if (error) {
+      console.error("Error fetching budget groups:", error);
+      return;
+    }
+
+    setBudgetGroups(data || []);
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      if (editingId) {
-        const purchaseRef = doc(db, "purchases", editingId);
-        await updateDoc(purchaseRef, {
-          itemName: formData.itemName,
-          cost: parseFloat(formData.cost),
-          budgetGroup: formData.budgetGroup,
-          timestamp: new Date(formData.timestamp + "T00:00:00Z"),
-        });
-      } else {
-        await addDoc(collection(db, "purchases"), {
-          itemName: formData.itemName,
-          cost: parseFloat(formData.cost),
-          budgetGroup: formData.budgetGroup,
-          timestamp: new Date(formData.timestamp + "T00:00:00Z"),
-        });
-      }
+  const fetchPurchases = async () => {
+    const { data, error } = await supabase
+      .from("purchases")
+      .select(
+        `
+        id,
+        item_name,
+        cost,
+        timestamp,
+        budget_item_id,
+        budget_items (
+          id,
+          name,
+          budget_groups (
+            id,
+            name
+          )
+        )
+      `
+      )
+      .eq("user_id", userId)
+      .order("timestamp", { ascending: false });
 
-      setFormData({
-        itemName: "",
-        cost: "",
-        budgetGroup: "",
-        selectedItem: "",
-        timestamp: "",
-      });
-      setEditingId(null);
-    } catch (error) {
-      console.error("Error adding/updating purchase: ", error);
+    if (error) {
+      console.error("Error fetching purchases:", error);
+      return;
     }
+
+    setPurchases(data || []);
   };
 
   const handleDelete = async (id) => {
     try {
-      await deleteDoc(doc(db, "purchases", id));
+      const { error } = await supabase.from("purchases").delete().eq("id", id);
+      await fetchPurchases();
+
+      if (error) throw error;
     } catch (error) {
-      console.error("Error deleting purchase: ", error);
+      console.error("Error deleting purchase:", error);
+      alert("Failed to delete purchase. Please try again.");
     }
   };
 
-  const handleCellClick = (field, purchase) => {
+  const handleCellEditStart = (field, purchase) => {
     setEditableField(field);
-    setFormData({
-      itemName: purchase.itemName,
-      cost: purchase.cost.toString(),
-      budgetGroup: purchase.budgetGroup,
-      selectedItem: purchase.itemName,
-      timestamp: purchase.timestamp
-        ? purchase.timestamp.toDate().toISOString().split("T")[0]
-        : "",
-    });
     setEditingId(purchase.id);
   };
 
-  const handleFieldBlur = async (field) => {
-    if (editingId && editableField === field) {
-      const purchaseRef = doc(db, "purchases", editingId);
-      const updatedValue =
-        field === "cost"
-          ? parseFloat(formData[field])
-          : field === "timestamp"
-          ? new Date(formData[field] + "T00:00:00Z")
-          : formData[field];
+  const handleCellUpdate = async (field, value) => {
+    try {
+      const updateData = {};
 
-      await updateDoc(purchaseRef, {
-        [field]: updatedValue,
-      });
+      switch (field) {
+        case "timestamp":
+          updateData.timestamp = new Date(value + "T00:00:00Z").toISOString();
+          break;
+        case "itemName":
+          updateData.item_name = value.trim();
+          break;
+        case "cost":
+          updateData.cost = parseFloat(value) || 0;
+          break;
+        case "budgetItemId":
+          updateData.budget_item_id = value;
+          break;
+      }
 
-      setFormData({
-        itemName: "",
-        cost: "",
-        budgetGroup: "",
-        selectedItem: "",
-        timestamp: "",
-      });
+      const { error } = await supabase
+        .from("purchases")
+        .update(updateData)
+        .eq("id", editingId);
+
+      if (error) throw error;
+
+      setEditingId(null);
       setEditableField(null);
+      await fetchPurchases();
+    } catch (error) {
+      console.error(`Error updating ${field}:`, error);
+      alert(`Failed to update ${field}. Please try again.`);
     }
   };
 
@@ -143,146 +182,83 @@ const Purchases = () => {
         Purchases
       </h1>
 
-      <form onSubmit={handleSubmit} className="space-y-4 mb-6">
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-gray-700 mb-2">Item Name</label>
-            <input
-              type="text"
-              name="itemName"
-              value={formData.itemName}
-              onChange={handleChange}
-              required
-              className="w-full px-3 py-2 border rounded-md hover:bg-blue-200 rounded-sm pl-2"
-            />
-          </div>
-          <div>
-            <label className="block text-gray-700 mb-2">Cost</label>
-            <input
-              type="number"
-              name="cost"
-              value={formData.cost}
-              onChange={handleChange}
-              required
-              className="w-full px-3 py-2 border rounded-md hover:bg-blue-200 rounded-sm pl-2"
-            />
-          </div>
-          <div>
-            <label className="block text-gray-700 mb-2">Budget Group</label>
-            <select
-              name="budgetGroup"
-              value={formData.budgetGroup}
-              onChange={handleChange}
-              required
-              className="w-full px-3 py-2 border rounded-md hover:bg-blue-200 rounded-sm pl-2"
-            >
-              <option value="">Select a group</option>
-              {categories.map((category) => (
-                <optgroup key={category.id} label={category.group}>
-                  {category.items.map((item) => (
-                    <option key={item.id} value={item.name}>
-                      {item.name}
-                    </option>
-                  ))}
-                </optgroup>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-gray-700 mb-2">Date</label>
-            <input
-              type="date"
-              name="timestamp"
-              value={formData.timestamp}
-              onChange={handleChange}
-              required
-              className="w-full px-3 py-2 border hover:bg-blue-200 rounded-sm pl-2"
-            />
-          </div>
-        </div>
-
-        <button
-          type="submit"
-          className="w-full bg-blue-500 text-white py-2 rounded-md hover:bg-blue-600 transition-colors flex items-center justify-center"
-        >
-          <Save className="mr-2" />{" "}
-          {editingId ? "Update Purchase" : "Add Purchase"}
-        </button>
-      </form>
-
-      <div className="overflow-x-auto rounded-md">
+      <div className="overflow-x-auto">
         <table className="w-full border bg-blue-50 rounded-md">
           <thead>
             <tr className="bg-blue-100">
-              <th className="p-3 font-semibold text-left text-gray-700">
-                Date
-              </th>
-              <th className="p-3 font-semibold text-left text-gray-700">
-                Item Name
-              </th>
-              <th className="p-3 font-semibold text-left text-gray-700">
-                Cost
-              </th>
-              <th className="p-3 font-semibold text-left text-gray-700">
-                Group
-              </th>
-              <th className="w-10 p-3 font-semibold text-gray-700"></th>
+              <th className="p-3 text-left text-gray-700">Date</th>
+              <th className="p-3 text-left text-gray-700">Item Name</th>
+              <th className="p-3 text-left text-gray-700">Cost</th>
+              <th className="p-3 text-left text-gray-700">Budget Item</th>
+              <th className="p-3 w-10"></th>
             </tr>
           </thead>
           <tbody>
             {purchases.map((purchase) => (
-              <tr key={purchase.id} className="border-b transition-colors">
+              <tr key={purchase.id} className="border-b hover:bg-blue-100">
                 <td
-                  onClick={() => handleCellClick("timestamp", purchase)}
-                  className="w-10 px-2 bg-transparent hover:bg-blue-200 rounded-sm"
+                  onClick={() => handleCellEditStart("timestamp", purchase)}
+                  className="p-2"
                 >
                   {editableField === "timestamp" &&
                   editingId === purchase.id ? (
                     <input
                       type="date"
-                      name="timestamp"
-                      value={formData.timestamp}
-                      onChange={handleChange}
-                      onBlur={() => handleFieldBlur("timestamp")}
-                      className="w-full"
+                      value={
+                        new Date(purchase.timestamp).toISOString().split("T")[0]
+                      }
+                      onChange={(e) =>
+                        handleCellUpdate("timestamp", e.target.value)
+                      }
+                      onBlur={() => {
+                        setEditableField(null);
+                        setEditingId(null);
+                      }}
+                      className="w-full px-2 py-1 border rounded"
                       autoFocus
                     />
                   ) : (
-                    new Date(
-                      purchase.timestamp.seconds * 1000
-                    ).toLocaleDateString()
+                    new Date(purchase.timestamp).toLocaleDateString()
                   )}
                 </td>
                 <td
-                  onClick={() => handleCellClick("itemName", purchase)}
-                  className="w-full px-2 bg-transparent hover:bg-blue-200 rounded-sm"
+                  onClick={() => handleCellEditStart("itemName", purchase)}
+                  className="p-2"
                 >
                   {editableField === "itemName" && editingId === purchase.id ? (
                     <input
                       type="text"
-                      name="itemName"
-                      value={formData.itemName}
-                      onChange={handleChange}
-                      onBlur={() => handleFieldBlur("itemName")}
-                      className="w-full"
+                      value={purchase.item_name}
+                      onChange={(e) =>
+                        handleCellUpdate("itemName", e.target.value)
+                      }
+                      onBlur={() => {
+                        setEditableField(null);
+                        setEditingId(null);
+                      }}
+                      className="w-full px-2 py-1 border rounded"
                       autoFocus
                     />
                   ) : (
-                    purchase.itemName
+                    purchase.item_name
                   )}
                 </td>
                 <td
-                  onClick={() => handleCellClick("cost", purchase)}
-                  className="w-12 px-2 bg-transparent hover:bg-blue-200 rounded-sm"
+                  onClick={() => handleCellEditStart("cost", purchase)}
+                  className="p-2"
                 >
                   {editableField === "cost" && editingId === purchase.id ? (
                     <input
                       type="number"
-                      name="cost"
-                      value={formData.cost}
-                      onChange={handleChange}
-                      onBlur={() => handleFieldBlur("cost")}
-                      className="w-full"
+                      value={purchase.cost}
+                      onChange={(e) => handleCellUpdate("cost", e.target.value)}
+                      onBlur={() => {
+                        setEditableField(null);
+                        setEditingId(null);
+                      }}
+                      className="w-full px-2 py-1 border rounded"
+                      min="0"
+                      step="0.01"
                       autoFocus
                     />
                   ) : (
@@ -290,24 +266,28 @@ const Purchases = () => {
                   )}
                 </td>
                 <td
-                  onClick={() => handleCellClick("budgetGroup", purchase)}
-                  className="w-16 px-2 bg-transparent hover:bg-blue-200 rounded-sm"
+                  onClick={() => handleCellEditStart("budgetItemId", purchase)}
+                  className="p-2"
                 >
-                  {editableField === "budgetGroup" &&
+                  {editableField === "budgetItemId" &&
                   editingId === purchase.id ? (
                     <select
-                      name="budgetGroup"
-                      value={formData.budgetGroup}
-                      onChange={handleChange}
-                      onBlur={() => handleFieldBlur("budgetGroup")}
-                      className="w-full"
+                      value={purchase.budget_item_id}
+                      onChange={(e) =>
+                        handleCellUpdate("budgetItemId", e.target.value)
+                      }
+                      onBlur={() => {
+                        setEditableField(null);
+                        setEditingId(null);
+                      }}
+                      className="w-full px-2 py-1 border rounded"
                       autoFocus
                     >
-                      <option value="">Select a group</option>
-                      {categories.map((category) => (
-                        <optgroup key={category.id} label={category.group}>
-                          {category.items.map((item) => (
-                            <option key={item.id} value={item.name}>
+                      <option value="">Select a budget item</option>
+                      {budgetGroups.map((group) => (
+                        <optgroup key={group.id} label={group.name}>
+                          {group.budget_items?.map((item) => (
+                            <option key={item.id} value={item.id}>
                               {item.name}
                             </option>
                           ))}
@@ -315,16 +295,17 @@ const Purchases = () => {
                       ))}
                     </select>
                   ) : (
-                    purchase.budgetGroup
+                    purchase.budget_items?.name
                   )}
                 </td>
-                <td className="p-1 w-8 flex justify-center items-center">
+                <td className="p-2 text-center">
                   <button
                     onClick={() => {
-                      const isConfirmed = window.confirm(
-                        "Are you sure you want to delete this purchase?"
-                      );
-                      if (isConfirmed) {
+                      if (
+                        window.confirm(
+                          "Are you sure you want to delete this purchase?"
+                        )
+                      ) {
                         handleDelete(purchase.id);
                       }
                     }}
@@ -342,4 +323,4 @@ const Purchases = () => {
   );
 };
 
-export default Purchases;
+export default PurchasesList;
