@@ -231,8 +231,9 @@ function BudgetVsSpentChart() {
           />
         </div>
       </div>
-
-      <Bar data={chartData} options={chartOptions} />
+      <div className="w-full max-w-screen overflow-x-auto">
+        <Bar data={chartData} options={chartOptions} />
+      </div>
 
       <div className="mt-4 flex flex-wrap gap-2">
         <div className={`px-3 py-1 rounded text-gray-600`}>Hide Groups:</div>

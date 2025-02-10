@@ -177,150 +177,169 @@ const PurchasesList = () => {
   };
 
   return (
-    <div className="w-full mx-auto p-6 bg-white shadow-lg rounded-lg">
+    <div className="w-full max-w-screen overflow-x-auto p-6 bg-white shadow-lg rounded-lg">
       <h1 className="text-3xl font-bold text-center text-gray-800 mb-6">
         Purchases
       </h1>
 
-      <div className="overflow-x-auto">
-        <table className="w-full border bg-blue-50 rounded-md">
-          <thead>
-            <tr className="bg-blue-100">
-              <th className="p-3 text-left text-gray-700">Date</th>
-              <th className="p-3 text-left text-gray-700">Item Name</th>
-              <th className="p-3 text-left text-gray-700">Cost</th>
-              <th className="p-3 text-left text-gray-700">Budget Item</th>
-              <th className="p-3 w-10"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {purchases.map((purchase) => (
-              <tr key={purchase.id} className="border-b hover:bg-blue-100">
-                <td
-                  onClick={() => handleCellEditStart("timestamp", purchase)}
-                  className="p-2"
-                >
-                  {editableField === "timestamp" &&
-                  editingId === purchase.id ? (
-                    <input
-                      type="date"
-                      value={
-                        new Date(purchase.timestamp).toISOString().split("T")[0]
-                      }
-                      onChange={(e) =>
-                        handleCellUpdate("timestamp", e.target.value)
-                      }
-                      onBlur={() => {
-                        setEditableField(null);
-                        setEditingId(null);
-                      }}
-                      className="w-full px-2 py-1 border rounded"
-                      autoFocus
-                    />
-                  ) : (
-                    new Date(purchase.timestamp).toLocaleDateString()
-                  )}
-                </td>
-                <td
-                  onClick={() => handleCellEditStart("itemName", purchase)}
-                  className="p-2"
-                >
-                  {editableField === "itemName" && editingId === purchase.id ? (
-                    <input
-                      type="text"
-                      value={purchase.item_name}
-                      onChange={(e) =>
-                        handleCellUpdate("itemName", e.target.value)
-                      }
-                      onBlur={() => {
-                        setEditableField(null);
-                        setEditingId(null);
-                      }}
-                      className="w-full px-2 py-1 border rounded"
-                      autoFocus
-                    />
-                  ) : (
-                    purchase.item_name
-                  )}
-                </td>
-                <td
-                  onClick={() => handleCellEditStart("cost", purchase)}
-                  className="p-2"
-                >
-                  {editableField === "cost" && editingId === purchase.id ? (
-                    <input
-                      type="number"
-                      value={purchase.cost}
-                      onChange={(e) => handleCellUpdate("cost", e.target.value)}
-                      onBlur={() => {
-                        setEditableField(null);
-                        setEditingId(null);
-                      }}
-                      className="w-full px-2 py-1 border rounded"
-                      min="0"
-                      step="0.01"
-                      autoFocus
-                    />
-                  ) : (
-                    `$${purchase.cost.toFixed(2)}`
-                  )}
-                </td>
-                <td
-                  onClick={() => handleCellEditStart("budgetItemId", purchase)}
-                  className="p-2"
-                >
-                  {editableField === "budgetItemId" &&
-                  editingId === purchase.id ? (
-                    <select
-                      value={purchase.budget_item_id}
-                      onChange={(e) =>
-                        handleCellUpdate("budgetItemId", e.target.value)
-                      }
-                      onBlur={() => {
-                        setEditableField(null);
-                        setEditingId(null);
-                      }}
-                      className="w-full px-2 py-1 border rounded"
-                      autoFocus
-                    >
-                      <option value="">Select a budget item</option>
-                      {budgetGroups.map((group) => (
-                        <optgroup key={group.id} label={group.name}>
-                          {group.budget_items?.map((item) => (
-                            <option key={item.id} value={item.id}>
-                              {item.name}
-                            </option>
-                          ))}
-                        </optgroup>
-                      ))}
-                    </select>
-                  ) : (
-                    purchase.budget_items?.name
-                  )}
-                </td>
-                <td className="p-2 text-center">
-                  <button
-                    onClick={() => {
-                      if (
-                        window.confirm(
-                          "Are you sure you want to delete this purchase?"
-                        )
-                      ) {
-                        handleDelete(purchase.id);
-                      }
-                    }}
-                    className="text-red-500 hover:text-red-700 transition-colors"
-                  >
-                    <Trash2 size={20} />
-                  </button>
-                </td>
+      <div className="w-full overflow-x-auto">
+        <div className="inline-block min-w-full align-middle">
+          <table className="min-w-full table-auto border bg-blue-50 rounded-md">
+            <thead>
+              <tr className="bg-blue-100">
+                <th className="p-3 text-left text-gray-700">Date</th>
+                <th className="p-3 text-left text-gray-700">Item Name</th>
+                <th className="p-3 text-left text-gray-700">Cost</th>
+                <th className="p-3 text-left text-gray-700">Budget Item</th>
+                <th className="p-3 w-10"></th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {purchases.map((purchase) => (
+                <tr key={purchase.id} className="border-b hover:bg-blue-100">
+                  <td
+                    onClick={() => handleCellEditStart("timestamp", purchase)}
+                    className="p-2"
+                  >
+                    {editableField === "timestamp" &&
+                    editingId === purchase.id ? (
+                      <input
+                        type="date"
+                        value={
+                          new Date(purchase.timestamp)
+                            .toISOString()
+                            .split("T")[0]
+                        }
+                        onChange={(e) =>
+                          handleCellUpdate("timestamp", e.target.value)
+                        }
+                        onBlur={() => {
+                          setEditableField(null);
+                          setEditingId(null);
+                        }}
+                        className="w-full px-2 py-1 border rounded"
+                        autoFocus
+                      />
+                    ) : (
+                      new Date(purchase.timestamp).toLocaleDateString("en-GB", {
+                        day: "2-digit",
+                        month: "2-digit",
+                      })
+                    )}
+                  </td>
+                  <td
+                    onClick={() => handleCellEditStart("itemName", purchase)}
+                    className="p-2 truncate"
+                    style={{
+                      maxWidth: "6ch",
+                      overflow: "hidden",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {editableField === "itemName" &&
+                    editingId === purchase.id ? (
+                      <input
+                        type="text"
+                        value={purchase.item_name}
+                        onChange={(e) =>
+                          handleCellUpdate("itemName", e.target.value)
+                        }
+                        onBlur={() => {
+                          setEditableField(null);
+                          setEditingId(null);
+                        }}
+                        className="w-full px-2 py-1 border rounded"
+                        autoFocus
+                      />
+                    ) : (
+                      purchase.item_name
+                    )}
+                  </td>
+                  <td
+                    onClick={() => handleCellEditStart("cost", purchase)}
+                    className="p-2"
+                  >
+                    {editableField === "cost" && editingId === purchase.id ? (
+                      <input
+                        type="number"
+                        value={purchase.cost}
+                        onChange={(e) =>
+                          handleCellUpdate("cost", e.target.value)
+                        }
+                        onBlur={() => {
+                          setEditableField(null);
+                          setEditingId(null);
+                        }}
+                        className="w-full px-2 py-1 border rounded"
+                        min="0"
+                        step="0.01"
+                        autoFocus
+                      />
+                    ) : (
+                      `$${purchase.cost.toFixed(2)}`
+                    )}
+                  </td>
+                  <td
+                    onClick={() =>
+                      handleCellEditStart("budgetItemId", purchase)
+                    }
+                    className="p-2 text-overflow:ellipsis"
+                  >
+                    {editableField === "budgetItemId" &&
+                    editingId === purchase.id ? (
+                      <select
+                        value={purchase.budget_item_id}
+                        onChange={(e) =>
+                          handleCellUpdate("budgetItemId", e.target.value)
+                        }
+                        onBlur={() => {
+                          setEditableField(null);
+                          setEditingId(null);
+                        }}
+                        className="w-full px-2 py-1 border rounded"
+                        autoFocus
+                      >
+                        <option value="">Select a budget item</option>
+                        {budgetGroups.map((group) => (
+                          <optgroup key={group.id} label={group.name}>
+                            {group.budget_items?.map((item) => (
+                              <option key={item.id} value={item.id}>
+                                {item.name}
+                              </option>
+                            ))}
+                          </optgroup>
+                        ))}
+                      </select>
+                    ) : (
+                      purchase.budget_items?.name
+                    )}
+                  </td>
+                  <td className="p-2 text-center">
+                    <button
+                      onClick={() => {
+                        if (
+                          window.confirm(
+                            "Are you sure you want to delete this purchase?"
+                          )
+                        ) {
+                          handleDelete(purchase.id);
+                        }
+                      }}
+                      className="text-red-500 hover:text-red-700 transition-colors"
+                    >
+                      <Trash2 size={20} />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
+
+
 };
 
 export default PurchasesList;

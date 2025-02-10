@@ -190,10 +190,43 @@ function Budget() {
     return () => window.removeEventListener("resize", checkScreenSize);
   }, []);
 
-  const calculateSpent = (itemId) => {
-    const filteredPurchases = purchases.filter(
-      (purchase) => purchase.budget_item_id === itemId
+  const calculateTotalSpent = () => {
+    const currentMonth = new Date().getMonth();
+    const currentYear = new Date().getFullYear();
+
+    const filteredPurchases = purchases.filter((purchase) => {
+      const purchaseDate = new Date(purchase.timestamp);
+      const purchaseMonth = purchaseDate.getMonth();
+      const purchaseYear = purchaseDate.getFullYear();
+
+      return (
+        purchaseMonth === currentMonth &&
+        purchaseYear === currentYear
+      );
+    });
+
+    return filteredPurchases.reduce(
+      (sum, purchase) => sum + (purchase.cost || 0),
+      0
     );
+  };
+
+  const calculateSpent = (itemId) => {
+    const currentMonth = new Date().getMonth();
+    const currentYear = new Date().getFullYear();
+
+    const filteredPurchases = purchases.filter((purchase) => {
+      const purchaseDate = new Date(purchase.timestamp);
+      const purchaseMonth = purchaseDate.getMonth();
+      const purchaseYear = purchaseDate.getFullYear();
+
+      return (
+        purchase.budget_item_id === itemId &&
+        purchaseMonth === currentMonth &&
+        purchaseYear === currentYear
+      );
+    });
+
     return filteredPurchases.reduce(
       (sum, purchase) => sum + (purchase.cost || 0),
       0
@@ -292,16 +325,13 @@ function Budget() {
 
   const calculateTotals = () => {
     let totalBudget = 0;
-    let totalSpent = 0;
+    let totalSpent = calculateTotalSpent();
 
     groups.forEach((group) => {
       if (Array.isArray(group.budget_items)) {
         group.budget_items.forEach((item) => {
           totalBudget += Number(item.budget) || 0;
-          item.spent = calculateSpent(item.name);
-          totalSpent += item.spent;
         });
-        
       }
     });
 
@@ -447,7 +477,7 @@ function Budget() {
       <div className="grid sm:grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-4 bg-white p-4 rounded-lg shadow">
           <div className="flex justify-between">
-            <span className="text-gray-600">Total Budget:</span>
+            <span className="text-gray-600">Total Budgeted:</span>
             <span className="font-semibold">
               ${totals.totalBudget.toFixed(2)}
             </span>
@@ -467,7 +497,7 @@ function Budget() {
             </span>
           </div>
           <div className="flex justify-between">
-            <span className="text-gray-600">Remaining Spent:</span>
+            <span className="text-gray-600">Remaining:</span>
             <span className="font-semibold">
               ${totals.remainingSpent.toFixed(2)}
             </span>

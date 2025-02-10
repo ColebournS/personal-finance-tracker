@@ -1,6 +1,13 @@
 import React, { useState, useEffect } from "react";
-import { BrowserRouter as Router } from "react-router-dom";
-import { Loader2 } from "lucide-react";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import {
+  Loader2,
+  DollarSign,
+  PlusCircle,
+  CreditCard,
+  List,
+  Settings,
+} from "lucide-react";
 import { AuthProvider } from "./AuthContext";
 import ProtectedRoute from "./ProtectedRoute";
 import Income from "./components/Income";
@@ -11,7 +18,46 @@ import RecomendedBudget from "./components/Charts/RecomendedBudget";
 import CurrentBudget from "./components/Charts/CurrentBudget";
 import BudgetVsSpent from "./components/Charts/BudgetVsSpent";
 import SettingsButton from "./components/SettingsButton";
+import SettingsMobile from "./components/SettingsMobile";
 import supabase from "./supabaseClient";
+import { Link } from "react-router-dom";
+
+const BottomNav = () => (
+  <div className="fixed bottom-0 left-0 w-full bg-white shadow-md border-t flex justify-around py-3">
+    <Link
+      to="/Income"
+      className="flex flex-col items-center text-gray-600 hover:text-blue-500"
+    >
+      <DollarSign size={24} />
+      <span className="text-xs">Income</span>
+    </Link>
+    <Link
+      to="/Purchases"
+      className="flex flex-col items-center text-gray-600 hover:text-blue-500"
+    >
+      <List size={24} />
+      <span className="text-xs">Purchases</span>
+    </Link>
+    <Link to="/" className="flex flex-col items-center text-blue-500">
+      <PlusCircle size={32} className="text-blue-500" />
+      <span className="text-xs">Add Purchase</span>
+    </Link>
+    <Link
+      to="/Budget"
+      className="flex flex-col items-center text-gray-600 hover:text-blue-500"
+    >
+      <CreditCard size={24} />
+      <span className="text-xs">Budget</span>
+    </Link>
+    <Link
+      to="/Settings"
+      className="flex flex-col items-center text-gray-600 hover:text-blue-500"
+    >
+      <Settings size={24} />
+      <span className="text-xs">Settings</span>
+    </Link>
+  </div>
+);
 
 const LoadingSpinner = () => (
   <div className="h-screen w-full flex items-center justify-center bg-blue-100">
@@ -22,12 +68,11 @@ const LoadingSpinner = () => (
 function App() {
   const [takeHomePay, setTakeHomePay] = useState(0);
   const [columns, setColumns] = useState(3);
-  const [hideIncome, setHideIncome] = useState(true); // Default to true
-  const [hideRecommendedBudget, setHideRecommendedBudget] = useState(true); // Default to true
+  const [hideIncome, setHideIncome] = useState(true);
+  const [hideRecommendedBudget, setHideRecommendedBudget] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
   const [userId, setUserId] = useState(null);
 
-  // Get current user
   useEffect(() => {
     const getCurrentUser = async () => {
       try {
@@ -38,7 +83,6 @@ function App() {
         if (error) throw error;
         if (user) {
           setUserId(user.id);
-          return user.id;
         }
       } catch (err) {
         console.error("Error getting user:", err);
@@ -108,17 +152,11 @@ function App() {
     };
   }, [userId]);
 
-  // Handle responsive columns
+
   useEffect(() => {
     const handleResize = () => {
       const width = window.innerWidth;
-      if (width < 890) {
-        setColumns(1);
-      } else if (width < 1100) {
-        setColumns(2);
-      } else {
-        setColumns(3);
-      }
+      setColumns(width < 890 ? 1 : width < 1100 ? 2 : 3);
     };
 
     handleResize();
@@ -131,41 +169,106 @@ function App() {
     2: "grid-cols-2",
     3: "grid-cols-3",
   };
-
+  
   return (
-    <AuthProvider>
-      <Router>
-        <ProtectedRoute>
-          {isLoading ? (
-            <LoadingSpinner />
-          ) : (
-            <>
-              <SettingsButton />
-              <div className={`grid ${gridClasses[columns]} bg-blue-100`}>
-                {(!hideIncome || !hideRecommendedBudget) && 
-                  <div className="flex flex-col gap-4 my-5 mx-4">
-                    {!hideIncome && (
-                      <Income onTakeHomePayUpdate={setTakeHomePay} />
-                    )}
-                    {!hideRecommendedBudget && <RecomendedBudget />}
-                  </div>
-                }
-                <div className="flex flex-col gap-4 my-5 mx-4">
-                  <Budget takeHomePay={takeHomePay} />
-                  <CurrentBudget />
-                </div>
+    <div className="min-h-screen bg-blue-100">
+      <AuthProvider>
+        <Router>
+          <ProtectedRoute>
+            {isLoading ? (
+              <LoadingSpinner />
+            ) : (
+              <>
+                {columns === 1 ? (
+                  <>
+                    <Routes>
+                      <Route
+                        path="/"
+                        element={
+                          <div className={`grid 1 bg-blue-100 pb-20`}>
+                            <div className="flex flex-col gap-4 my-5 mx-4">
+                              <AddPurchase />
+                            </div>
+                          </div>
+                        }
+                      />
+                      <Route
+                        path="/Income"
+                        element={
+                          <div className={`grid 1 bg-blue-100 pb-20`}>
+                            <div className="flex flex-col gap-4 my-5 mx-4">
+                              <Income onTakeHomePayUpdate={setTakeHomePay} />
+                              <RecomendedBudget />
+                            </div>
+                          </div>
+                        }
+                      />
+                      <Route
+                        path="/Budget"
+                        element={
+                          <div className={`grid 1 bg-blue-100 pb-20`}>
+                            <div className="flex flex-col gap-4 my-5 mx-4">
+                              <Budget takeHomePay={takeHomePay} />
+                              <CurrentBudget />
+                            </div>
+                          </div>
+                        }
+                      />
+                      <Route
+                        path="/Purchases"
+                        element={
+                          <div className={`grid 1 bg-blue-100 pb-20`}>
+                            <div className="flex flex-col gap-4 my-5 mx-4">
+                              <PurchasesList />
+                              <BudgetVsSpent />
+                            </div>
+                          </div>
+                        }
+                      />
+                      <Route
+                        path="/Settings"
+                        element={
+                          <div className={`grid 1 bg-blue-100 pb-20`}>
+                            <div className="flex flex-col gap-4 my-5 mx-4">
+                              <SettingsMobile />
+                            </div>
+                          </div>
+                        }
+                      />
+                    </Routes>
+                    <BottomNav />
+                  </>
+                ) : (
+                  <>
+                    <SettingsButton />
+                    <div className={`grid ${gridClasses[columns]} bg-blue-100`}>
+                      {(!hideIncome || !hideRecommendedBudget) && (
+                        <div className="flex flex-col gap-4 my-5 mx-4">
+                          {!hideIncome && (
+                            <Income onTakeHomePayUpdate={setTakeHomePay} />
+                          )}
+                          {!hideRecommendedBudget && <RecomendedBudget />}
+                        </div>
+                      )}
+                      <div className="flex flex-col gap-4 my-5 mx-4">
+                        <Budget takeHomePay={takeHomePay} />
+                        <CurrentBudget />
+                      </div>
 
-                <div className="flex flex-col gap-4 my-5 mx-4">
-                  <AddPurchase />
-                  <PurchasesList />
-                  <BudgetVsSpent />
-                </div>
-              </div>
-            </>
-          )}
-        </ProtectedRoute>
-      </Router>
-    </AuthProvider>
+                      <div className="flex flex-col gap-4 my-5 mx-4">
+                        <AddPurchase />
+                        <PurchasesList />
+                        <BudgetVsSpent />
+                      </div>
+                    </div>
+                  </>
+                )}
+              </>
+            )}
+          </ProtectedRoute>
+        </Router>
+      </AuthProvider>
+    </div>
   );
 }
 
