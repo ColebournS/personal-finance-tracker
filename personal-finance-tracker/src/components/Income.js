@@ -15,44 +15,10 @@ function Income() {
       } = await supabase.auth.getUser();
       if (user) {
         setUserId(user.id);
-        await checkAndCreateIncomeRecord(user.id);
       }
     };
     getCurrentUser();
   }, []);
-
-  // Check if user has an income record, create one if they don't
-  const checkAndCreateIncomeRecord = async (uid) => {
-    const { error } = await supabase
-      .from("income")
-      .select("*")
-      .eq("user_id", uid)
-      .single();
-    
-    if (error && error.code === "PGRST116") {
-      // no rows returned
-      // Create default income record for new user
-      const defaultIncomeData = {
-        user_id: uid,
-        yearlySalary: 50000,
-        retirementContribution: 3,
-        employerMatch: 3,
-        federalTaxRate: 10.59,
-        medicareTaxRate: 1.45,
-        socialSecurityTaxRate: 6.2,
-        stateTaxRate: 5,
-        monthlyTakeHome: 3073.33,
-      };
-
-      const { error: insertError } = await supabase
-        .from("income")
-        .insert([defaultIncomeData]);
-
-      if (insertError) {
-        console.error("Error creating income record:", insertError);
-      }
-    }
-  };
 
   useEffect(() => {
     if (userId) {

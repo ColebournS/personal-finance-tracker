@@ -32,6 +32,7 @@ const Auth = () => {
       setError(error.message);
     } finally {
       setLoading(false);
+      window.location.reload();
     }
   };
 
@@ -69,7 +70,6 @@ const Auth = () => {
       setError(error.message);
     } finally {
       setLoading(false);
-       window.location.reload();
     }
   };
 
