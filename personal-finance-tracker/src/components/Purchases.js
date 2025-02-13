@@ -221,10 +221,7 @@ const PurchasesList = () => {
                         autoFocus
                       />
                     ) : (
-                      new Date(purchase.timestamp).toLocaleDateString("en-GB", {
-                        day: "2-digit",
-                        month: "2-digit",
-                      })
+                      new Date(purchase.timestamp).toLocaleDateString(undefined, { month: 'numeric', day: 'numeric' })
                     )}
                   </td>
                   <td

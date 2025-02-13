@@ -118,7 +118,7 @@ function BudgetVsSpentChart() {
             event: "*",
             schema: "public",
             table: "budget_items",
-            filter: `user_id=eq.${userId}`,
+            match: { user_id: userId },
           },
           fetchBudgetData
         )
@@ -132,7 +132,7 @@ function BudgetVsSpentChart() {
             event: "*",
             schema: "public",
             table: "purchases",
-            filter: `user_id=eq.${userId}`,
+            match: { user_id: userId },
           },
           fetchBudgetData
         )
