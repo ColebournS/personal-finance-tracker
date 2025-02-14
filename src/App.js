@@ -32,22 +32,22 @@ const BottomNav = () => (
       <span className="text-xs">Income</span>
     </Link>
     <Link
-      to="/Purchases"
+      to="/Budget"
       className="flex flex-col items-center text-gray-600 hover:text-blue-500"
     >
-      <List size={24} />
-      <span className="text-xs">Purchases</span>
+      <CreditCard size={24} />
+      <span className="text-xs">Budget</span>
     </Link>
     <Link to="/" className="flex flex-col items-center text-blue-500">
       <PlusCircle size={32} className="text-blue-500" />
       <span className="text-xs">Add Purchase</span>
     </Link>
     <Link
-      to="/Budget"
+      to="/Purchases"
       className="flex flex-col items-center text-gray-600 hover:text-blue-500"
     >
-      <CreditCard size={24} />
-      <span className="text-xs">Budget</span>
+      <List size={24} />
+      <span className="text-xs">Purchases</span>
     </Link>
     <Link
       to="/Settings"

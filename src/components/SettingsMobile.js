@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { Download, LogOut } from "lucide-react";
 import * as XLSX from "xlsx";
 import supabase from "../supabaseClient";
+import BulkPurchaseImport from "./BulkPurchaseImport";
 
 const SettingsMobile = ({
   onToggleIncome = () => {},
@@ -220,6 +221,8 @@ const SettingsMobile = ({
           <Download className="w-4 h-4" />
           Export Data
         </button>
+
+        <BulkPurchaseImport />
 
         <div className="border-t border-gray-200 pt-4">
           <button

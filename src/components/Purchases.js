@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import supabase from "../supabaseClient.js";
-import { Trash2 } from "lucide-react";
+import { Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 import AddPurchase from "./AddPurchase";
 
 const PurchasesList = () => {
@@ -9,6 +9,8 @@ const PurchasesList = () => {
   const [editingId, setEditingId] = useState(null);
   const [editableField, setEditableField] = useState(null);
   const [userId, setUserId] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   useEffect(() => {
     const getCurrentUser = async () => {
@@ -176,6 +178,24 @@ const PurchasesList = () => {
     }
   };
 
+  // Calculate pagination values
+  const totalPages = Math.ceil(purchases.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentPurchases = purchases.slice(startIndex, endIndex);
+
+  const handleNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
+
+  const handlePrevPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+    }
+  };
+
   return (
     <div className="w-full max-w-screen overflow-x-auto p-6 bg-white shadow-lg rounded-lg">
       <h1 className="text-3xl font-bold text-center text-gray-800 mb-6">
@@ -195,7 +215,7 @@ const PurchasesList = () => {
               </tr>
             </thead>
             <tbody>
-              {purchases.map((purchase) => (
+              {currentPurchases.map((purchase) => (
                 <tr key={purchase.id} className="border-b hover:bg-blue-100">
                   <td
                     onClick={() => handleCellEditStart("timestamp", purchase)}
@@ -221,7 +241,13 @@ const PurchasesList = () => {
                         autoFocus
                       />
                     ) : (
-                      new Date(purchase.timestamp).toLocaleDateString(undefined, { month: 'numeric', day: 'numeric' })
+                      new Date(purchase.timestamp).toLocaleDateString(
+                        undefined,
+                        {
+                          month: "numeric",
+                          day: "numeric",
+                        }
+                      )
                     )}
                   </td>
                   <td
@@ -331,12 +357,45 @@ const PurchasesList = () => {
               ))}
             </tbody>
           </table>
+
+          {/* Pagination Controls */}
+          <div className="mt-4 flex items-center justify-between">
+            <div className="text-sm text-gray-700">
+              Showing {startIndex + 1} to {Math.min(endIndex, purchases.length)}{" "}
+              of {purchases.length} purchases
+            </div>
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={handlePrevPage}
+                disabled={currentPage === 1}
+                className={`p-2 rounded ${
+                  currentPage === 1
+                    ? "text-gray-400 cursor-not-allowed"
+                    : "text-blue-600 hover:text-blue-800"
+                }`}
+              >
+                <ChevronLeft size={20} />
+              </button>
+              <span className="text-sm text-gray-700">
+                Page {currentPage} of {totalPages}
+              </span>
+              <button
+                onClick={handleNextPage}
+                disabled={currentPage === totalPages}
+                className={`p-2 rounded ${
+                  currentPage === totalPages
+                    ? "text-gray-400 cursor-not-allowed"
+                    : "text-blue-600 hover:text-blue-800"
+                }`}
+              >
+                <ChevronRight size={20} />
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
   );
-
-
 };
 
 export default PurchasesList;
