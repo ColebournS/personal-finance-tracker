@@ -25,32 +25,35 @@ import { Link } from "react-router-dom";
 const BottomNav = () => (
   <div className="fixed bottom-0 left-0 w-full bg-white shadow-md border-t flex justify-around py-3">
     <Link
-      to="/Income"
+      to="/personal-finance-tracker/Income"
       className="flex flex-col items-center text-gray-600 hover:text-blue-500"
     >
       <DollarSign size={24} />
       <span className="text-xs">Income</span>
     </Link>
     <Link
-      to="/Budget"
+      to="/personal-finance-tracker/Budget"
       className="flex flex-col items-center text-gray-600 hover:text-blue-500"
     >
       <CreditCard size={24} />
       <span className="text-xs">Budget</span>
     </Link>
-    <Link to="/" className="flex flex-col items-center text-blue-500">
+    <Link
+      to="/personal-finance-tracker"
+      className="flex flex-col items-center text-blue-500"
+    >
       <PlusCircle size={32} className="text-blue-500" />
       <span className="text-xs">Add Purchase</span>
     </Link>
     <Link
-      to="/Purchases"
+      to="/personal-finance-tracker/Purchases"
       className="flex flex-col items-center text-gray-600 hover:text-blue-500"
     >
       <List size={24} />
       <span className="text-xs">Purchases</span>
     </Link>
     <Link
-      to="/Settings"
+      to="/personal-finance-tracker/Settings"
       className="flex flex-col items-center text-gray-600 hover:text-blue-500"
     >
       <Settings size={24} />
