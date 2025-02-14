@@ -186,7 +186,7 @@ function App() {
                   <>
                     <Routes>
                       <Route
-                        path="/"
+                        path="/personal-finance-tracker"
                         element={
                           <div className={`grid 1 bg-blue-100 pb-20`}>
                             <div className="flex flex-col gap-4 my-5 mx-4">
@@ -196,7 +196,7 @@ function App() {
                         }
                       />
                       <Route
-                        path="/Income"
+                        path="/personal-finance-tracker/Income"
                         element={
                           <div className={`grid 1 bg-blue-100 pb-20`}>
                             <div className="flex flex-col gap-4 my-5 mx-4">
@@ -207,7 +207,7 @@ function App() {
                         }
                       />
                       <Route
-                        path="/Budget"
+                        path="/personal-finance-tracker/Budget"
                         element={
                           <div className={`grid 1 bg-blue-100 pb-20`}>
                             <div className="flex flex-col gap-4 my-5 mx-4">
@@ -218,7 +218,7 @@ function App() {
                         }
                       />
                       <Route
-                        path="/Purchases"
+                        path="/personal-finance-tracker/Purchases"
                         element={
                           <div className={`grid 1 bg-blue-100 pb-20`}>
                             <div className="flex flex-col gap-4 my-5 mx-4">
@@ -229,7 +229,7 @@ function App() {
                         }
                       />
                       <Route
-                        path="/Settings"
+                        path="/personal-finance-tracker/Settings"
                         element={
                           <div className={`grid 1 bg-blue-100 pb-20`}>
                             <div className="flex flex-col gap-4 my-5 mx-4">
