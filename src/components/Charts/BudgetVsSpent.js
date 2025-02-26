@@ -24,6 +24,7 @@ ChartJS.register(
 );
 
 function BudgetVsSpentChart() {
+  const [isOpen, setIsOpen] = useState(false);
   const [chartData, setChartData] = useState({
     labels: [],
     datasets: [],
@@ -380,25 +381,25 @@ function BudgetVsSpentChart() {
 
           {/* Quick selection buttons - now always in one row */}
           <div className="flex gap-2 min-w-0">
-              <button
-                onClick={setCurrentMonth}
-                className="bg-blue-50 text-blue-700 px-3 py-1.5 rounded hover:bg-blue-600 hover:text-white transition-colors font-medium whitespace-nowrap flex-1 min-w-0 text-[min(2vw,12px)]"
-              >
-                Current Month
-              </button>
-              <button
-                onClick={setPreviousMonth}
-                className="bg-blue-50 text-blue-700 px-3 py-1.5 rounded hover:bg-blue-600 hover:text-white transition-colors font-medium whitespace-nowrap flex-1 min-w-0 text-[min(2vw,12px)]"
-              >
-                Previous Month
-              </button>
-              <button
-                onClick={setCurrentYear}
-                className="bg-blue-50 text-blue-700 px-3 py-1.5 rounded hover:bg-blue-600 hover:text-white transition-colors font-medium whitespace-nowrap flex-1 min-w-0 text-[min(2vw,12px)]"
-              >
-                Current Year
-              </button>
-            </div>
+            <button
+              onClick={setCurrentMonth}
+              className="bg-blue-50 text-blue-700 px-3 py-1.5 rounded hover:bg-blue-600 hover:text-white transition-colors font-medium whitespace-nowrap flex-1 min-w-0 text-[min(2vw,12px)]"
+            >
+              Current Month
+            </button>
+            <button
+              onClick={setPreviousMonth}
+              className="bg-blue-50 text-blue-700 px-3 py-1.5 rounded hover:bg-blue-600 hover:text-white transition-colors font-medium whitespace-nowrap flex-1 min-w-0 text-[min(2vw,12px)]"
+            >
+              Previous Month
+            </button>
+            <button
+              onClick={setCurrentYear}
+              className="bg-blue-50 text-blue-700 px-3 py-1.5 rounded hover:bg-blue-600 hover:text-white transition-colors font-medium whitespace-nowrap flex-1 min-w-0 text-[min(2vw,12px)]"
+            >
+              Current Year
+            </button>
+          </div>
         </div>
       </div>
 
@@ -449,29 +450,35 @@ function BudgetVsSpentChart() {
 
       {/* Category visibility controls */}
       <div className="bg-gray-50 rounded-lg p-4 shadow-sm">
-        <div className="flex items-center gap-2 mb-3">
+        <div
+          className="flex items-center gap-2 mb-3 cursor-pointer"
+          onClick={() => setIsOpen(!isOpen)}
+        >
           <Eye className="text-gray-600" size={20} />
           <h2 className="font-bold text-gray-700">Category Visibility</h2>
         </div>
-        <div className="flex flex-wrap gap-2 items-center">
-          {budgetItems.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => toggleItemVisibility(item.id)}
-              className={`px-3 py-1.5 rounded-full flex items-center gap-1 transition-all ${
-                item.hidden
-                  ? "bg-gray-200 text-gray-600 hover:bg-gray-300"
-                  : "bg-blue-100 text-blue-700 hover:bg-blue-200"
-              }`}
-            >
-              {item.hidden ? <EyeOff size={14} /> : <Eye size={14} />}
-              {item.name}
-            </button>
-          ))}
-          {budgetItems.length === 0 && (
-            <p className="text-gray-500 italic">No budget items found</p>
-          )}
-        </div>
+
+        {isOpen && (
+          <div className="flex flex-wrap gap-2 items-center">
+            {budgetItems.map((item) => (
+              <button
+                key={item.id}
+                onClick={() => toggleItemVisibility(item.id)}
+                className={`px-3 py-1.5 rounded-full flex items-center gap-1 transition-all ${
+                  item.hidden
+                    ? "bg-gray-200 text-gray-600 hover:bg-gray-300"
+                    : "bg-blue-100 text-blue-700 hover:bg-blue-200"
+                }`}
+              >
+                {item.hidden ? <EyeOff size={14} /> : <Eye size={14} />}
+                {item.name}
+              </button>
+            ))}
+            {budgetItems.length === 0 && (
+              <p className="text-gray-500 italic">No budget items found</p>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
