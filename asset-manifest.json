@@ -1,15 +1,15 @@
 {
   "files": {
-    "main.css": "/personal-finance-tracker/static/css/main.9275149d.css",
-    "main.js": "/personal-finance-tracker/static/js/main.d366be97.js",
+    "main.css": "/personal-finance-tracker/static/css/main.1d712a05.css",
+    "main.js": "/personal-finance-tracker/static/js/main.d5a2b44b.js",
     "static/js/952.592c70c5.chunk.js": "/personal-finance-tracker/static/js/952.592c70c5.chunk.js",
     "index.html": "/personal-finance-tracker/index.html",
-    "main.9275149d.css.map": "/personal-finance-tracker/static/css/main.9275149d.css.map",
-    "main.d366be97.js.map": "/personal-finance-tracker/static/js/main.d366be97.js.map",
+    "main.1d712a05.css.map": "/personal-finance-tracker/static/css/main.1d712a05.css.map",
+    "main.d5a2b44b.js.map": "/personal-finance-tracker/static/js/main.d5a2b44b.js.map",
     "952.592c70c5.chunk.js.map": "/personal-finance-tracker/static/js/952.592c70c5.chunk.js.map"
   },
   "entrypoints": [
-    "static/css/main.9275149d.css",
-    "static/js/main.d366be97.js"
+    "static/css/main.1d712a05.css",
+    "static/js/main.d5a2b44b.js"
   ]
 }
