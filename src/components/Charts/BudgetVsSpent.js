@@ -235,7 +235,9 @@ function BudgetVsSpentChart() {
       toDate: new Date(now.getFullYear(), 11, 31).toISOString().split("T")[0],
     });
   };
-
+  
+  const getFontSize = () => (window.innerWidth < 768 ? 8 : 12);
+  
   const chartOptions = {
     responsive: true,
     maintainAspectRatio: false,
@@ -304,7 +306,7 @@ function BudgetVsSpentChart() {
         font: {
           family: "'Inter', sans-serif",
           weight: "600",
-          size: 8,
+          size: getFontSize(),
         },
         color: (context) => {
           const colors = ["rgb(0, 0, 0)", "rgb(0, 0, 0)"];
