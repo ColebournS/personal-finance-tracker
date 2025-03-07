@@ -31,6 +31,7 @@ ChartJS.register(
   ChartDataLabels
 );
 
+
 function BudgetVsSpentChart() {
   const [isOpen, setIsOpen] = useState(false);
   const [chartData, setChartData] = useState({
@@ -102,7 +103,7 @@ function BudgetVsSpentChart() {
     const spentValues = visibleItems.map((item) =>
       item.purchases.reduce((sum, purchase) => sum + purchase.cost, 0)
     );
-
+    
     const chartConfig = {
       labels: visibleItems.map((item) => item.name),
       datasets: [
@@ -241,26 +242,46 @@ function BudgetVsSpentChart() {
     plugins: {
       legend: {
         position: "top",
+        align: "center",
         labels: {
           usePointStyle: true,
+          pointStyle: "circle",
+          boxWidth: 8,
+          boxHeight: 8,
+          padding: 10,
           font: {
-            size: 14,
-            weight: "bold",
+            family: "'Inter', sans-serif",
+            size: 13,
+            weight: "600",
           },
-          padding: 20,
+          color: "#4b5563",
         },
       },
       tooltip: {
-        backgroundColor: "rgba(0, 0, 0, 0.8)",
+        backgroundColor: "rgba(30, 41, 59, 0.95)",
+        titleColor: "#f3f4f6",
+        bodyColor: "#e5e7eb",
+        borderColor: "rgba(148, 163, 184, 0.2)",
+        borderWidth: 1,
+        cornerRadius: 8,
         titleFont: {
-          size: 16,
+          family: "'Inter', sans-serif",
+          size: 14,
+          weight: "600",
         },
         bodyFont: {
-          size: 14,
+          family: "'Inter', sans-serif",
+          size: 13,
         },
         padding: 12,
         displayColors: true,
+        boxWidth: 8,
+        boxHeight: 8,
+        usePointStyle: true,
         callbacks: {
+          title: function (tooltipItems) {
+            return tooltipItems[0].label;
+          },
           label: function (context) {
             let label = context.dataset.label || "";
             if (label) {
@@ -278,45 +299,87 @@ function BudgetVsSpentChart() {
       },
       datalabels: {
         anchor: "end",
-        align: "top",
-        formatter: (value) => (value === 0 ? "" : `$${value.toFixed(2)}`),
+        align: "bottom",
+        formatter: (value) => (value < 10 ? "" : `${Math.round(value)}`),
         font: {
-          weight: "bold",
-          size: 12,
+          family: "'Inter', sans-serif",
+          weight: "600",
+          size: 8,
         },
-        color: (context) =>
-          context.datasetIndex === 0 ? "#1e40af" : "#b91c1c",
-        padding: 6,
+        color: (context) => {
+          const colors = ["rgb(0, 0, 0)", "rgb(0, 0, 0)"];
+          return colors[context.datasetIndex % colors.length];
+        },
+        offset: 0,
+        textShadow: "0 1px 2px rgba(0, 0, 0, 0.2)",
       },
     },
     scales: {
       x: {
         grid: {
-          color: "rgba(0, 0, 0, 0.05)",
+          display: true,
+          color: "rgba(0, 0, 0, 0.03)",
+          drawBorder: false,
         },
         ticks: {
+          padding: 10,
           font: {
-            weight: "bold",
+            family: "'Inter', sans-serif",
+            size: 12,
+            weight: "500",
           },
+          color: "#6b7280",
+        },
+        border: {
+          color: "rgba(0, 0, 0, 0.05)",
         },
       },
       y: {
         beginAtZero: true,
         grid: {
-          color: "rgba(0, 0, 0, 0.05)",
+          color: "rgba(0, 0, 0, 0.04)",
+          drawBorder: false,
+        },
+        border: {
+          display: false,
         },
         ticks: {
+          padding: 10,
+          stepSize: Math.ceil(
+            Math.max(...chartData.datasets.flatMap((d) => d.data)) / 5
+          ),
+          font: {
+            family: "'Inter', sans-serif",
+            size: 12,
+          },
+          color: "#6b7280",
           callback: function (value) {
-            return "$" + value;
+            return (
+              "$" +
+              new Intl.NumberFormat("en-US", {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0,
+              }).format(value)
+            );
           },
         },
       },
     },
     animation: {
-      duration: 1000,
+      duration: 1200,
       easing: "easeOutQuart",
     },
+    elements: {
+      bar: {
+        borderRadius: 4,
+        borderWidth: 0,
+        borderSkipped: false,
+      },
+    },
+    barPercentage: 0.9,
+    categoryPercentage: 0.8,
   };
+  
 
   // Calculate totals for the summary
   const totalBudgeted =
@@ -444,18 +507,27 @@ function BudgetVsSpentChart() {
           </p>
         </div>
       </div>
+
       {/* Chart */}
-      <div className="w-full bg-white rounded-lg shadow-sm p-4 mb-6 border border-gray-100">
-        <div className="h-80 w-full max-w-screen overflow-x-auto">
+      <div className="w-full bg-white rounded-lg shadow p-5 mb-6 border border-gray-200">
+        <h3 className="text-lg font-semibold text-gray-800 mb-4">
+          Budget vs. Spending
+        </h3>
+        <div className="h-80 md:h-96 w-full">
           {isLoading ? (
             <div className="h-full w-full flex items-center justify-center">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
             </div>
           ) : (
-            <Bar data={chartData} options={chartOptions} />
+            <Bar
+              data={chartData}
+              options={chartOptions}
+              plugins={[ChartDataLabels]}
+            />
           )}
         </div>
       </div>
+
       {/* Category visibility controls */}
       <div
         className={`bg-white rounded-lg p-4 shadow border border-gray-200 ${
