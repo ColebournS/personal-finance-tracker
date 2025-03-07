@@ -11,7 +11,15 @@ import {
   Legend,
 } from "chart.js";
 import supabase from "../../supabaseClient";
-import { Calendar, EyeOff, Eye, BarChart3, RefreshCw } from "lucide-react";
+import {
+  Calendar,
+  EyeOff,
+  Eye,
+  BarChart3,
+  RefreshCw,
+  ChevronUp,
+  ChevronDown,
+} from "lucide-react";
 
 ChartJS.register(
   CategoryScale,
@@ -334,7 +342,6 @@ function BudgetVsSpentChart() {
           <RefreshCw size={20} className={isLoading ? "animate-spin" : ""} />
         </button>
       </div>
-
       {/* Date selection card */}
       <div className="bg-white rounded-lg p-6 mb-6 shadow border border-gray-100">
         <div className="flex items-center gap-2 mb-4">
@@ -344,11 +351,11 @@ function BudgetVsSpentChart() {
 
         <div className="space-y-5">
           {/* Date inputs */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-2 gap-2 sm:gap-6">
             <div>
               <label
                 htmlFor="fromDate"
-                className="block text-sm font-medium text-gray-700 mb-2"
+                className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2"
               >
                 From Date
               </label>
@@ -358,13 +365,13 @@ function BudgetVsSpentChart() {
                 name="fromDate"
                 value={dateRange.fromDate}
                 onChange={handleDateChange}
-                className="w-full rounded-md border border-gray-300 px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                className="w-full rounded-md border border-gray-300 px-2 py-1 sm:px-4 sm:py-2 text-xs sm:text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
               />
             </div>
             <div>
               <label
                 htmlFor="toDate"
-                className="block text-sm font-medium text-gray-700 mb-2"
+                className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2"
               >
                 To Date
               </label>
@@ -374,7 +381,7 @@ function BudgetVsSpentChart() {
                 name="toDate"
                 value={dateRange.toDate}
                 onChange={handleDateChange}
-                className="w-full rounded-md border border-gray-300 px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                className="w-full rounded-md border border-gray-300 px-2 py-1 sm:px-4 sm:py-2 text-xs sm:text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
               />
             </div>
           </div>
@@ -402,31 +409,34 @@ function BudgetVsSpentChart() {
           </div>
         </div>
       </div>
-
       {/* Budget summary card */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <div className="bg-blue-100 rounded-lg p-4 shadow-sm">
-          <p className="text-sm font-medium text-blue-800 mb-1">
+      <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-6">
+        <div className="bg-blue-100 rounded-lg p-2 sm:p-4 shadow-sm">
+          <p className="text-xs sm:text-sm font-medium text-blue-800 mb-1">
             Total Budgeted
           </p>
-          <p className="text-2xl font-bold text-blue-900">
+          <p className="text-xs sm:text-sm font-bold text-blue-900">
             ${totalBudgeted.toFixed(2)}
           </p>
         </div>
-        <div className="bg-red-100 rounded-lg p-4 shadow-sm">
-          <p className="text-sm font-medium text-red-800 mb-1">Total Spent</p>
-          <p className="text-2xl font-bold text-red-900">
+        <div className="bg-red-100 rounded-lg p-2 sm:p-4 shadow-sm">
+          <p className="text-xs sm:text-sm font-medium text-red-800 mb-1">
+            Total Spent
+          </p>
+          <p className="text-xs sm:text-sm font-bold text-red-900">
             ${totalSpent.toFixed(2)}
           </p>
         </div>
         <div
           className={`${
             percentOfBudgetUsed > 100 ? "bg-red-100" : "bg-green-100"
-          } rounded-lg p-4 shadow-sm`}
+          } rounded-lg p-2 sm:p-4 shadow-sm`}
         >
-          <p className="text-sm font-medium text-gray-800 mb-1">Budget Usage</p>
+          <p className="text-xs sm:text-sm font-medium text-gray-800 mb-1">
+            Budget Usage
+          </p>
           <p
-            className={`text-2xl font-bold ${
+            className={`text-xs sm:text-sm font-bold ${
               percentOfBudgetUsed > 100 ? "text-red-900" : "text-green-900"
             }`}
           >
@@ -434,7 +444,6 @@ function BudgetVsSpentChart() {
           </p>
         </div>
       </div>
-
       {/* Chart */}
       <div className="w-full bg-white rounded-lg shadow-sm p-4 mb-6 border border-gray-100">
         <div className="h-80 w-full max-w-screen overflow-x-auto">
@@ -447,35 +456,53 @@ function BudgetVsSpentChart() {
           )}
         </div>
       </div>
-
       {/* Category visibility controls */}
-      <div className="bg-gray-50 rounded-lg p-4 shadow-sm">
+      <div
+        className={`bg-white rounded-lg p-4 shadow border border-gray-200 ${
+          !isOpen ? "w-fit" : "w-full"
+        }`}
+      >
         <div
-          className="flex items-center gap-2 mb-3 cursor-pointer"
+          className="flex items-center gap-2 cursor-pointer hover:text-blue-600 transition-colors whitespace-nowrap"
           onClick={() => setIsOpen(!isOpen)}
         >
-          <Eye className="text-gray-600" size={20} />
-          <h2 className="font-bold text-gray-700">Category Visibility</h2>
+          <Eye className="text-blue-500" size={20} />
+          <h2 className="font-semibold text-gray-800 text-lg">
+            Category Visibility
+          </h2>
+          <div className="ml-2">
+            {isOpen ? (
+              <ChevronUp size={18} className="text-gray-500" />
+            ) : (
+              <ChevronDown size={18} className="text-gray-500" />
+            )}
+          </div>
         </div>
 
         {isOpen && (
-          <div className="flex flex-wrap gap-2 items-center">
+          <div className="flex flex-wrap gap-2 items-center mt-4">
             {budgetItems.map((item) => (
               <button
                 key={item.id}
                 onClick={() => toggleItemVisibility(item.id)}
-                className={`px-3 py-1.5 rounded-full flex items-center gap-1 transition-all ${
+                className={`px-3 py-1.5 rounded-full flex items-center gap-2 text-sm font-medium transition-all ${
                   item.hidden
-                    ? "bg-gray-200 text-gray-600 hover:bg-gray-300"
-                    : "bg-blue-100 text-blue-700 hover:bg-blue-200"
+                    ? "bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-800"
+                    : "bg-blue-50 text-blue-600 hover:bg-blue-100 hover:text-blue-700 ring-1 ring-blue-200"
                 }`}
               >
-                {item.hidden ? <EyeOff size={14} /> : <Eye size={14} />}
-                {item.name}
+                {item.hidden ? (
+                  <EyeOff size={14} className="text-gray-500" />
+                ) : (
+                  <Eye size={14} className="text-blue-500" />
+                )}
+                <span>{item.name}</span>
               </button>
             ))}
             {budgetItems.length === 0 && (
-              <p className="text-gray-500 italic">No budget items found</p>
+              <p className="text-gray-500 italic px-2 py-4 w-full text-center">
+                No budget items found
+              </p>
             )}
           </div>
         )}

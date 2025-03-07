@@ -222,8 +222,8 @@ function App() {
                         element={
                           <div className={`grid 1 bg-blue-100 pb-20`}>
                             <div className="flex flex-col gap-4 my-5 mx-4">
-                              <PurchasesList />
                               <BudgetVsSpent />
+                              <PurchasesList />
                             </div>
                           </div>
                         }
