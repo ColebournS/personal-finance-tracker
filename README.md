@@ -13,17 +13,6 @@ A simple and free personal finance tracking app that helps users manage their sa
 - **Real-time Updates**: Live data synchronization across all views
 - **Bulk Import**: Import multiple purchases at once via CSV/TSV data
 
-### Visualizations
-- **Budget vs Spent Chart**: Compare budgeted amounts against actual spending
-- **Current Budget Breakdown**: Pie chart showing budget allocation
-- **Recommended Budget**: 50/30/20 rule visualization (Needs/Wants/Savings)
-
-### User Experience
-- **Mobile-Friendly**: Responsive design that works seamlessly on desktop and mobile
-- **Offline Support**: Data stored in Supabase with real-time synchronization
-- **Dark Mode Ready**: Modern, clean interface with Tailwind CSS
-- **User Authentication**: Secure login with Supabase Auth
-
 ## Tech Stack
 
 - **Frontend**: React 18, Tailwind CSS
