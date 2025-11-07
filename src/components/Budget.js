@@ -1,178 +1,21 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import supabase from "../supabaseClient";
 import { Trash2, PlusCircle } from "lucide-react";
+import { useData } from "../DataContext";
 
 function Budget() {
-  const [income, setIncome] = useState(0);
-  const [groups, setGroups] = useState([]);
-  const [purchases, setPurchases] = useState([]);
+  const {
+    income: incomeData,
+    budgetGroups: groups,
+    purchases,
+    userId,
+    refetchBudgetGroups,
+  } = useData();
+  const income = incomeData?.monthlyTakeHome || 0;
   const [isSmallScreen, setIsSmallScreen] = useState(false);
   const [tempGroupNames, setTempGroupNames] = useState({});
   const [tempItemNames, setTempItemNames] = useState({});
-  const [userId, setUserId] = useState(null);
-
-  useEffect(() => {
-    // Get the current user's ID when component mounts
-    const getCurrentUser = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (user) {
-        setUserId(user.id);
-      }
-    };
-    getCurrentUser();
-  }, []);
-
-
-  const fetchData = async () => {
-    if (!userId) return; // Don't fetch if we don't have a user ID
-
-    fetchIncomeData();
-
-    const { data: groupsData, error: groupsError } = await supabase
-      .from("budget_groups")
-      .select(
-        `
-        id,
-        name,
-        budget_items (
-          id,
-          name,
-          budget
-        )
-      `
-      )
-      .eq("user_id", userId) // Filter by user_id
-      .order("name");
-
-    if (groupsError) {
-      console.error("Error fetching budget groups:", groupsError);
-    } else {
-      setGroups(groupsData);
-    }
-
-    const { data: purchasesData, error: purchasesError } = await supabase
-      .from("purchases")
-      .select(
-        `
-        *,
-        budget_items (
-          id,
-          name,
-          budget_groups (
-            id,
-            name
-          )
-        )
-      `
-      )
-      .eq("user_id", userId) // Filter by user_id
-      .order("timestamp", { ascending: false });
-
-    if (purchasesError) {
-      console.error("Error fetching purchases:", purchasesError);
-    } else {
-      setPurchases(purchasesData);
-    }
-  };
-
-  useEffect(() => {
-    if (userId) {
-      fetchData();
-    }
-  }, [userId]);
-
-  useEffect(() => {
-    if (!userId) return;
-
-    const budgetGroupsSubscription = supabase
-      .channel(`budget_groups_${userId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "budget_groups",
-          match: { user_id: userId }, // Only listen to this user's changes
-        },
-        fetchData
-      )
-      .subscribe();
-
-    const budgetItemsSubscription = supabase
-      .channel(`budget_items_${userId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "budget_items",
-          match: { user_id: userId }, // Only listen to this user's changes
-        },
-        fetchData
-      )
-      .subscribe();
-
-    const purchasesSubscription = supabase
-      .channel(`purchases__${userId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "purchases",
-          match: { user_id: userId }, // Only listen to this user's changes
-        },
-        fetchData
-      )
-      .subscribe();
-
-    const incomeChannel = supabase
-      .channel(`income_changes_${userId}`) // Unique name per user
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "income",
-          match: { user_id: userId },
-        },
-        (payload) => {
-          setIncome(payload.new?.monthlyTakeHome || 0);
-        }
-      )
-      .subscribe();
-
-
-    return () => {
-      supabase.removeChannel(budgetGroupsSubscription);
-      supabase.removeChannel(budgetItemsSubscription);
-      supabase.removeChannel(purchasesSubscription);
-      supabase.removeChannel(incomeChannel);
-    };
-  }, [userId]);
-
-  const fetchIncomeData = async () => {
-    if (!userId) return;
-
-    try {
-      const { data, error } = await supabase
-        .from("income")
-        .select("monthlyTakeHome")
-        .eq("user_id", userId) // Filter by user_id
-        .single();
-      if (error) {
-        console.error("Error fetching income data:", error);
-        return;
-      }
-      if (data?.monthlyTakeHome !== undefined) {
-        setIncome(data.monthlyTakeHome || 0);
-      }
-    } catch (err) {
-      console.error("Unexpected error:", err);
-    }
-  };
+  const debounceTimers = useRef({});
 
   useEffect(() => {
     const checkScreenSize = () => {
@@ -190,7 +33,8 @@ function Budget() {
     return () => window.removeEventListener("resize", checkScreenSize);
   }, []);
 
-  const calculateTotalSpent = () => {
+  // Memoize total spent calculation
+  const calculateTotalSpent = useMemo(() => {
     const currentMonth = new Date().getMonth();
     const currentYear = new Date().getFullYear();
 
@@ -209,9 +53,10 @@ function Budget() {
       (sum, purchase) => sum + (purchase.cost || 0),
       0
     );
-  };
+  }, [purchases]);
 
-  const calculateSpent = (itemId) => {
+  // Memoize spent by item calculation
+  const calculateSpent = useCallback((itemId) => {
     const currentMonth = new Date().getMonth();
     const currentYear = new Date().getFullYear();
 
@@ -231,46 +76,60 @@ function Budget() {
       (sum, purchase) => sum + (purchase.cost || 0),
       0
     );
-  };
+  }, [purchases]);
 
-  const handleGroupInputChange = async (groupId, value) => {
-    await supabase
-      .from("budget_groups")
-      .update({ name: value })
-      .eq("id", groupId);
-    fetchData();
-  };
+  // Debounced update function
+  const debounceUpdate = useCallback((key, callback, delay = 500) => {
+    if (debounceTimers.current[key]) {
+      clearTimeout(debounceTimers.current[key]);
+    }
+    debounceTimers.current[key] = setTimeout(callback, delay);
+  }, []);
 
-  const handleGroupInputBlur = (groupId, value) => {
+  const handleGroupInputChange = (groupId, value) => {
+    // Update temp state immediately for responsive typing
     setTempGroupNames((prev) => ({
       ...prev,
-      [groupId]: value === "" ? "" : value,
+      [groupId]: value,
     }));
+    
+    // Debounce the database update
+    debounceUpdate(`group-${groupId}`, async () => {
+      await supabase
+        .from("budget_groups")
+        .update({ name: value })
+        .eq("id", groupId);
+      refetchBudgetGroups();
+    });
   };
 
-  const handleItemInputChange = async (itemId, value) => {
-    await supabase
-      .from("budget_items")
-      .update({ name: value })
-      .eq("id", itemId);
-    fetchData();
-  };
-
-  const handleItemInputBlur = (itemId, value) => {
+  const handleItemInputChange = (itemId, value) => {
+    // Update temp state immediately for responsive typing
     setTempItemNames((prev) => ({
       ...prev,
-      [itemId]: value === "" ? "" : value,
+      [itemId]: value,
     }));
+    
+    // Debounce the database update
+    debounceUpdate(`item-${itemId}`, async () => {
+      await supabase
+        .from("budget_items")
+        .update({ name: value })
+        .eq("id", itemId);
+      refetchBudgetGroups();
+    });
   };
 
-  const handleItemBudgetChange = async (itemId, value) => {
+  const handleItemBudgetChange = (itemId, value) => {
+    debounceUpdate(`budget-${itemId}`, async () => {
       const numericValue = parseFloat(value) || 0;
       await supabase
         .from("budget_items")
         .update({ budget: numericValue })
         .eq("id", itemId);
-      fetchData();
-    };
+      refetchBudgetGroups();
+    });
+  };
     
   const handleAddItem = async (groupId) => {
     if (!userId) return;
@@ -299,7 +158,7 @@ function Budget() {
     };
 
     await supabase.from("budget_items").insert([newItem]);
-    fetchData();
+    refetchBudgetGroups();
   };
 
   const handleAddGroup = async () => {
@@ -310,22 +169,23 @@ function Budget() {
       user_id: userId, // Add user_id
     };
     await supabase.from("budget_groups").insert([newGroup]);
-    fetchData();
+    refetchBudgetGroups();
   };
 
   const handleDeleteItem = async (itemId) => {
     await supabase.from("budget_items").delete().eq("id", itemId);
-    fetchData();
+    refetchBudgetGroups();
   };
 
   const handleDeleteGroup = async (groupId) => {
     await supabase.from("budget_groups").delete().eq("id", groupId);
-    fetchData();
+    refetchBudgetGroups();
   };
 
-  const calculateTotals = () => {
+  // Memoize totals calculation
+  const totals = useMemo(() => {
     let totalBudget = 0;
-    let totalSpent = calculateTotalSpent();
+    const totalSpent = calculateTotalSpent;
 
     groups.forEach((group) => {
       if (Array.isArray(group.budget_items)) {
@@ -341,9 +201,7 @@ function Budget() {
       remainingBudget: income - totalBudget,
       remainingSpent: income - totalSpent,
     };
-  };
-
-  const totals = calculateTotals();
+  }, [groups, income, calculateTotalSpent]);
 
   return (
     <div className="w-full mx-auto p-6 bg-white shadow-lg rounded-lg">
@@ -367,8 +225,7 @@ function Budget() {
             <input
               type="text"
               value={tempGroupNames[group.id] ?? group.name}
-              onChange={(e) => handleGroupInputBlur(group.id, e.target.value)}
-              onBlur={(e) => handleGroupInputChange(group.id, e.target.value)}
+              onChange={(e) => handleGroupInputChange(group.id, e.target.value)}
               className="text-xl font-semibold text-gray-700 bg-transparent border-b border-gray-300 w-full hover:bg-blue-200 rounded-sm pl-2"
             />
             <div className="flex space-x-1">
@@ -427,9 +284,6 @@ function Budget() {
                         type="text"
                         value={tempItemNames[item.id] ?? item.name}
                         onChange={(e) =>
-                          handleItemInputBlur(item.id, e.target.value)
-                        }
-                        onBlur={(e) =>
                           handleItemInputChange(item.id, e.target.value)
                         }
                         className="w-full px-2 bg-transparent hover:bg-blue-200 rounded-sm"

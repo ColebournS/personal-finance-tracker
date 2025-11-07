@@ -1,70 +1,14 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Doughnut } from "react-chartjs-2";
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from "chart.js";
-import supabase from "../../supabaseClient";
+import { useData } from "../../DataContext";
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 
 function RecommendedBudget() {
-  const [monthlyIncome, setMonthlyIncome] = useState(0);
+  const { income: incomeData } = useData();
+  const monthlyIncome = incomeData?.monthlyTakeHome || 0;
   const [budgetView, setBudgetView] = useState("monthly");
-  const [userId, setUserId] = useState(null);
-
-  useEffect(() => {
-    const getCurrentUser = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (user) {
-        setUserId(user.id);
-      }
-    };
-    getCurrentUser();
-  }, []);
-
-  useEffect(() => {
-    if (userId) {
-      fetchIncomeData();
-
-      const incomeChannel = supabase
-        .channel(`income_changes_${userId}`)
-        .on(
-          "postgres_changes",
-          {
-            event: "*",
-            schema: "public",
-            table: "income",
-            match: { user_id: userId },
-          },
-          () => fetchIncomeData()
-        )
-        .subscribe();
-
-      return () => {
-        incomeChannel.unsubscribe();
-      };
-    }
-  }, [userId]);
-
-  const fetchIncomeData = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("income")
-        .select("monthlyTakeHome")
-        .eq("user_id", userId)
-        .single();
-
-      if (error) {
-        console.error("Error fetching income data:", error);
-        return;
-      }
-      if (data?.monthlyTakeHome !== undefined) {
-        setMonthlyIncome(data.monthlyTakeHome || 0);
-      }
-    } catch (err) {
-      console.error("Unexpected error:", err);
-    }
-  };
 
   const displayIncome =
     budgetView === "monthly" ? monthlyIncome : monthlyIncome * 12;

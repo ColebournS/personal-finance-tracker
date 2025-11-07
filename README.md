@@ -1,35 +1,105 @@
 # Personal Finance Tracker
 
 Visit https://colebourns.github.io/personal-finance-tracker/ to use!
+
 A simple and free personal finance tracking app that helps users manage their salary, set monthly budgets, log purchases, and visualize their spending with interactive charts. Built with React, Supabase, and hosted on GitHub Pages.
 
 ## Features
 
-- **Finances Section**: Input salary and calculate take-home pay.
-- **Budget Section**: Set budget groups and amounts, track spending.
-- **Purchases Section**: Show all purchases linked to budget categories
-- **Graphs and Charts**: Visualize budget allocation and track spending progress.
-- **Offline Support**: Data stored in Supabase and localStorage for redundancy.
-- **Mobile-Friendly**: Designed to work seamlessly on both desktop and mobile devices.
+### Core Functionality
+- **Income Management**: Input salary information and automatically calculate take-home pay with tax deductions
+- **Budget Planning**: Create budget groups and items with custom amounts
+- **Purchase Tracking**: Log purchases and link them to budget categories
+- **Real-time Updates**: Live data synchronization across all views
+- **Bulk Import**: Import multiple purchases at once via CSV/TSV data
+
+### Visualizations
+- **Budget vs Spent Chart**: Compare budgeted amounts against actual spending
+- **Current Budget Breakdown**: Pie chart showing budget allocation
+- **Recommended Budget**: 50/30/20 rule visualization (Needs/Wants/Savings)
+
+### User Experience
+- **Mobile-Friendly**: Responsive design that works seamlessly on desktop and mobile
+- **Offline Support**: Data stored in Supabase with real-time synchronization
+- **Dark Mode Ready**: Modern, clean interface with Tailwind CSS
+- **User Authentication**: Secure login with Supabase Auth
 
 ## Tech Stack
 
-- **Frontend**: React, Tailwind CSS
-- **Backend**: Supabase (Postgres Database)
+- **Frontend**: React 18, Tailwind CSS
+- **Backend**: Supabase (PostgreSQL Database)
 - **Authentication**: Supabase Authentication
-- **Charts**: Chart.js
+- **Charts**: Chart.js with react-chartjs-2
+- **Icons**: Lucide React
 - **Hosting**: GitHub Pages (Frontend) and Supabase (Backend)
+- **State Management**: React Context API with optimized hooks
+
+## Getting Started
 
 ### Prerequisites
 
 Make sure you have the following installed:
-- [Node.js](https://nodejs.org/)
+- [Node.js](https://nodejs.org/) (v14 or higher)
+- [npm](https://www.npmjs.com/) or [yarn](https://yarnpkg.com/)
 - [Git](https://git-scm.com/)
 
-### Steps to Set Up Locally
+### Environment Setup
 
 1. **Clone the repository**:
    ```bash
-   git clone https://github.com/your-username/finance-tracker.git
-   cd finance-tracker
+   git clone https://github.com/colebourns/personal-finance-tracker.git
+   cd personal-finance-tracker
+   ```
 
+2. **Install dependencies**:
+   ```bash
+   npm install
+   ```
+
+3. **Set up environment variables**:
+   Create a `.env` file in the root directory:
+   ```env
+   REACT_APP_SUPABASE_URL=your_supabase_url
+   REACT_APP_SUPABASE_ANON_KEY=your_supabase_anon_key
+   ```
+
+4. **Start the development server**:
+   ```bash
+   npm start
+   ```
+
+   The app will open at `http://localhost:3000`
+
+### Build for Production
+
+```bash
+npm run build
+```
+
+This creates an optimized production build in the `build` folder.
+
+### Deploy to GitHub Pages
+
+```bash
+npm run deploy
+```
+
+## Project Structure
+
+```
+personal-finance-tracker/
+├── public/              # Static files
+├── src/
+│   ├── components/      # React components
+│   │   ├── Charts/      # Chart components
+│   │   ├── AddPurchase.js
+│   │   ├── Budget.js
+│   │   ├── Income.js
+│   │   ├── Purchases.js
+│   │   └── ...
+│   ├── App.js          # Main app component with routing
+│   ├── DataContext.js  # Centralized data management
+│   ├── AuthContext.js  # Authentication context
+│   └── supabaseClient.js
+└── package.json
+```

@@ -11,6 +11,7 @@ import {
   Legend,
 } from "chart.js";
 import supabase from "../../supabaseClient";
+import { useData } from "../../DataContext";
 import {
   Calendar,
   EyeOff,
@@ -33,12 +34,12 @@ ChartJS.register(
 
 
 function BudgetVsSpentChart() {
+  const { userId } = useData();
   const [isOpen, setIsOpen] = useState(false);
   const [chartData, setChartData] = useState({
     labels: [],
     datasets: [],
   });
-  const [userId, setUserId] = useState(null);
   const [budgetItems, setBudgetItems] = useState([]);
   const [hiddenItems, setHiddenItems] = useState(new Set());
   const [isLoading, setIsLoading] = useState(false);
@@ -50,18 +51,6 @@ function BudgetVsSpentChart() {
       .toISOString()
       .split("T")[0],
   });
-
-  useEffect(() => {
-    const getCurrentUser = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (user) {
-        setUserId(user.id);
-      }
-    };
-    getCurrentUser();
-  }, []);
 
   const fetchBudgetData = async () => {
     if (!userId) return;

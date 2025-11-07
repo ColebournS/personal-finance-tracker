@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, lazy, Suspense } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import {
   Loader2,
@@ -9,18 +9,20 @@ import {
   Settings,
 } from "lucide-react";
 import { AuthProvider } from "./AuthContext";
+import { DataProvider, useData } from "./DataContext";
 import ProtectedRoute from "./ProtectedRoute";
-import Income from "./components/Income";
-import Budget from "./components/Budget";
-import AddPurchase from "./components/AddPurchase";
-import PurchasesList from "./components/Purchases";
-import RecomendedBudget from "./components/Charts/RecomendedBudget";
-import CurrentBudget from "./components/Charts/CurrentBudget";
-import BudgetVsSpent from "./components/Charts/BudgetVsSpent";
-import SettingsButton from "./components/SettingsButton";
-import SettingsMobile from "./components/SettingsMobile";
-import supabase from "./supabaseClient";
 import { Link } from "react-router-dom";
+
+// Lazy load components for code splitting
+const Income = lazy(() => import("./components/Income"));
+const Budget = lazy(() => import("./components/Budget"));
+const AddPurchase = lazy(() => import("./components/AddPurchase"));
+const PurchasesList = lazy(() => import("./components/Purchases"));
+const RecomendedBudget = lazy(() => import("./components/Charts/RecomendedBudget"));
+const CurrentBudget = lazy(() => import("./components/Charts/CurrentBudget"));
+const BudgetVsSpent = lazy(() => import("./components/Charts/BudgetVsSpent"));
+const SettingsButton = lazy(() => import("./components/SettingsButton"));
+const SettingsMobile = lazy(() => import("./components/SettingsMobile"));
 
 const BottomNav = () => (
   <div className="fixed bottom-0 left-0 w-full bg-white shadow-md border-t flex justify-around py-3">
@@ -71,89 +73,6 @@ const LoadingSpinner = () => (
 function App() {
   const [takeHomePay, setTakeHomePay] = useState(0);
   const [columns, setColumns] = useState(3);
-  const [hideIncome, setHideIncome] = useState(true);
-  const [hideRecommendedBudget, setHideRecommendedBudget] = useState(true);
-  const [isLoading, setIsLoading] = useState(true);
-  const [userId, setUserId] = useState(null);
-
-  useEffect(() => {
-    const getCurrentUser = async () => {
-      try {
-        const {
-          data: { user },
-          error,
-        } = await supabase.auth.getUser();
-        if (error) throw error;
-        if (user) {
-          setUserId(user.id);
-        }
-      } catch (err) {
-        console.error("Error getting user:", err);
-      }
-    };
-    getCurrentUser();
-  }, []);
-
-  useEffect(() => {
-    if (!userId) return;
-
-    const fetchProfileSettings = async () => {
-      try {
-        const { data, error } = await supabase
-          .from("profiles")
-          .select("hide_income, hide_recommended_budget")
-          .eq("id", userId)
-          .single();
-
-        if (error) throw error;
-
-        if (data) {
-          // Use nullish coalescing to properly handle boolean values
-          setHideIncome(data.hide_income ?? true);
-          setHideRecommendedBudget(data.hide_recommended_budget ?? true);
-        }
-      } catch (err) {
-        console.error("Error fetching profile settings:", err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    // Initial fetch
-    fetchProfileSettings();
-
-    // Set up real-time subscription
-    const profileChannel = supabase
-      .channel(`profiles_changes_${userId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "profiles",
-          filter: `id=eq.${userId}`,
-        },
-        (payload) => {
-          console.log("Profile change received:", payload);
-          const newData = payload.new;
-          if (newData) {
-            setHideIncome(newData.hide_income ?? true);
-            setHideRecommendedBudget(newData.hide_recommended_budget ?? true);
-          }
-        }
-      )
-      .subscribe((status) => {
-        if (status === "SUBSCRIBED") {
-          console.log("Successfully subscribed to profile changes");
-        } else {
-          console.error("Failed to subscribe to profile changes:", status);
-        }
-      });
-
-    return () => {
-      profileChannel.unsubscribe();
-    };
-  }, [userId]);
 
 
   useEffect(() => {
@@ -166,23 +85,40 @@ function App() {
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
+  
+  return (
+    <div className="min-h-screen bg-blue-100">
+      <AuthProvider>
+        <DataProvider>
+          <AppContent 
+            columns={columns} 
+            takeHomePay={takeHomePay} 
+            setTakeHomePay={setTakeHomePay} 
+          />
+        </DataProvider>
+      </AuthProvider>
+    </div>
+  );
+}
+
+function AppContent({ columns, takeHomePay, setTakeHomePay }) {
+  const { profileSettings, loading: isLoading } = useData();
+  const { hideIncome, hideRecommendedBudget } = profileSettings;
 
   const gridClasses = {
     1: "grid-cols-1",
     2: "grid-cols-2",
     3: "grid-cols-3",
   };
-  
+
   return (
-    <div className="min-h-screen bg-blue-100">
-      <AuthProvider>
-        <Router>
-          <ProtectedRoute>
-            {isLoading ? (
-              <LoadingSpinner />
-            ) : (
-              <>
-                {columns === 1 ? (
+    <Router>
+      <ProtectedRoute>
+        {isLoading ? (
+          <LoadingSpinner />
+        ) : (
+          <>
+            {columns === 1 ? (
                   <>
                     <Routes>
                       <Route
@@ -190,7 +126,9 @@ function App() {
                         element={
                           <div className={`grid 1 bg-blue-100 pb-20`}>
                             <div className="flex flex-col gap-4 my-5 mx-4">
-                              <AddPurchase />
+                              <Suspense fallback={<LoadingSpinner />}>
+                                <AddPurchase />
+                              </Suspense>
                             </div>
                           </div>
                         }
@@ -200,8 +138,10 @@ function App() {
                         element={
                           <div className={`grid 1 bg-blue-100 pb-20`}>
                             <div className="flex flex-col gap-4 my-5 mx-4">
-                              <Income onTakeHomePayUpdate={setTakeHomePay} />
-                              <RecomendedBudget />
+                              <Suspense fallback={<LoadingSpinner />}>
+                                <Income onTakeHomePayUpdate={setTakeHomePay} />
+                                <RecomendedBudget />
+                              </Suspense>
                             </div>
                           </div>
                         }
@@ -211,8 +151,10 @@ function App() {
                         element={
                           <div className={`grid 1 bg-blue-100 pb-20`}>
                             <div className="flex flex-col gap-4 my-5 mx-4">
-                              <Budget takeHomePay={takeHomePay} />
-                              <CurrentBudget />
+                              <Suspense fallback={<LoadingSpinner />}>
+                                <Budget takeHomePay={takeHomePay} />
+                                <CurrentBudget />
+                              </Suspense>
                             </div>
                           </div>
                         }
@@ -222,8 +164,10 @@ function App() {
                         element={
                           <div className={`grid 1 bg-blue-100 pb-20`}>
                             <div className="flex flex-col gap-4 my-5 mx-4">
-                              <BudgetVsSpent />
-                              <PurchasesList />
+                              <Suspense fallback={<LoadingSpinner />}>
+                                <BudgetVsSpent />
+                                <PurchasesList />
+                              </Suspense>
                             </div>
                           </div>
                         }
@@ -233,7 +177,9 @@ function App() {
                         element={
                           <div className={`grid 1 bg-blue-100 pb-20`}>
                             <div className="flex flex-col gap-4 my-5 mx-4">
-                              <SettingsMobile />
+                              <Suspense fallback={<LoadingSpinner />}>
+                                <SettingsMobile />
+                              </Suspense>
                             </div>
                           </div>
                         }
@@ -243,35 +189,41 @@ function App() {
                   </>
                 ) : (
                   <>
-                    <SettingsButton />
+                    <Suspense fallback={<div />}>
+                      <SettingsButton />
+                    </Suspense>
                     <div className={`grid ${gridClasses[columns]} bg-blue-100`}>
                       {(!hideIncome || !hideRecommendedBudget) && (
                         <div className="flex flex-col gap-4 my-5 mx-4">
-                          {!hideIncome && (
-                            <Income onTakeHomePayUpdate={setTakeHomePay} />
-                          )}
-                          {!hideRecommendedBudget && <RecomendedBudget />}
+                          <Suspense fallback={<LoadingSpinner />}>
+                            {!hideIncome && (
+                              <Income onTakeHomePayUpdate={setTakeHomePay} />
+                            )}
+                            {!hideRecommendedBudget && <RecomendedBudget />}
+                          </Suspense>
                         </div>
                       )}
                       <div className="flex flex-col gap-4 my-5 mx-4">
-                        <Budget takeHomePay={takeHomePay} />
-                        <CurrentBudget />
+                        <Suspense fallback={<LoadingSpinner />}>
+                          <Budget takeHomePay={takeHomePay} />
+                          <CurrentBudget />
+                        </Suspense>
                       </div>
 
                       <div className="flex flex-col gap-4 my-5 mx-4">
-                        <AddPurchase />
-                        <PurchasesList />
-                        <BudgetVsSpent />
+                        <Suspense fallback={<LoadingSpinner />}>
+                          <AddPurchase />
+                          <PurchasesList />
+                          <BudgetVsSpent />
+                        </Suspense>
                       </div>
                     </div>
                   </>
                 )}
               </>
             )}
-          </ProtectedRoute>
-        </Router>
-      </AuthProvider>
-    </div>
+      </ProtectedRoute>
+    </Router>
   );
 }
 

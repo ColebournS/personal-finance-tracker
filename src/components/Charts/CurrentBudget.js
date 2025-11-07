@@ -1,134 +1,13 @@
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { Doughnut } from "react-chartjs-2";
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from "chart.js";
-import supabase from "../../supabaseClient";
+import { useData } from "../../DataContext";
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 
 function CurrentBudget() {
-  const [income, setIncome] = useState(0);
-  const [groups, setGroups] = useState([]);
-  const [userId, setUserId] = useState(null);
-
-  useEffect(() => {
-    // Get the current user's ID when component mounts
-    const getCurrentUser = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (user) {
-        setUserId(user.id);
-      }
-    };
-    getCurrentUser();
-  }, []);
-
-  const fetchData = async () => {
-    if (userId) {
-      fetchIncomeData();
-
-      const { data: groupsData, error: groupsError } = await supabase
-        .from("budget_groups")
-        .select(
-          `
-          id,
-          name,
-          budget_items (
-            id,
-            name,
-            budget
-          )
-        `
-        )
-        .eq("user_id", userId)
-        .order("name");
-
-      if (groupsError) {
-        console.error("Error fetching budget groups:", groupsError);
-      } else {
-        setGroups(groupsData);
-      }
-    }
-  };
-
-  useEffect(() => {
-    if (userId) {
-      fetchData();
-
-      const budgetGroupsSubscription = supabase
-        .channel(`budget_groups_${userId}`)
-        .on(
-          "postgres_changes",
-          {
-            event: "*",
-            schema: "public",
-            table: "budget_groups",
-            match: { user_id: userId },
-          },
-          fetchData
-        )
-        .subscribe();
-
-      const budgetItemsSubscription = supabase
-        .channel(`budget_items_${userId}`)
-        .on(
-          "postgres_changes",
-          {
-            event: "*",
-            schema: "public",
-            table: "budget_items",
-            match: { user_id: userId },
-          },
-          fetchData
-        )
-        .subscribe();
-
-      const incomeChannel = supabase
-        .channel(`income_changes_${userId}`)
-        .on(
-          "postgres_changes",
-          {
-            event: "*",
-            schema: "public",
-            table: "income",
-            match: { user_id: userId },
-          },
-          (payload) => {
-            if (payload.new?.monthlyTakeHome !== undefined) {
-              setIncome(payload.new.monthlyTakeHome || 0);
-            }
-          }
-        )
-        .subscribe();
-
-      return () => {
-        supabase.removeChannel(budgetGroupsSubscription);
-        supabase.removeChannel(budgetItemsSubscription);
-        supabase.removeChannel(incomeChannel);
-      };
-    }
-  }, [userId]);
-
-  const fetchIncomeData = async () => {
-    if (!userId) return;
-
-    try {
-      const { data, error } = await supabase
-        .from("income")
-        .select("monthlyTakeHome")
-        .eq("user_id", userId)
-        .single();
-      if (error) {
-        console.error("Error fetching income data:", error);
-        return;
-      }
-      if (data?.monthlyTakeHome !== undefined) {
-        setIncome(data.monthlyTakeHome || 0);
-      }
-    } catch (err) {
-      console.error("Unexpected error:", err);
-    }
-  };
+  const { income: incomeData, budgetGroups: groups } = useData();
+  const income = incomeData?.monthlyTakeHome || 0;
 
   const colorPalette = {
     backgroundColor: [

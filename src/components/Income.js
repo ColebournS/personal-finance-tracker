@@ -1,95 +1,49 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useCallback, useRef } from "react";
 import supabase from "../supabaseClient";
+import { useData } from "../DataContext";
 
 function Income() {
-  const [incomeData, setIncomeData] = useState({});
+  const { income: incomeData, userId, refetchIncome } = useData();
   const [editableField, setEditableField] = useState(null);
   const [tempValue, setTempValue] = useState(null);
-  const [userId, setUserId] = useState(null);
+  const debounceTimers = useRef({});
 
-  useEffect(() => {
-    // Get the current user's ID when component mounts
-    const getCurrentUser = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (user) {
-        setUserId(user.id);
-      }
-    };
-    getCurrentUser();
+  // Debounced update function
+  const debounceUpdate = useCallback((key, callback, delay = 500) => {
+    if (debounceTimers.current[key]) {
+      clearTimeout(debounceTimers.current[key]);
+    }
+    debounceTimers.current[key] = setTimeout(callback, delay);
   }, []);
 
-  useEffect(() => {
-    if (userId) {
-      fetchIncomeData();
-
-      const incomeChannel = supabase
-        .channel(`income_changes_${userId}`)
-        .on(
-          "postgres_changes",
-          {
-            event: "*",
-            schema: "public",
-            table: "income",
-            match: { user_id: userId },
-          },
-          () => fetchIncomeData()
-        )
-        .subscribe();
-
-      return () => {
-        incomeChannel.unsubscribe();
-      };
-    }
-  }, [userId]);
-
-  const fetchIncomeData = async () => {
+  const handleInputChange = (field) => {
     if (!userId) return;
 
-    try {
-      const { data, error } = await supabase
-        .from("income")
-        .select("*")
-        .eq("user_id", userId)
-        .single();
+    debounceUpdate(`income-${field}`, async () => {
+      try {
+        const updatedValue =
+          field === "payFrequency" ? tempValue : Number(tempValue);
+        
+        const updatedIncomeData = { ...incomeData, [field]: updatedValue };
+        const { monthlyTakeHomePay } = calculateTaxes(updatedIncomeData);
 
-      if (error) {
-        console.error("Error fetching income data:", error);
-      } else if (data) {
-        setIncomeData(data);
+
+        const { error } = await supabase
+          .from("income")
+          .update({ [field]: updatedValue, monthlyTakeHome: monthlyTakeHomePay })
+          .eq("id", incomeData.id)
+          .eq("user_id", userId); // Ensure we're only updating this user's record
+
+        if (error) {
+          console.error("Error updating income data:", error);
+        } else {
+          setEditableField(null);
+          await refetchIncome(); // Refresh data after update
+        }
+      } catch (err) {
+        console.error("Unexpected error:", err);
       }
-    } catch (err) {
-      console.error("Error:", err);
-    }
-  };
-
-  const handleInputChange = async (field) => {
-    if (!userId) return;
-
-    try {
-      const updatedValue =
-        field === "payFrequency" ? tempValue : Number(tempValue);
-      
-      const updatedIncomeData = { ...incomeData, [field]: updatedValue };
-      const { monthlyTakeHomePay } = calculateTaxes(updatedIncomeData);
-
-
-      const { error } = await supabase
-        .from("income")
-        .update({ [field]: updatedValue, monthlyTakeHome: monthlyTakeHomePay })
-        .eq("id", incomeData.id)
-        .eq("user_id", userId); // Ensure we're only updating this user's record
-
-      if (error) {
-        console.error("Error updating income data:", error);
-      } else {
-        setEditableField(null);
-        await fetchIncomeData(); // Refresh data after update
-      }
-    } catch (err) {
-      console.error("Unexpected error:", err);
-    }
+    });
   };
 
   const handleCellClick = (field) => {
@@ -162,10 +116,26 @@ function Income() {
                     ? tempValue
                     : incomeData.payFrequency
                 }
-                onChange={(e) => {
+                onChange={async (e) => {
+                  const value = e.target.value;
                   setEditableField("payFrequency");
-                  setTempValue(e.target.value);
-                  handleInputChange("payFrequency");
+                  setTempValue(value);
+                  // Immediate update for select dropdown (no debounce)
+                  try {
+                    const updatedIncomeData = { ...incomeData, payFrequency: value };
+                    const { monthlyTakeHomePay } = calculateTaxes(updatedIncomeData);
+                    const { error } = await supabase
+                      .from("income")
+                      .update({ payFrequency: value, monthlyTakeHome: monthlyTakeHomePay })
+                      .eq("id", incomeData.id)
+                      .eq("user_id", userId);
+                    if (!error) {
+                      setEditableField(null);
+                      await refetchIncome();
+                    }
+                  } catch (err) {
+                    console.error("Error updating payFrequency:", err);
+                  }
                 }}
                 className="w-full p-2 border rounded-md"
               >

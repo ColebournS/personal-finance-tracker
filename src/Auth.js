@@ -81,7 +81,7 @@ const Auth = () => {
             <h2 className="text-2xl font-bold mb-6 text-center">
               Welcome to Budget Tracker
             </h2>
-            <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
+            <form className="space-y-4" onSubmit={handleSignIn}>
               <div>
                 <input
                   type="email"
@@ -103,8 +103,7 @@ const Auth = () => {
               {error && <div className="text-red-500 text-sm">{error}</div>}
               <div className="space-x-4">
                 <button
-                  type="button"
-                  onClick={handleSignIn}
+                  type="submit"
                   disabled={loading}
                   className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 disabled:opacity-50"
                 >

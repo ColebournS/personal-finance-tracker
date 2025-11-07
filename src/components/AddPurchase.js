@@ -1,54 +1,16 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import supabase from "../supabaseClient.js";
 import { Save, CheckCircle } from "lucide-react";
+import { useData } from "../DataContext";
 
 const AddPurchase = () => {
+  const { budgetGroups, userId, refetchPurchases } = useData();
   const [formData, setFormData] = useState({
     itemName: "",
     cost: "",
     budgetItemId: "",
-    timestamp: new Date().toISOString().split("T")[0],
   });
-  const [userId, setUserId] = useState(null);
-  const [budgetGroups, setBudgetGroups] = useState([]);
   const [showSuccess, setShowSuccess] = useState(false);
-
-  useEffect(() => {
-    const getCurrentUser = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (user) {
-        setUserId(user.id);
-        fetchBudgetGroups(user.id);
-      }
-    };
-    getCurrentUser();
-  }, []);
-
-  const fetchBudgetGroups = async (userId) => {
-    const { data, error } = await supabase
-      .from("budget_groups")
-      .select(
-        `
-        id,
-        name,
-        budget_items (
-          id,
-          name
-        )
-      `
-      )
-      .eq("user_id", userId)
-      .order("name");
-
-    if (error) {
-      console.error("Error fetching budget groups:", error);
-      return;
-    }
-
-    setBudgetGroups(data || []);
-  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -59,17 +21,21 @@ const AddPurchase = () => {
     e.preventDefault();
 
     try {
+      const currentDate = new Date().toISOString().split("T")[0];
       const purchaseData = {
         item_name: formData.itemName.trim(),
         user_id: userId,
         cost: parseFloat(formData.cost) || 0,
         budget_item_id: formData.budgetItemId,
-        timestamp: new Date(formData.timestamp + "T00:00:00Z").toISOString(),
+        timestamp: new Date(currentDate + "T00:00:00Z").toISOString(),
       };
 
       const { error } = await supabase.from("purchases").insert([purchaseData]);
 
       if (error) throw error;
+
+      // Refetch purchases to update the context
+      await refetchPurchases();
 
       // Show success animation
       setShowSuccess(true);
@@ -84,7 +50,6 @@ const AddPurchase = () => {
         itemName: "",
         cost: "",
         budgetItemId: "",
-        timestamp: new Date().toISOString().split("T")[0],
       });
     } catch (error) {
       console.error("Error saving purchase:", error);
@@ -251,17 +216,6 @@ const AddPurchase = () => {
                 </optgroup>
               ))}
             </select>
-          </div>
-          <div>
-            <label className="block text-gray-700 mb-2">Date</label>
-            <input
-              type="date"
-              name="timestamp"
-              value={formData.timestamp}
-              onChange={handleChange}
-              required
-              className="w-full px-3 py-2 border rounded-md hover:bg-blue-200"
-            />
           </div>
         </div>
 

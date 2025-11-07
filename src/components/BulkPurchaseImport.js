@@ -1,8 +1,10 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useRef } from "react";
 import { Upload, X, Save, AlertCircle } from "lucide-react";
 import supabase from "../supabaseClient.js";
+import { useData } from "../DataContext";
 
 const BulkPurchaseImport = () => {
+  const { userId, refetchPurchases } = useData();
   const dialogRef = useRef(null);
   const [rawData, setRawData] = useState("");
   const [mappings, setMappings] = useState({
@@ -13,19 +15,6 @@ const BulkPurchaseImport = () => {
   const [preview, setPreview] = useState([]);
   const [headers, setHeaders] = useState([]);
   const [error, setError] = useState("");
-  const [userId, setUserId] = useState(null);
-
-  useEffect(() => {
-    const getCurrentUser = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (user) {
-        setUserId(user.id);
-      }
-    };
-    getCurrentUser();
-  }, []);
 
   const detectDelimiter = (text) => {
     const firstLine = text.split("\n")[0];

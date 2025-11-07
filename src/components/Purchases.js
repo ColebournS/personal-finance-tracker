@@ -1,137 +1,23 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import supabase from "../supabaseClient.js";
 import { Trash2, ChevronLeft, ChevronRight } from "lucide-react";
-import AddPurchase from "./AddPurchase";
+import { useData } from "../DataContext";
 
 const PurchasesList = () => {
-  const [purchases, setPurchases] = useState([]);
-  const [budgetGroups, setBudgetGroups] = useState([]);
+  const { purchases, budgetGroups, refetchPurchases } = useData();
   const [editingId, setEditingId] = useState(null);
   const [editableField, setEditableField] = useState(null);
-  const [userId, setUserId] = useState(null);
+  const [editingValue, setEditingValue] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
-
-  useEffect(() => {
-    const getCurrentUser = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (user) {
-        setUserId(user.id);
-      }
-    };
-    getCurrentUser();
-  }, []);
-
-  useEffect(() => {
-    const fetchInitialData = async () => {
-      await fetchBudgetGroups();
-      await fetchPurchases();
-    };
-
-    if (!userId) return;
-
-    fetchInitialData();
-
-    const purchasesChannel = supabase.channel(`purchases_changes_${userId}`);
-    const budgetGroupsChannel = supabase.channel(
-      `budget_groups_changes_${userId}`
-    );
-
-    purchasesChannel
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "purchases",
-          match: { user_id: userId },
-        },
-        () => fetchPurchases()
-      )
-      .subscribe();
-
-    budgetGroupsChannel
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "budget_groups",
-          match: { user_id: userId },
-        },
-        () => fetchBudgetGroups()
-      )
-      .subscribe();
-
-    return () => {
-      purchasesChannel.unsubscribe();
-      budgetGroupsChannel.unsubscribe();
-    };
-  }, [userId]);
-
-  const fetchBudgetGroups = async () => {
-    const { data, error } = await supabase
-      .from("budget_groups")
-      .select(
-        `
-        id,
-        name,
-        budget_items (
-          id,
-          name
-        )
-      `
-      )
-      .eq("user_id", userId)
-      .order("name");
-
-    if (error) {
-      console.error("Error fetching budget groups:", error);
-      return;
-    }
-
-    setBudgetGroups(data || []);
-  };
-
-  const fetchPurchases = async () => {
-    const { data, error } = await supabase
-      .from("purchases")
-      .select(
-        `
-        id,
-        item_name,
-        cost,
-        timestamp,
-        budget_item_id,
-        budget_items (
-          id,
-          name,
-          budget_groups (
-            id,
-            name
-          )
-        )
-      `
-      )
-      .eq("user_id", userId)
-      .order("timestamp", { ascending: false });
-
-    if (error) {
-      console.error("Error fetching purchases:", error);
-      return;
-    }
-
-    setPurchases(data || []);
-  };
 
   const handleDelete = async (id) => {
     try {
       const { error } = await supabase.from("purchases").delete().eq("id", id);
-      await fetchPurchases();
 
       if (error) throw error;
+
+      await refetchPurchases();
     } catch (error) {
       console.error("Error deleting purchase:", error);
       alert("Failed to delete purchase. Please try again.");
@@ -141,6 +27,25 @@ const PurchasesList = () => {
   const handleCellEditStart = (field, purchase) => {
     setEditableField(field);
     setEditingId(purchase.id);
+    
+    // Set initial value based on field
+    switch (field) {
+      case "timestamp":
+        setEditingValue(new Date(purchase.timestamp).toISOString().split("T")[0]);
+        break;
+      case "itemName":
+        setEditingValue(purchase.item_name);
+        break;
+      case "cost":
+        setEditingValue(purchase.cost);
+        break;
+      case "budgetItemId":
+        setEditingValue(purchase.budget_item_id);
+        break;
+      default:
+        setEditingValue("");
+        break;
+    }
   };
 
   const handleCellUpdate = async (field, value) => {
@@ -171,7 +76,8 @@ const PurchasesList = () => {
 
       setEditingId(null);
       setEditableField(null);
-      await fetchPurchases();
+      setEditingValue("");
+      await refetchPurchases();
     } catch (error) {
       console.error(`Error updating ${field}:`, error);
       alert(`Failed to update ${field}. Please try again.`);
@@ -225,15 +131,10 @@ const PurchasesList = () => {
                     editingId === purchase.id ? (
                       <input
                         type="date"
-                        value={
-                          new Date(purchase.timestamp)
-                            .toISOString()
-                            .split("T")[0]
-                        }
-                        onChange={(e) =>
-                          handleCellUpdate("timestamp", e.target.value)
-                        }
+                        value={editingValue}
+                        onChange={(e) => setEditingValue(e.target.value)}
                         onBlur={() => {
+                          handleCellUpdate("timestamp", editingValue);
                           setEditableField(null);
                           setEditingId(null);
                         }}
@@ -263,11 +164,10 @@ const PurchasesList = () => {
                     editingId === purchase.id ? (
                       <input
                         type="text"
-                        value={purchase.item_name}
-                        onChange={(e) =>
-                          handleCellUpdate("itemName", e.target.value)
-                        }
+                        value={editingValue}
+                        onChange={(e) => setEditingValue(e.target.value)}
                         onBlur={() => {
+                          handleCellUpdate("itemName", editingValue);
                           setEditableField(null);
                           setEditingId(null);
                         }}
@@ -285,11 +185,10 @@ const PurchasesList = () => {
                     {editableField === "cost" && editingId === purchase.id ? (
                       <input
                         type="number"
-                        value={purchase.cost}
-                        onChange={(e) =>
-                          handleCellUpdate("cost", e.target.value)
-                        }
+                        value={editingValue}
+                        onChange={(e) => setEditingValue(e.target.value)}
                         onBlur={() => {
+                          handleCellUpdate("cost", editingValue);
                           setEditableField(null);
                           setEditingId(null);
                         }}
@@ -311,10 +210,12 @@ const PurchasesList = () => {
                     {editableField === "budgetItemId" &&
                     editingId === purchase.id ? (
                       <select
-                        value={purchase.budget_item_id}
-                        onChange={(e) =>
-                          handleCellUpdate("budgetItemId", e.target.value)
-                        }
+                        value={editingValue}
+                        onChange={(e) => {
+                          const newValue = e.target.value;
+                          setEditingValue(newValue);
+                          handleCellUpdate("budgetItemId", newValue);
+                        }}
                         onBlur={() => {
                           setEditableField(null);
                           setEditingId(null);
