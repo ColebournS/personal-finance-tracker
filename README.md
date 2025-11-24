@@ -1,6 +1,6 @@
 # Personal Finance Tracker
 
-Visit https://colebourns.github.io/personal-finance-tracker/ to use!
+Visit http://finance.samcolebourn.com/ to use!
 
 A simple and free personal finance tracking app that helps users manage their salary, set monthly budgets, log purchases, and visualize their spending with interactive charts. Built with React, Supabase, and hosted on GitHub Pages.
 
