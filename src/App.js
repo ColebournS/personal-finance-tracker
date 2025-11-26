@@ -34,9 +34,9 @@ const BottomNav = () => {
   return (
     <div className="fixed bottom-0 left-0 w-full bg-white dark:bg-slate-800 shadow-md border-t dark:border-gray-600 flex justify-around py-3">
       <Link
-        to="/personal-finance-tracker/Income"
+        to="/Income"
         className={`flex flex-col items-center ${
-          isActive("/personal-finance-tracker/Income")
+          isActive("/Income")
             ? "text-blue-500 dark:text-blue-400"
             : "text-gray-600 dark:text-gray-300 hover:text-blue-500 dark:hover:text-blue-400"
         }`}
@@ -45,9 +45,9 @@ const BottomNav = () => {
         <span className="text-xs">Income</span>
       </Link>
       <Link
-        to="/personal-finance-tracker/Budget"
+        to="/Budget"
         className={`flex flex-col items-center ${
-          isActive("/personal-finance-tracker/Budget")
+          isActive("/Budget")
             ? "text-blue-500 dark:text-blue-400"
             : "text-gray-600 dark:text-gray-300 hover:text-blue-500 dark:hover:text-blue-400"
         }`}
@@ -56,9 +56,9 @@ const BottomNav = () => {
         <span className="text-xs">Budget</span>
       </Link>
       <Link
-        to="/personal-finance-tracker"
+        to="/"
         className={`flex flex-col items-center ${
-          isActive("/personal-finance-tracker")
+          isActive("/")
             ? "text-blue-500 dark:text-blue-400"
             : "text-blue-500 dark:text-blue-400"
         }`}
@@ -67,9 +67,9 @@ const BottomNav = () => {
         <span className="text-xs">Add Purchase</span>
       </Link>
       <Link
-        to="/personal-finance-tracker/Purchases"
+        to="/Purchases"
         className={`flex flex-col items-center ${
-          isActive("/personal-finance-tracker/Purchases")
+          isActive("/Purchases")
             ? "text-blue-500 dark:text-blue-400"
             : "text-gray-600 dark:text-gray-300 hover:text-blue-500 dark:hover:text-blue-400"
         }`}
@@ -78,9 +78,9 @@ const BottomNav = () => {
         <span className="text-xs">Purchases</span>
       </Link>
       <Link
-        to="/personal-finance-tracker/Settings"
+        to="/Settings"
         className={`flex flex-col items-center ${
-          isActive("/personal-finance-tracker/Settings")
+          isActive("/Settings")
             ? "text-blue-500 dark:text-blue-400"
             : "text-gray-600 dark:text-gray-300 hover:text-blue-500 dark:hover:text-blue-400"
         }`}
@@ -142,10 +142,6 @@ function AppContent({ isMobile, takeHomePay, setTakeHomePay }) {
                 <Routes>
                   <Route
                     path="/"
-                    element={<Navigate to="/personal-finance-tracker" replace />}
-                  />
-                  <Route
-                    path="/personal-finance-tracker"
                     element={
                       <div className="bg-white dark:bg-black pb-20">
                         <div className="flex flex-col gap-4 my-5 mx-4">
@@ -157,7 +153,7 @@ function AppContent({ isMobile, takeHomePay, setTakeHomePay }) {
                     }
                   />
                   <Route
-                    path="/personal-finance-tracker/Income"
+                    path="/Income"
                     element={
                       <div className="bg-white dark:bg-black pb-20">
                         <div className="flex flex-col gap-4 my-5 mx-4">
@@ -170,7 +166,7 @@ function AppContent({ isMobile, takeHomePay, setTakeHomePay }) {
                     }
                   />
                   <Route
-                    path="/personal-finance-tracker/Budget"
+                    path="/Budget"
                     element={
                       <div className="bg-white dark:bg-black pb-20">
                         <div className="flex flex-col gap-4 my-5 mx-4">
@@ -183,7 +179,7 @@ function AppContent({ isMobile, takeHomePay, setTakeHomePay }) {
                     }
                   />
                   <Route
-                    path="/personal-finance-tracker/Purchases"
+                    path="/Purchases"
                     element={
                       <div className="bg-white dark:bg-black pb-20">
                         <div className="flex flex-col gap-4 my-5 mx-4">
@@ -196,7 +192,7 @@ function AppContent({ isMobile, takeHomePay, setTakeHomePay }) {
                     }
                   />
                   <Route
-                    path="/personal-finance-tracker/Settings"
+                    path="/Settings"
                     element={
                       <div className="bg-white dark:bg-black pb-20">
                         <div className="flex flex-col gap-4 my-5 mx-4">
@@ -209,7 +205,7 @@ function AppContent({ isMobile, takeHomePay, setTakeHomePay }) {
                   />
                   <Route
                     path="*"
-                    element={<Navigate to="/personal-finance-tracker" replace />}
+                    element={<Navigate to="/" replace />}
                   />
                 </Routes>
                 <BottomNav />
@@ -229,14 +225,10 @@ function AppContent({ isMobile, takeHomePay, setTakeHomePay }) {
                   <Routes>
                     <Route
                       path="/"
-                      element={<Navigate to="/personal-finance-tracker/budget" replace />}
+                      element={<Navigate to="/budget" replace />}
                     />
                     <Route
-                      path="/personal-finance-tracker"
-                      element={<Navigate to="/personal-finance-tracker/budget" replace />}
-                    />
-                    <Route
-                      path="/personal-finance-tracker/income"
+                      path="/income"
                       element={
                         <div className="max-w-6xl mx-auto px-6">
                           <div className="flex flex-col gap-4 my-5">
@@ -249,7 +241,7 @@ function AppContent({ isMobile, takeHomePay, setTakeHomePay }) {
                       }
                     />
                     <Route
-                      path="/personal-finance-tracker/budget"
+                      path="/budget"
                       element={
                         <div className="max-w-4xl mx-auto px-6">
                           <div className="flex flex-col gap-4 my-5">
@@ -262,7 +254,7 @@ function AppContent({ isMobile, takeHomePay, setTakeHomePay }) {
                       }
                     />
                     <Route
-                      path="/personal-finance-tracker/purchases"
+                      path="/purchases"
                       element={
                         <div className="max-w-4xl mx-auto px-6">
                           <div className="flex flex-col gap-4 my-5">
@@ -276,7 +268,7 @@ function AppContent({ isMobile, takeHomePay, setTakeHomePay }) {
                       }
                     />
                     <Route
-                      path="/personal-finance-tracker/accounts"
+                      path="/accounts"
                       element={
                         <div className="max-w-7xl mx-auto px-6">
                           <div className="flex flex-col gap-4 my-5">
@@ -289,7 +281,7 @@ function AppContent({ isMobile, takeHomePay, setTakeHomePay }) {
                     />
                     <Route
                       path="*"
-                      element={<Navigate to="/personal-finance-tracker/budget" replace />}
+                      element={<Navigate to="/budget" replace />}
                     />
                   </Routes>
                 </div>

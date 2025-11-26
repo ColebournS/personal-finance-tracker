@@ -11,22 +11,22 @@ const TopNav = () => {
 
   const navItems = [
     {
-      path: "/personal-finance-tracker/income",
+      path: "/income",
       label: "Income",
       icon: DollarSign,
     },
     {
-      path: "/personal-finance-tracker/budget",
+      path: "/budget",
       label: "Budget",
       icon: CreditCard,
     },
     {
-      path: "/personal-finance-tracker/purchases",
+      path: "/purchases",
       label: "Purchases",
       icon: ShoppingCart,
     },
     {
-      path: "/personal-finance-tracker/accounts",
+      path: "/accounts",
       label: "Accounts",
       icon: Wallet,
     },
