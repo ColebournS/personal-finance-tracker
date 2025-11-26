@@ -226,7 +226,7 @@ function AppContent({ isMobile, takeHomePay, setTakeHomePay }) {
                     <Route
                       path="/personal-finance-tracker/income"
                       element={
-                        <div className="max-w-4xl mx-auto px-6">
+                        <div className="max-w-6xl mx-auto px-6">
                           <div className="flex flex-col gap-4 my-5">
                             <Suspense fallback={<LoadingSpinner />}>
                               <Income onTakeHomePayUpdate={setTakeHomePay} />
