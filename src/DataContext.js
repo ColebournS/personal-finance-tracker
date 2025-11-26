@@ -65,8 +65,33 @@ export const DataProvider = ({ children }) => {
           .single();
 
         if (error) {
-          console.error("Error fetching income data:", error);
-          throw new Error(error.message);
+          // If no income record exists (PGRST116), create a default one
+          if (error.code === 'PGRST116') {
+            const { data: newData, error: insertError } = await supabase
+              .from("income")
+              .insert([
+                {
+                  user_id: userId,
+                  yearlySalary: 0,
+                  retirementContribution: 0,
+                  employerMatch: 0,
+                  monthlyTakeHome: 0,
+                  payFrequency: 'Monthly'
+                }
+              ])
+              .select()
+              .single();
+
+            if (insertError) {
+              console.error("Error creating default income:", insertError);
+              throw new Error(insertError.message);
+            } else if (newData) {
+              setIncome(newData);
+            }
+          } else {
+            console.error("Error fetching income data:", error);
+            throw new Error(error.message);
+          }
         } else if (data) {
           // Decrypt sensitive income fields
           const decryptedIncome = {
@@ -110,15 +135,53 @@ export const DataProvider = ({ children }) => {
           console.error("Error fetching budget groups:", error);
           throw new Error(error.message);
         } else {
-          // Decrypt budget values for each budget item
-          const decryptedBudgetGroups = (data || []).map(group => ({
-            ...group,
-            budget_items: (group.budget_items || []).map(item => ({
-              ...item,
-              budget: decryptValue(item.budget, userId),
-            })),
-          }));
-          setBudgetGroups(decryptedBudgetGroups);
+          // If no budget groups exist, create default ones for new users
+          if (!data || data.length === 0) {
+            const defaultGroups = [
+              { user_id: userId, name: "Needs" },
+              { user_id: userId, name: "Wants" },
+              { user_id: userId, name: "Savings" },
+            ];
+
+            const { error: insertError } = await supabase
+              .from("budget_groups")
+              .insert(defaultGroups);
+
+            if (insertError) {
+              console.error("Error creating default budget groups:", insertError);
+            } else {
+              // Re-fetch budget groups after initialization
+              const { data: newData, error: newError } = await supabase
+                .from("budget_groups")
+                .select(
+                  `
+                  id,
+                  name,
+                  budget_items (
+                    id,
+                    name,
+                    budget
+                  )
+                `
+                )
+                .eq("user_id", userId)
+                .order("name");
+
+              if (!newError) {
+                setBudgetGroups(newData || []);
+              }
+            }
+          } else {
+            // Decrypt budget values for each budget item
+            const decryptedBudgetGroups = data.map(group => ({
+              ...group,
+              budget_items: (group.budget_items || []).map(item => ({
+                ...item,
+                budget: decryptValue(item.budget, userId),
+              })),
+            }));
+            setBudgetGroups(decryptedBudgetGroups);
+          }
         }
       });
     } catch (err) {
