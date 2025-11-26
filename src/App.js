@@ -1,5 +1,5 @@
 import React, { useState, useEffect, lazy, Suspense } from "react";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import {
   Loader2,
   DollarSign,
@@ -24,46 +24,73 @@ const BudgetVsSpent = lazy(() => import("./components/Charts/BudgetVsSpent"));
 const SettingsButton = lazy(() => import("./components/SettingsButton"));
 const SettingsMobile = lazy(() => import("./components/SettingsMobile"));
 const ThemeToggle = lazy(() => import("./components/ThemeToggle"));
+const TopNav = lazy(() => import("./components/TopNav"));
+const Accounts = lazy(() => import("./components/Accounts"));
 
-const BottomNav = () => (
-  <div className="fixed bottom-0 left-0 w-full bg-white dark:bg-slate-800 shadow-md border-t dark:border-gray-600 flex justify-around py-3">
-    <Link
-      to="/personal-finance-tracker/Income"
-      className="flex flex-col items-center text-gray-600 dark:text-gray-300 hover:text-blue-500 dark:hover:text-blue-400"
-    >
-      <DollarSign size={24} />
-      <span className="text-xs">Income</span>
-    </Link>
-    <Link
-      to="/personal-finance-tracker/Budget"
-      className="flex flex-col items-center text-gray-600 dark:text-gray-300 hover:text-blue-500 dark:hover:text-blue-400"
-    >
-      <CreditCard size={24} />
-      <span className="text-xs">Budget</span>
-    </Link>
-    <Link
-      to="/personal-finance-tracker"
-      className="flex flex-col items-center text-blue-500 dark:text-blue-400"
-    >
-      <PlusCircle size={32} className="text-blue-500 dark:text-blue-400" />
-      <span className="text-xs">Add Purchase</span>
-    </Link>
-    <Link
-      to="/personal-finance-tracker/Purchases"
-      className="flex flex-col items-center text-gray-600 dark:text-gray-300 hover:text-blue-500 dark:hover:text-blue-400"
-    >
-      <List size={24} />
-      <span className="text-xs">Purchases</span>
-    </Link>
-    <Link
-      to="/personal-finance-tracker/Settings"
-      className="flex flex-col items-center text-gray-600 dark:text-gray-300 hover:text-blue-500 dark:hover:text-blue-400"
-    >
-      <Settings size={24} />
-      <span className="text-xs">Settings</span>
-    </Link>
-  </div>
-);
+const BottomNav = () => {
+  const location = window.location;
+  const isActive = (path) => location.pathname === path;
+  
+  return (
+    <div className="fixed bottom-0 left-0 w-full bg-white dark:bg-slate-800 shadow-md border-t dark:border-gray-600 flex justify-around py-3">
+      <Link
+        to="/personal-finance-tracker/Income"
+        className={`flex flex-col items-center ${
+          isActive("/personal-finance-tracker/Income")
+            ? "text-blue-500 dark:text-blue-400"
+            : "text-gray-600 dark:text-gray-300 hover:text-blue-500 dark:hover:text-blue-400"
+        }`}
+      >
+        <DollarSign size={24} />
+        <span className="text-xs">Income</span>
+      </Link>
+      <Link
+        to="/personal-finance-tracker/Budget"
+        className={`flex flex-col items-center ${
+          isActive("/personal-finance-tracker/Budget")
+            ? "text-blue-500 dark:text-blue-400"
+            : "text-gray-600 dark:text-gray-300 hover:text-blue-500 dark:hover:text-blue-400"
+        }`}
+      >
+        <CreditCard size={24} />
+        <span className="text-xs">Budget</span>
+      </Link>
+      <Link
+        to="/personal-finance-tracker"
+        className={`flex flex-col items-center ${
+          isActive("/personal-finance-tracker")
+            ? "text-blue-500 dark:text-blue-400"
+            : "text-blue-500 dark:text-blue-400"
+        }`}
+      >
+        <PlusCircle size={32} className="text-blue-500 dark:text-blue-400" />
+        <span className="text-xs">Add Purchase</span>
+      </Link>
+      <Link
+        to="/personal-finance-tracker/Purchases"
+        className={`flex flex-col items-center ${
+          isActive("/personal-finance-tracker/Purchases")
+            ? "text-blue-500 dark:text-blue-400"
+            : "text-gray-600 dark:text-gray-300 hover:text-blue-500 dark:hover:text-blue-400"
+        }`}
+      >
+        <List size={24} />
+        <span className="text-xs">Purchases</span>
+      </Link>
+      <Link
+        to="/personal-finance-tracker/Settings"
+        className={`flex flex-col items-center ${
+          isActive("/personal-finance-tracker/Settings")
+            ? "text-blue-500 dark:text-blue-400"
+            : "text-gray-600 dark:text-gray-300 hover:text-blue-500 dark:hover:text-blue-400"
+        }`}
+      >
+        <Settings size={24} />
+        <span className="text-xs">Settings</span>
+      </Link>
+    </div>
+  );
+};
 
 const LoadingSpinner = () => (
   <div className="h-screen w-full flex items-center justify-center bg-white dark:bg-black">
@@ -73,13 +100,11 @@ const LoadingSpinner = () => (
 
 function App() {
   const [takeHomePay, setTakeHomePay] = useState(0);
-  const [columns, setColumns] = useState(3);
-
+  const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
     const handleResize = () => {
-      const width = window.innerWidth;
-      setColumns(width < 890 ? 1 : width < 1100 ? 2 : 3);
+      setIsMobile(window.innerWidth < 890);
     };
 
     handleResize();
@@ -92,7 +117,7 @@ function App() {
       <AuthProvider>
         <DataProvider>
           <AppContent 
-            columns={columns} 
+            isMobile={isMobile} 
             takeHomePay={takeHomePay} 
             setTakeHomePay={setTakeHomePay} 
           />
@@ -102,15 +127,8 @@ function App() {
   );
 }
 
-function AppContent({ columns, takeHomePay, setTakeHomePay }) {
-  const { profileSettings, loading: isLoading } = useData();
-  const { hideIncome, hideRecommendedBudget } = profileSettings;
-
-  const gridClasses = {
-    1: "grid-cols-1",
-    2: "grid-cols-2",
-    3: "grid-cols-3",
-  };
+function AppContent({ isMobile, takeHomePay, setTakeHomePay }) {
+  const { loading: isLoading } = useData();
 
   return (
     <Router>
@@ -119,113 +137,150 @@ function AppContent({ columns, takeHomePay, setTakeHomePay }) {
           <LoadingSpinner />
         ) : (
           <>
-            {columns === 1 ? (
-                  <>
-                    <Routes>
-                      <Route
-                        path="/personal-finance-tracker"
-                        element={
-                          <div className={`grid 1 bg-white dark:bg-black pb-20`}>
-                            <div className="flex flex-col gap-4 my-5 mx-4">
-                              <Suspense fallback={<LoadingSpinner />}>
-                                <AddPurchase />
-                              </Suspense>
-                            </div>
-                          </div>
-                        }
-                      />
-                      <Route
-                        path="/personal-finance-tracker/Income"
-                        element={
-                          <div className={`grid 1 bg-white dark:bg-black pb-20`}>
-                            <div className="flex flex-col gap-4 my-5 mx-4">
-                              <Suspense fallback={<LoadingSpinner />}>
-                                <Income onTakeHomePayUpdate={setTakeHomePay} />
-                                <RecomendedBudget />
-                              </Suspense>
-                            </div>
-                          </div>
-                        }
-                      />
-                      <Route
-                        path="/personal-finance-tracker/Budget"
-                        element={
-                          <div className={`grid 1 bg-white dark:bg-black pb-20`}>
-                            <div className="flex flex-col gap-4 my-5 mx-4">
-                              <Suspense fallback={<LoadingSpinner />}>
-                                <Budget takeHomePay={takeHomePay} />
-                                <CurrentBudget />
-                              </Suspense>
-                            </div>
-                          </div>
-                        }
-                      />
-                      <Route
-                        path="/personal-finance-tracker/Purchases"
-                        element={
-                          <div className={`grid 1 bg-white dark:bg-black pb-20`}>
-                            <div className="flex flex-col gap-4 my-5 mx-4">
-                              <Suspense fallback={<LoadingSpinner />}>
-                                <BudgetVsSpent />
-                                <PurchasesList />
-                              </Suspense>
-                            </div>
-                          </div>
-                        }
-                      />
-                      <Route
-                        path="/personal-finance-tracker/Settings"
-                        element={
-                          <div className={`grid 1 bg-white dark:bg-black pb-20`}>
-                            <div className="flex flex-col gap-4 my-5 mx-4">
-                              <Suspense fallback={<LoadingSpinner />}>
-                                <SettingsMobile />
-                              </Suspense>
-                            </div>
-                          </div>
-                        }
-                      />
-                    </Routes>
-                    <BottomNav />
-                  </>
-                ) : (
-                  <>
-                    <div className="fixed top-2 right-2 z-50 flex gap-2">
-                      <Suspense fallback={<div />}>
-                        <ThemeToggle />
-                        <SettingsButton />
-                      </Suspense>
-                    </div>
-                    <div className={`grid ${gridClasses[columns]} bg-white dark:bg-black`}>
-                      {(!hideIncome || !hideRecommendedBudget) && (
+            {isMobile ? (
+              <>
+                <Routes>
+                  <Route
+                    path="/personal-finance-tracker"
+                    element={
+                      <div className="bg-white dark:bg-black pb-20">
                         <div className="flex flex-col gap-4 my-5 mx-4">
                           <Suspense fallback={<LoadingSpinner />}>
-                            {!hideIncome && (
-                              <Income onTakeHomePayUpdate={setTakeHomePay} />
-                            )}
-                            {!hideRecommendedBudget && <RecomendedBudget />}
+                            <AddPurchase />
                           </Suspense>
                         </div>
-                      )}
-                      <div className="flex flex-col gap-4 my-5 mx-4">
-                        <Suspense fallback={<LoadingSpinner />}>
-                          <Budget takeHomePay={takeHomePay} />
-                          <CurrentBudget />
-                        </Suspense>
                       </div>
-
-                      <div className="flex flex-col gap-4 my-5 mx-4">
-                        <Suspense fallback={<LoadingSpinner />}>
-                          <AddPurchase />
-                          <PurchasesList />
-                          <BudgetVsSpent />
-                        </Suspense>
+                    }
+                  />
+                  <Route
+                    path="/personal-finance-tracker/Income"
+                    element={
+                      <div className="bg-white dark:bg-black pb-20">
+                        <div className="flex flex-col gap-4 my-5 mx-4">
+                          <Suspense fallback={<LoadingSpinner />}>
+                            <Income onTakeHomePayUpdate={setTakeHomePay} />
+                            <RecomendedBudget />
+                          </Suspense>
+                        </div>
                       </div>
-                    </div>
-                  </>
-                )}
+                    }
+                  />
+                  <Route
+                    path="/personal-finance-tracker/Budget"
+                    element={
+                      <div className="bg-white dark:bg-black pb-20">
+                        <div className="flex flex-col gap-4 my-5 mx-4">
+                          <Suspense fallback={<LoadingSpinner />}>
+                            <Budget takeHomePay={takeHomePay} />
+                            <CurrentBudget />
+                          </Suspense>
+                        </div>
+                      </div>
+                    }
+                  />
+                  <Route
+                    path="/personal-finance-tracker/Purchases"
+                    element={
+                      <div className="bg-white dark:bg-black pb-20">
+                        <div className="flex flex-col gap-4 my-5 mx-4">
+                          <Suspense fallback={<LoadingSpinner />}>
+                            <BudgetVsSpent />
+                            <PurchasesList />
+                          </Suspense>
+                        </div>
+                      </div>
+                    }
+                  />
+                  <Route
+                    path="/personal-finance-tracker/Settings"
+                    element={
+                      <div className="bg-white dark:bg-black pb-20">
+                        <div className="flex flex-col gap-4 my-5 mx-4">
+                          <Suspense fallback={<LoadingSpinner />}>
+                            <SettingsMobile />
+                          </Suspense>
+                        </div>
+                      </div>
+                    }
+                  />
+                </Routes>
+                <BottomNav />
+              </>
+            ) : (
+              <>
+                <Suspense fallback={<div />}>
+                  <TopNav />
+                </Suspense>
+                <div className="fixed top-2 right-2 z-50 flex gap-2">
+                  <Suspense fallback={<div />}>
+                    <ThemeToggle />
+                    <SettingsButton />
+                  </Suspense>
+                </div>
+                <div className="pt-20 bg-white dark:bg-black min-h-screen">
+                  <Routes>
+                    <Route
+                      path="/personal-finance-tracker"
+                      element={<Navigate to="/personal-finance-tracker/budget" replace />}
+                    />
+                    <Route
+                      path="/personal-finance-tracker/income"
+                      element={
+                        <div className="max-w-4xl mx-auto px-6">
+                          <div className="flex flex-col gap-4 my-5">
+                            <Suspense fallback={<LoadingSpinner />}>
+                              <Income onTakeHomePayUpdate={setTakeHomePay} />
+                              <RecomendedBudget />
+                            </Suspense>
+                          </div>
+                        </div>
+                      }
+                    />
+                    <Route
+                      path="/personal-finance-tracker/budget"
+                      element={
+                        <div className="max-w-4xl mx-auto px-6">
+                          <div className="flex flex-col gap-4 my-5">
+                            <Suspense fallback={<LoadingSpinner />}>
+                              <Budget takeHomePay={takeHomePay} />
+                              <CurrentBudget />
+                            </Suspense>
+                          </div>
+                        </div>
+                      }
+                    />
+                    <Route
+                      path="/personal-finance-tracker/purchases"
+                      element={
+                        <div className="max-w-4xl mx-auto px-6">
+                          <div className="flex flex-col gap-4 my-5">
+                            <Suspense fallback={<LoadingSpinner />}>
+                              <AddPurchase />
+                              <PurchasesList />
+                              <BudgetVsSpent />
+                            </Suspense>
+                          </div>
+                        </div>
+                      }
+                    />
+                    <Route
+                      path="/personal-finance-tracker/accounts"
+                      element={
+                        <div className="max-w-7xl mx-auto px-6">
+                          <div className="flex flex-col gap-4 my-5">
+                            <Suspense fallback={<LoadingSpinner />}>
+                              <Accounts />
+                            </Suspense>
+                          </div>
+                        </div>
+                      }
+                    />
+                  </Routes>
+                </div>
               </>
             )}
+          </>
+        )}
       </ProtectedRoute>
     </Router>
   );
