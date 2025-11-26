@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef, useMemo } from "react"
 import supabase from "../supabaseClient";
 import { Trash2, PlusCircle, X, Search, ArrowUpDown, ArrowUp, ArrowDown, TrendingUp } from "lucide-react";
 import { useAuth } from "../AuthContext";
+import { encryptValue, decryptValue } from "../utils/encryption";
 
 function Accounts() {
   const { user } = useAuth();
@@ -43,7 +44,16 @@ function Accounts() {
         .order("created_at", { ascending: true });
 
       if (error) throw error;
-      setAccounts(data || []);
+      
+      // Decrypt account values
+      const decryptedAccounts = (data || []).map(account => ({
+        ...account,
+        value: decryptValue(account.value, user.id),
+        interest_rate: decryptValue(account.interest_rate, user.id),
+        montly_contribution: decryptValue(account.montly_contribution, user.id)
+      }));
+      
+      setAccounts(decryptedAccounts);
     } catch (error) {
       console.error("Error fetching accounts:", error);
     } finally {
@@ -91,15 +101,18 @@ function Accounts() {
     setTempValues((prev) => ({ ...prev, [accountId]: value }));
     
     const numericValue = parseFloat(value) || 0;
-    // Update local state immediately
+    // Update local state immediately with decrypted value
     setAccounts((prev) =>
       prev.map((acc) => (acc.id === accountId ? { ...acc, value: numericValue } : acc))
     );
     
     debounceUpdate(`value-${accountId}`, async () => {
+      // Encrypt value before saving to database
+      const encryptedValue = encryptValue(numericValue, user?.id);
+      
       const { error } = await supabase
         .from("accounts")
-        .update({ value: numericValue })
+        .update({ value: encryptedValue })
         .eq("id", accountId);
       
       if (error) {
@@ -115,7 +128,7 @@ function Accounts() {
     setTempInterestRates((prev) => ({ ...prev, [accountId]: value }));
     
     const numericValue = parseFloat(value) || 0;
-    // Update local state immediately
+    // Update local state immediately with decrypted value
     setAccounts((prev) =>
       prev.map((acc) =>
         acc.id === accountId ? { ...acc, interest_rate: numericValue } : acc
@@ -123,9 +136,12 @@ function Accounts() {
     );
     
     debounceUpdate(`interest-${accountId}`, async () => {
+      // Encrypt interest rate before saving to database
+      const encryptedValue = encryptValue(numericValue, user?.id);
+      
       const { error } = await supabase
         .from("accounts")
-        .update({ interest_rate: numericValue })
+        .update({ interest_rate: encryptedValue })
         .eq("id", accountId);
       
       if (error) {
@@ -164,7 +180,7 @@ function Accounts() {
     setTempMonthlyContributions((prev) => ({ ...prev, [accountId]: value }));
     
     const numericValue = parseFloat(value) || 0;
-    // Update local state immediately
+    // Update local state immediately with decrypted value
     setAccounts((prev) =>
       prev.map((acc) =>
         acc.id === accountId ? { ...acc, montly_contribution: numericValue } : acc
@@ -172,9 +188,12 @@ function Accounts() {
     );
     
     debounceUpdate(`monthly-${accountId}`, async () => {
+      // Encrypt monthly contribution before saving to database
+      const encryptedValue = encryptValue(numericValue, user?.id);
+      
       const { error } = await supabase
         .from("accounts")
-        .update({ montly_contribution: numericValue })
+        .update({ montly_contribution: encryptedValue })
         .eq("id", accountId);
       
       if (error) {
@@ -220,11 +239,20 @@ function Accounts() {
     
     setAdding(true);
     
+    const numericValue = parseFloat(newAccount.value) || 0;
+    const numericInterestRate = parseFloat(newAccount.interest_rate) || 0;
+    const numericMonthlyContribution = parseFloat(newAccount.montly_contribution) || 0;
+    
+    // Encrypt all sensitive numeric fields
+    const encryptedValue = encryptValue(numericValue, user.id);
+    const encryptedInterestRate = encryptValue(numericInterestRate, user.id);
+    const encryptedMonthlyContribution = encryptValue(numericMonthlyContribution, user.id);
+    
     const accountData = {
       name: newAccount.name.trim(),
-      value: parseFloat(newAccount.value) || 0,
-      interest_rate: parseFloat(newAccount.interest_rate) || 0,
-      montly_contribution: parseFloat(newAccount.montly_contribution) || 0,
+      value: encryptedValue,
+      interest_rate: encryptedInterestRate,
+      montly_contribution: encryptedMonthlyContribution,
       type: newAccount.type,
       user_id: user.id,
     };
@@ -467,21 +495,21 @@ function Accounts() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-        <div className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 p-6 rounded-lg border-2 border-green-200 dark:border-green-700 shadow-sm">
-          <div className="text-sm font-medium text-green-700 dark:text-green-300 mb-1">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4 mb-8">
+        <div className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 p-3 md:p-6 rounded-lg border-2 border-green-200 dark:border-green-700 shadow-sm">
+          <div className="text-xs md:text-sm font-medium text-green-700 dark:text-green-300 mb-1">
             Total Investments
           </div>
-          <div className="text-3xl font-bold text-green-600 dark:text-green-400">
+          <div className="text-lg md:text-3xl font-bold text-green-600 dark:text-green-400">
             ${formatCurrency(totals.totalInvestments)}
           </div>
         </div>
         
-        <div className="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 p-6 rounded-lg border-2 border-red-200 dark:border-red-700 shadow-sm">
-          <div className="text-sm font-medium text-red-700 dark:text-red-300 mb-1">
+        <div className="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 p-3 md:p-6 rounded-lg border-2 border-red-200 dark:border-red-700 shadow-sm">
+          <div className="text-xs md:text-sm font-medium text-red-700 dark:text-red-300 mb-1">
             Total Loans
           </div>
-          <div className="text-3xl font-bold text-red-600 dark:text-red-400">
+          <div className="text-lg md:text-3xl font-bold text-red-600 dark:text-red-400">
             ${formatCurrency(totals.totalLoans)}
           </div>
         </div>
@@ -490,15 +518,15 @@ function Accounts() {
           netWorth >= 0 
             ? 'from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 border-blue-200 dark:border-blue-700' 
             : 'from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20 border-orange-200 dark:border-orange-700'
-        } p-6 rounded-lg border-2 shadow-sm`}>
-          <div className={`text-sm font-medium mb-1 ${
+        } p-3 md:p-6 rounded-lg border-2 shadow-sm col-span-2 md:col-span-1`}>
+          <div className={`text-xs md:text-sm font-medium mb-1 ${
             netWorth >= 0 
               ? 'text-blue-700 dark:text-blue-300' 
               : 'text-orange-700 dark:text-orange-300'
           }`}>
             Net Worth
           </div>
-          <div className={`text-3xl font-bold ${
+          <div className={`text-lg md:text-3xl font-bold ${
             netWorth >= 0 
               ? 'text-blue-600 dark:text-blue-400' 
               : 'text-orange-600 dark:text-orange-400'
@@ -542,7 +570,7 @@ function Accounts() {
                 : "bg-white dark:bg-slate-700 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-slate-600"
             }`}
           >
-            💰 Investments ({accounts.filter(a => a.type === "Investment").length})
+            Investments ({accounts.filter(a => a.type === "Investment").length})
           </button>
           <button
             onClick={() => setFilterType("Loan")}
@@ -552,7 +580,7 @@ function Accounts() {
                 : "bg-white dark:bg-slate-700 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-slate-600"
             }`}
           >
-            🏦 Loans ({accounts.filter(a => a.type === "Loan").length})
+            Loans ({accounts.filter(a => a.type === "Loan").length})
           </button>
         </div>
       </div>
@@ -662,10 +690,10 @@ function Accounts() {
                         className="w-full min-w-0 px-3 py-2 bg-white dark:bg-slate-600 hover:bg-gray-50 dark:hover:bg-slate-500 rounded-md text-gray-800 dark:text-white border border-gray-300 dark:border-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition-all cursor-pointer"
                       >
                         <option value="Investment" className="bg-white dark:bg-slate-700">
-                          💰 Investment
+                          Investment
                         </option>
                         <option value="Loan" className="bg-white dark:bg-slate-700">
-                          🏦 Loan
+                          Loan
                         </option>
                       </select>
                     </td>
@@ -807,21 +835,15 @@ function Accounts() {
                       <td className={`px-4 py-3 font-medium text-gray-800 dark:text-white whitespace-nowrap sticky left-0 ${
                         index % 2 === 0
                           ? "bg-white dark:bg-slate-700"
-                          : "bg-gray-50 dark:bg-slate-700/80"
+                          : "bg-gray-50 dark:bg-slate-700"
                       }`}>
                         <div className="flex items-center gap-2">
-                          <span className="text-lg">
-                            {item.account.type === "Investment" ? "💰" : "🏦"}
-                          </span>
                           {item.account.name}
                         </div>
                       </td>
                       <td className="px-4 py-3 text-center whitespace-nowrap">
                         <div className="font-semibold text-gray-800 dark:text-white">
                           ${formatCurrency(Number(item.account.value || 0))}
-                        </div>
-                        <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                          Principal
                         </div>
                       </td>
                       {item.projections.map((proj) => {
@@ -987,8 +1009,8 @@ function Accounts() {
                   className="w-full px-4 py-3 bg-gray-50 dark:bg-slate-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-800 dark:text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition-all cursor-pointer"
                   required
                 >
-                  <option value="Investment">💰 Investment</option>
-                  <option value="Loan">🏦 Loan</option>
+                  <option value="Investment">Investment</option>
+                  <option value="Loan">Loan</option>
                 </select>
               </div>
 

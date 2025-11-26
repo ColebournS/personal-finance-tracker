@@ -141,6 +141,10 @@ function AppContent({ isMobile, takeHomePay, setTakeHomePay }) {
               <>
                 <Routes>
                   <Route
+                    path="/"
+                    element={<Navigate to="/personal-finance-tracker" replace />}
+                  />
+                  <Route
                     path="/personal-finance-tracker"
                     element={
                       <div className="bg-white dark:bg-black pb-20">
@@ -203,6 +207,10 @@ function AppContent({ isMobile, takeHomePay, setTakeHomePay }) {
                       </div>
                     }
                   />
+                  <Route
+                    path="*"
+                    element={<Navigate to="/personal-finance-tracker" replace />}
+                  />
                 </Routes>
                 <BottomNav />
               </>
@@ -219,6 +227,10 @@ function AppContent({ isMobile, takeHomePay, setTakeHomePay }) {
                 </div>
                 <div className="pt-20 bg-white dark:bg-black min-h-screen">
                   <Routes>
+                    <Route
+                      path="/"
+                      element={<Navigate to="/personal-finance-tracker/budget" replace />}
+                    />
                     <Route
                       path="/personal-finance-tracker"
                       element={<Navigate to="/personal-finance-tracker/budget" replace />}
@@ -274,6 +286,10 @@ function AppContent({ isMobile, takeHomePay, setTakeHomePay }) {
                           </div>
                         </div>
                       }
+                    />
+                    <Route
+                      path="*"
+                      element={<Navigate to="/personal-finance-tracker/budget" replace />}
                     />
                   </Routes>
                 </div>

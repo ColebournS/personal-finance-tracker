@@ -12,6 +12,7 @@ import {
 } from "chart.js";
 import supabase from "../../supabaseClient";
 import { useData } from "../../DataContext";
+import { decryptValue } from "../../utils/encryption";
 import {
   Calendar,
   EyeOff,
@@ -78,15 +79,21 @@ function BudgetVsSpentChart() {
       return;
     }
 
-    setBudgetItems(items);
+    // Decrypt budget values for each item
+    const decryptedItems = items.map(item => ({
+      ...item,
+      budget: decryptValue(item.budget, userId),
+    }));
+
+    setBudgetItems(decryptedItems);
 
     // Update hiddenItems state based on database values
     const hiddenSet = new Set(
-      items.filter((item) => item.hidden).map((item) => item.id)
+      decryptedItems.filter((item) => item.hidden).map((item) => item.id)
     );
     setHiddenItems(hiddenSet);
 
-    const visibleItems = items.filter((item) => !item.hidden);
+    const visibleItems = decryptedItems.filter((item) => !item.hidden);
 
     const budgetValues = visibleItems.map((item) => item.budget);
     const spentValues = visibleItems.map((item) =>
@@ -382,34 +389,42 @@ function BudgetVsSpentChart() {
     : 0;
 
   return (
-    <div className="w-full mx-auto p-6 bg-white dark:bg-slate-800 shadow-lg rounded-lg">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-3xl font-bold text-gray-800 dark:text-white flex items-center">
-          <BarChart3 className="mr-2 text-blue-600 dark:text-blue-400" size={28} />
-          Budget vs Spent
-        </h1>
+    <div className="w-full mx-auto p-6 bg-white dark:bg-slate-800 shadow-xl rounded-xl border border-gray-200 dark:border-gray-700">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center gap-3">
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg">
+            <BarChart3 className="text-white" size={24} />
+          </div>
+          <h1 className="text-3xl font-bold text-gray-800 dark:text-white">
+            Budget vs Spent
+          </h1>
+        </div>
         <button
           onClick={handleRefresh}
-          className="bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 p-2 rounded-full hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors"
+          className="flex items-center gap-2 bg-blue-500 dark:bg-blue-600 hover:bg-blue-600 dark:hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg transition-all shadow-md hover:shadow-lg font-medium"
           title="Refresh data"
         >
-          <RefreshCw size={20} className={isLoading ? "animate-spin" : ""} />
+          <RefreshCw size={18} className={isLoading ? "animate-spin" : ""} />
+          <span className="hidden sm:inline">Refresh</span>
         </button>
       </div>
-      {/* Date selection card */}
-      <div className="bg-white dark:bg-slate-700 rounded-lg p-6 mb-6 shadow border border-gray-100 dark:border-gray-600">
-        <div className="flex items-center gap-2 mb-4">
-          <Calendar className="text-blue-600 dark:text-blue-400" size={20} />
-          <h2 className="font-semibold text-gray-800 dark:text-white text-lg">Date Range</h2>
+      {/* Date Range Selector */}
+      <div className="bg-white dark:bg-slate-700 rounded-xl p-6 mb-8 shadow-xl border border-gray-200 dark:border-gray-700">
+        <div className="flex items-center gap-3 mb-5">
+          <div className="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400 shadow-sm">
+            <Calendar size={20} />
+          </div>
+          <h2 className="text-xl font-bold text-gray-800 dark:text-white">Date Range</h2>
         </div>
 
         <div className="space-y-5">
           {/* Date inputs */}
-          <div className="grid grid-cols-2 gap-2 sm:gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label
                 htmlFor="fromDate"
-                className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-200 mb-1 sm:mb-2"
+                className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2"
               >
                 From Date
               </label>
@@ -419,13 +434,13 @@ function BudgetVsSpentChart() {
                 name="fromDate"
                 value={dateRange.fromDate}
                 onChange={handleDateChange}
-                className="w-full rounded-md border border-gray-300 dark:border-gray-600 px-2 py-1 sm:px-4 sm:py-2 text-xs sm:text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-white dark:bg-slate-600 text-gray-800 dark:text-white"
+                className="w-full rounded-lg border-2 border-gray-300 dark:border-gray-600 px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-white dark:bg-slate-600 text-gray-800 dark:text-white shadow-sm"
               />
             </div>
             <div>
               <label
                 htmlFor="toDate"
-                className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-200 mb-1 sm:mb-2"
+                className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2"
               >
                 To Date
               </label>
@@ -435,79 +450,118 @@ function BudgetVsSpentChart() {
                 name="toDate"
                 value={dateRange.toDate}
                 onChange={handleDateChange}
-                className="w-full rounded-md border border-gray-300 dark:border-gray-600 px-2 py-1 sm:px-4 sm:py-2 text-xs sm:text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-white dark:bg-slate-600 text-gray-800 dark:text-white"
+                className="w-full rounded-lg border-2 border-gray-300 dark:border-gray-600 px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-white dark:bg-slate-600 text-gray-800 dark:text-white shadow-sm"
               />
             </div>
           </div>
 
-          {/* Quick selection buttons - now always in one row */}
-          <div className="flex gap-2 min-w-0">
+          {/* Quick selection buttons */}
+          <div className="grid grid-cols-3 gap-3">
             <button
               onClick={setCurrentMonth}
-              className="bg-blue-50 dark:bg-blue-900 text-blue-700 dark:text-blue-300 px-3 py-1.5 rounded hover:bg-blue-600 hover:text-white dark:hover:bg-blue-700 transition-colors font-medium whitespace-nowrap flex-1 min-w-0 text-[min(2vw,12px)]"
+              className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/30 text-blue-700 dark:text-blue-300 px-4 py-3 rounded-lg hover:from-blue-500 hover:to-blue-600 hover:text-white dark:hover:from-blue-600 dark:hover:to-blue-700 transition-all font-semibold shadow-sm hover:shadow-md border border-blue-200 dark:border-blue-700"
             >
-              Current Month
+              <span className="hidden sm:inline">Current Month</span>
+              <span className="sm:hidden">This Month</span>
             </button>
             <button
               onClick={setPreviousMonth}
-              className="bg-blue-50 dark:bg-blue-900 text-blue-700 dark:text-blue-300 px-3 py-1.5 rounded hover:bg-blue-600 hover:text-white dark:hover:bg-blue-700 transition-colors font-medium whitespace-nowrap flex-1 min-w-0 text-[min(2vw,12px)]"
+              className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/30 text-blue-700 dark:text-blue-300 px-4 py-3 rounded-lg hover:from-blue-500 hover:to-blue-600 hover:text-white dark:hover:from-blue-600 dark:hover:to-blue-700 transition-all font-semibold shadow-sm hover:shadow-md border border-blue-200 dark:border-blue-700"
             >
-              Previous Month
+              <span className="hidden sm:inline">Previous Month</span>
+              <span className="sm:hidden">Last Month</span>
             </button>
             <button
               onClick={setCurrentYear}
-              className="bg-blue-50 dark:bg-blue-900 text-blue-700 dark:text-blue-300 px-3 py-1.5 rounded hover:bg-blue-600 hover:text-white dark:hover:bg-blue-700 transition-colors font-medium whitespace-nowrap flex-1 min-w-0 text-[min(2vw,12px)]"
+              className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/30 text-blue-700 dark:text-blue-300 px-4 py-3 rounded-lg hover:from-blue-500 hover:to-blue-600 hover:text-white dark:hover:from-blue-600 dark:hover:to-blue-700 transition-all font-semibold shadow-sm hover:shadow-md border border-blue-200 dark:border-blue-700"
             >
-              Current Year
+              <span className="hidden sm:inline">Current Year</span>
+              <span className="sm:hidden">This Year</span>
             </button>
           </div>
         </div>
       </div>
-      {/* Budget summary card */}
-      <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-6">
-        <div className="bg-blue-100 dark:bg-blue-900 rounded-lg p-2 sm:p-4 shadow-sm">
-          <p className="text-xs sm:text-sm font-medium text-blue-800 dark:text-blue-300 mb-1">
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 p-6 rounded-xl border-2 border-blue-200 dark:border-blue-700 shadow-sm">
+          <div className="text-sm font-medium text-blue-700 dark:text-blue-300 mb-2">
             Total Budgeted
-          </p>
-          <p className="text-xs sm:text-sm font-bold text-blue-900 dark:text-blue-100">
-            ${totalBudgeted.toFixed(2)}
-          </p>
+          </div>
+          <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">
+            ${new Intl.NumberFormat('en-US', {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            }).format(totalBudgeted)}
+          </div>
         </div>
-        <div className="bg-red-100 dark:bg-red-900 rounded-lg p-2 sm:p-4 shadow-sm">
-          <p className="text-xs sm:text-sm font-medium text-red-800 dark:text-red-300 mb-1">
+        
+        <div className="bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20 p-6 rounded-xl border-2 border-orange-200 dark:border-orange-700 shadow-sm">
+          <div className="text-sm font-medium text-orange-700 dark:text-orange-300 mb-2">
             Total Spent
-          </p>
-          <p className="text-xs sm:text-sm font-bold text-red-900 dark:text-red-100">
-            ${totalSpent.toFixed(2)}
-          </p>
+          </div>
+          <div className="text-3xl font-bold text-orange-600 dark:text-orange-400">
+            ${new Intl.NumberFormat('en-US', {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            }).format(totalSpent)}
+          </div>
         </div>
-        <div
-          className={`${
-            percentOfBudgetUsed > 100 ? "bg-red-100 dark:bg-red-900" : "bg-green-100 dark:bg-green-900"
-          } rounded-lg p-2 sm:p-4 shadow-sm`}
-        >
-          <p className="text-xs sm:text-sm font-medium text-gray-800 dark:text-gray-200 mb-1">
+        
+        <div className={`bg-gradient-to-br ${
+          percentOfBudgetUsed > 100 
+            ? 'from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 border-red-200 dark:border-red-700' 
+            : 'from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 border-green-200 dark:border-green-700'
+        } p-6 rounded-xl border-2 shadow-sm`}>
+          <div className={`text-sm font-medium mb-2 ${
+            percentOfBudgetUsed > 100 
+              ? 'text-red-700 dark:text-red-300' 
+              : 'text-green-700 dark:text-green-300'
+          }`}>
             Budget Usage
-          </p>
-          <p
-            className={`text-xs sm:text-sm font-bold ${
-              percentOfBudgetUsed > 100 ? "text-red-900 dark:text-red-100" : "text-green-900 dark:text-green-100"
-            }`}
-          >
+          </div>
+          <div className={`text-3xl font-bold ${
+            percentOfBudgetUsed > 100 
+              ? 'text-red-600 dark:text-red-400' 
+              : 'text-green-600 dark:text-green-400'
+          }`}>
             {percentOfBudgetUsed.toFixed(1)}%
-          </p>
+          </div>
+          <div className="mt-2">
+            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5 overflow-hidden">
+              <div 
+                className={`h-2.5 rounded-full transition-all duration-500 ${
+                  percentOfBudgetUsed > 100 
+                    ? 'bg-red-600 dark:bg-red-500' 
+                    : 'bg-green-600 dark:bg-green-500'
+                }`}
+                style={{ width: `${Math.min(percentOfBudgetUsed, 100)}%` }}
+              ></div>
+            </div>
+          </div>
         </div>
       </div>
 
       {/* Chart */}
-      <div className="w-full bg-white dark:bg-slate-700 rounded-lg shadow p-5 mb-6 border border-gray-200 dark:border-gray-600">
-        <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">
-          Budget vs. Spending
-        </h3>
+      <div className="w-full bg-white dark:bg-slate-700 rounded-xl shadow-xl p-6 mb-8 border border-gray-200 dark:border-gray-700">
+        <div className="flex items-center gap-3 mb-5">
+          <div className="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-purple-100 dark:bg-purple-900 text-purple-600 dark:text-purple-400 shadow-sm">
+            <BarChart3 size={20} />
+          </div>
+          <h3 className="text-xl font-bold text-gray-800 dark:text-white">
+            Budget vs. Spending Comparison
+          </h3>
+        </div>
         <div className="h-80 md:h-96 w-full">
           {isLoading ? (
-            <div className="h-full w-full flex items-center justify-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+            <div className="h-full w-full flex flex-col items-center justify-center gap-4">
+              <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-200 border-t-blue-600 dark:border-blue-800 dark:border-t-blue-400"></div>
+              <p className="text-gray-500 dark:text-gray-400 font-medium">Loading chart data...</p>
+            </div>
+          ) : chartData.labels.length === 0 ? (
+            <div className="h-full w-full flex flex-col items-center justify-center gap-4">
+              <BarChart3 className="w-16 h-16 text-gray-300 dark:text-gray-600" />
+              <p className="text-gray-500 dark:text-gray-400 font-medium">No budget data to display</p>
+              <p className="text-gray-400 dark:text-gray-500 text-sm">Add budget items to see the comparison</p>
             </div>
           ) : (
             <Bar
@@ -519,53 +573,61 @@ function BudgetVsSpentChart() {
         </div>
       </div>
 
-      {/* Category visibility controls */}
-      <div
-        className={`bg-white dark:bg-slate-700 rounded-lg p-4 shadow border border-gray-200 dark:border-gray-600 ${
-          !isOpen ? "w-fit" : "w-full"
-        }`}
-      >
-        <div
-          className="flex items-center gap-2 cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors whitespace-nowrap"
+      {/* Category Visibility Controls */}
+      <div className="bg-white dark:bg-slate-700 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <button
+          className="w-full flex items-center justify-between p-6 cursor-pointer hover:bg-gray-50 dark:hover:bg-slate-600 transition-colors"
           onClick={() => setIsOpen(!isOpen)}
         >
-          <Eye className="text-blue-500 dark:text-blue-400" size={20} />
-          <h2 className="font-semibold text-gray-800 dark:text-white text-lg">
-            Category Visibility
-          </h2>
-          <div className="ml-2">
+          <div className="flex items-center gap-3">
+            <div className="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-indigo-100 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-400 shadow-sm">
+              <Eye size={20} />
+            </div>
+            <h2 className="text-xl font-bold text-gray-800 dark:text-white">
+              Category Visibility
+            </h2>
+            <span className="text-sm text-gray-500 dark:text-gray-400 font-medium">
+              ({budgetItems.filter(item => !item.hidden).length} of {budgetItems.length} visible)
+            </span>
+          </div>
+          <div className="p-2 rounded-lg bg-gray-100 dark:bg-slate-600">
             {isOpen ? (
-              <ChevronUp size={18} className="text-gray-500 dark:text-gray-400" />
+              <ChevronUp size={20} className="text-gray-600 dark:text-gray-300" />
             ) : (
-              <ChevronDown size={18} className="text-gray-500 dark:text-gray-400" />
+              <ChevronDown size={20} className="text-gray-600 dark:text-gray-300" />
             )}
           </div>
-        </div>
+        </button>
 
         {isOpen && (
-          <div className="flex flex-wrap gap-2 items-center mt-4">
-            {budgetItems.map((item) => (
-              <button
-                key={item.id}
-                onClick={() => toggleItemVisibility(item.id)}
-                className={`px-3 py-1.5 rounded-full flex items-center gap-2 text-sm font-medium transition-all ${
-                  item.hidden
-                    ? "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 hover:text-gray-800 dark:hover:text-gray-200"
-                    : "bg-blue-50 dark:bg-blue-900 text-blue-600 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-800 hover:text-blue-700 dark:hover:text-blue-200 ring-1 ring-blue-200 dark:ring-blue-700"
-                }`}
-              >
-                {item.hidden ? (
-                  <EyeOff size={14} className="text-gray-500 dark:text-gray-400" />
-                ) : (
-                  <Eye size={14} className="text-blue-500 dark:text-blue-400" />
-                )}
-                <span>{item.name}</span>
-              </button>
-            ))}
-            {budgetItems.length === 0 && (
-              <p className="text-gray-500 dark:text-gray-400 italic px-2 py-4 w-full text-center">
-                No budget items found
-              </p>
+          <div className="px-6 pb-6 border-t border-gray-200 dark:border-gray-600 pt-5">
+            {budgetItems.length > 0 ? (
+              <div className="flex flex-wrap gap-3">
+                {budgetItems.map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => toggleItemVisibility(item.id)}
+                    className={`px-4 py-2.5 rounded-xl flex items-center gap-2 text-sm font-semibold transition-all shadow-sm hover:shadow-md ${
+                      item.hidden
+                        ? "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 border-2 border-gray-300 dark:border-gray-600"
+                        : "bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/30 text-blue-700 dark:text-blue-300 hover:from-blue-100 hover:to-blue-200 dark:hover:from-blue-800/40 dark:hover:to-blue-700/40 border-2 border-blue-300 dark:border-blue-600"
+                    }`}
+                  >
+                    {item.hidden ? (
+                      <EyeOff size={16} className="text-gray-500 dark:text-gray-400" />
+                    ) : (
+                      <Eye size={16} className="text-blue-600 dark:text-blue-400" />
+                    )}
+                    <span>{item.name}</span>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 bg-gray-50 dark:bg-slate-600 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-500">
+                <BarChart3 className="w-12 h-12 mx-auto text-gray-400 dark:text-gray-500 mb-3" />
+                <p className="text-gray-500 dark:text-gray-400 font-medium">No budget items found</p>
+                <p className="text-gray-400 dark:text-gray-500 text-sm mt-1">Create budget items to track spending</p>
+              </div>
             )}
           </div>
         )}

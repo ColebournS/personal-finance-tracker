@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, useCallback, useMemo } from "react";
 import { useAuth } from "./AuthContext";
 import supabase from "./supabaseClient";
+import { decryptValue } from "./utils/encryption";
 
 const DataContext = createContext({});
 
@@ -67,7 +68,15 @@ export const DataProvider = ({ children }) => {
           console.error("Error fetching income data:", error);
           throw new Error(error.message);
         } else if (data) {
-          setIncome(data);
+          // Decrypt sensitive income fields
+          const decryptedIncome = {
+            ...data,
+            yearlySalary: decryptValue(data.yearlySalary, userId),
+            retirementContribution: decryptValue(data.retirementContribution, userId),
+            employerMatch: decryptValue(data.employerMatch, userId),
+            monthlyTakeHome: decryptValue(data.monthlyTakeHome, userId),
+          };
+          setIncome(decryptedIncome);
         }
       });
     } catch (err) {
@@ -101,7 +110,15 @@ export const DataProvider = ({ children }) => {
           console.error("Error fetching budget groups:", error);
           throw new Error(error.message);
         } else {
-          setBudgetGroups(data || []);
+          // Decrypt budget values for each budget item
+          const decryptedBudgetGroups = (data || []).map(group => ({
+            ...group,
+            budget_items: (group.budget_items || []).map(item => ({
+              ...item,
+              budget: decryptValue(item.budget, userId),
+            })),
+          }));
+          setBudgetGroups(decryptedBudgetGroups);
         }
       });
     } catch (err) {
@@ -127,6 +144,7 @@ export const DataProvider = ({ children }) => {
             budget_items (
               id,
               name,
+              budget,
               budget_groups (
                 id,
                 name
@@ -141,7 +159,15 @@ export const DataProvider = ({ children }) => {
           console.error("Error fetching purchases:", error);
           throw new Error(error.message);
         } else {
-          setPurchases(data || []);
+          // Decrypt budget values in nested budget_items
+          const decryptedPurchases = (data || []).map(purchase => ({
+            ...purchase,
+            budget_items: purchase.budget_items ? {
+              ...purchase.budget_items,
+              budget: decryptValue(purchase.budget_items.budget, userId),
+            } : null,
+          }));
+          setPurchases(decryptedPurchases);
         }
       });
     } catch (err) {
