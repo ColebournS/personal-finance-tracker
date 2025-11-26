@@ -184,26 +184,26 @@ const SettingsButton = ({
   }, []);
 
   return (
-    <div className="fixed top-2 right-2 z-50">
+    <div className="z-50">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="p-4 rounded-md bg-blue-200 hover:bg-blue-400 shadow-md transition-colors"
+        className="p-4 rounded-md bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 shadow-md transition-colors"
         aria-label="Settings"
       >
-        <Settings className="w-6 h-6 text-gray-700" />
+        <Settings className="w-6 h-6 text-gray-700 dark:text-gray-200" />
       </button>
 
       {isOpen && (
         <div
           ref={popupRef}
-          className="absolute right-0 mt-2 w-80 rounded-lg bg-white shadow-lg ring-1 ring-black ring-opacity-5"
+          className="absolute right-0 mt-2 w-80 rounded-lg bg-white dark:bg-slate-800 shadow-lg ring-1 ring-black dark:ring-gray-600 ring-opacity-5"
         >
           <div className="p-4">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900">Settings</h2>
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Settings</h2>
               <button
                 onClick={() => setIsOpen(false)}
-                className="text-gray-400 hover:text-gray-500"
+                className="text-gray-400 dark:text-gray-500 hover:text-gray-500 dark:hover:text-gray-400"
               >
                 <span className="sr-only">Close</span>
                 <svg
@@ -223,12 +223,12 @@ const SettingsButton = ({
             </div>
 
             <div className="space-y-4">
-              <div className="flex items-center justify-between p-2 hover:bg-gray-50 rounded-md">
+              <div className="flex items-center justify-between p-2 hover:bg-gray-50 dark:hover:bg-slate-700 rounded-md">
                 <div>
-                  <h3 className="text-sm font-medium text-gray-900">
+                  <h3 className="text-sm font-medium text-gray-900 dark:text-white">
                     Hide Income
                   </h3>
-                  <p className="text-sm text-gray-500">
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
                     Toggle income visibility
                   </p>
                 </div>
@@ -239,16 +239,16 @@ const SettingsButton = ({
                     onChange={handleIncomeToggle}
                     className="sr-only peer"
                   />
-                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                  <div className="w-11 h-6 bg-gray-200 dark:bg-gray-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                 </label>
               </div>
 
-              <div className="flex items-center justify-between p-2 hover:bg-gray-50 rounded-md">
+              <div className="flex items-center justify-between p-2 hover:bg-gray-50 dark:hover:bg-slate-700 rounded-md">
                 <div>
-                  <h3 className="text-sm font-medium text-gray-900">
+                  <h3 className="text-sm font-medium text-gray-900 dark:text-white">
                     Hide Recommended Budget
                   </h3>
-                  <p className="text-sm text-gray-500">
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
                     Toggle recommended budget visibility
                   </p>
                 </div>
@@ -259,13 +259,13 @@ const SettingsButton = ({
                     onChange={handleRecommendedToggle}
                     className="sr-only peer"
                   />
-                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                  <div className="w-11 h-6 bg-gray-200 dark:bg-gray-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                 </label>
               </div>
 
               <button
                 onClick={exportToExcel}
-                className="w-full flex items-center justify-center gap-2 p-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors"
+                className="w-full flex items-center justify-center gap-2 p-2 text-sm font-medium text-white bg-blue-600 dark:bg-blue-700 hover:bg-blue-700 dark:hover:bg-blue-800 rounded-md transition-colors"
               >
                 <Download className="w-4 h-4" />
                 Export Data
@@ -273,10 +273,10 @@ const SettingsButton = ({
               
               <BulkPurchaseImport />
 
-              <div className="border-t border-gray-200 pt-4">
+              <div className="border-t border-gray-200 dark:border-gray-600 pt-4">
                 <button
                   onClick={handleSignOut}
-                  className="w-full flex items-center justify-center gap-2 p-2 text-sm font-medium text-red-600 hover:text-red-700 hover:bg-red-50 rounded-md transition-colors"
+                  className="w-full flex items-center justify-center gap-2 p-2 text-sm font-medium text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-colors"
                 >
                   <LogOut className="w-4 h-4" />
                   Sign Out

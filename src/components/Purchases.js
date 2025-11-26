@@ -103,29 +103,29 @@ const PurchasesList = () => {
   };
 
   return (
-    <div className="w-full max-w-screen overflow-x-auto p-6 bg-white shadow-lg rounded-lg">
-      <h1 className="text-3xl font-bold text-center text-gray-800 mb-6">
+    <div className="w-full max-w-screen overflow-x-auto p-6 bg-white dark:bg-slate-800 shadow-lg rounded-lg">
+      <h1 className="text-3xl font-bold text-center text-gray-800 dark:text-white mb-6">
         Purchases
       </h1>
 
       <div className="w-full overflow-x-auto">
         <div className="inline-block min-w-full align-middle">
-          <table className="min-w-full table-auto border bg-blue-50 rounded-md">
+          <table className="min-w-full table-auto border dark:border-gray-600 bg-gray-50 dark:bg-slate-700 rounded-md">
             <thead>
-              <tr className="bg-blue-100">
-                <th className="p-3 text-left text-gray-700">Date</th>
-                <th className="p-3 text-left text-gray-700">Item Name</th>
-                <th className="p-3 text-left text-gray-700">Cost</th>
-                <th className="p-3 text-left text-gray-700">Budget Item</th>
+              <tr className="bg-gray-100 dark:bg-slate-600">
+                <th className="p-3 text-left text-gray-700 dark:text-gray-200">Date</th>
+                <th className="p-3 text-left text-gray-700 dark:text-gray-200">Item Name</th>
+                <th className="p-3 text-left text-gray-700 dark:text-gray-200">Cost</th>
+                <th className="p-3 text-left text-gray-700 dark:text-gray-200">Budget Item</th>
                 <th className="p-3 w-10"></th>
               </tr>
             </thead>
             <tbody>
               {currentPurchases.map((purchase) => (
-                <tr key={purchase.id} className="border-b hover:bg-blue-100">
+                <tr key={purchase.id} className="border-b dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-slate-600">
                   <td
                     onClick={() => handleCellEditStart("timestamp", purchase)}
-                    className="p-2"
+                    className="p-2 text-gray-800 dark:text-white"
                   >
                     {editableField === "timestamp" &&
                     editingId === purchase.id ? (
@@ -138,7 +138,7 @@ const PurchasesList = () => {
                           setEditableField(null);
                           setEditingId(null);
                         }}
-                        className="w-full px-2 py-1 border rounded"
+                        className="w-full px-2 py-1 border dark:border-gray-600 rounded bg-white dark:bg-slate-600 text-gray-800 dark:text-white"
                         autoFocus
                       />
                     ) : (
@@ -153,7 +153,7 @@ const PurchasesList = () => {
                   </td>
                   <td
                     onClick={() => handleCellEditStart("itemName", purchase)}
-                    className="p-2 truncate"
+                    className="p-2 truncate text-gray-800 dark:text-white"
                     style={{
                       maxWidth: "6ch",
                       overflow: "hidden",
@@ -171,7 +171,7 @@ const PurchasesList = () => {
                           setEditableField(null);
                           setEditingId(null);
                         }}
-                        className="w-full px-2 py-1 border rounded"
+                        className="w-full px-2 py-1 border dark:border-gray-600 rounded bg-white dark:bg-slate-600 text-gray-800 dark:text-white"
                         autoFocus
                       />
                     ) : (
@@ -180,7 +180,7 @@ const PurchasesList = () => {
                   </td>
                   <td
                     onClick={() => handleCellEditStart("cost", purchase)}
-                    className="p-2"
+                    className="p-2 text-gray-800 dark:text-white"
                   >
                     {editableField === "cost" && editingId === purchase.id ? (
                       <input
@@ -192,7 +192,7 @@ const PurchasesList = () => {
                           setEditableField(null);
                           setEditingId(null);
                         }}
-                        className="w-full px-2 py-1 border rounded"
+                        className="w-full px-2 py-1 border dark:border-gray-600 rounded bg-white dark:bg-slate-600 text-gray-800 dark:text-white"
                         min="0"
                         step="0.01"
                         autoFocus
@@ -205,7 +205,7 @@ const PurchasesList = () => {
                     onClick={() =>
                       handleCellEditStart("budgetItemId", purchase)
                     }
-                    className="p-2 text-overflow:ellipsis"
+                    className="p-2 text-overflow:ellipsis text-gray-800 dark:text-white"
                   >
                     {editableField === "budgetItemId" &&
                     editingId === purchase.id ? (
@@ -220,7 +220,7 @@ const PurchasesList = () => {
                           setEditableField(null);
                           setEditingId(null);
                         }}
-                        className="w-full px-2 py-1 border rounded"
+                        className="w-full px-2 py-1 border dark:border-gray-600 rounded bg-white dark:bg-slate-600 text-gray-800 dark:text-white"
                         autoFocus
                       >
                         <option value="">Select a budget item</option>
@@ -249,7 +249,7 @@ const PurchasesList = () => {
                           handleDelete(purchase.id);
                         }
                       }}
-                      className="text-red-500 hover:text-red-700 transition-colors"
+                      className="text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-colors"
                     >
                       <Trash2 size={20} />
                     </button>
@@ -261,7 +261,7 @@ const PurchasesList = () => {
 
           {/* Pagination Controls */}
           <div className="mt-4 flex items-center justify-between">
-            <div className="text-sm text-gray-700">
+            <div className="text-sm text-gray-700 dark:text-gray-300">
               Showing {startIndex + 1} to {Math.min(endIndex, purchases.length)}{" "}
               of {purchases.length} purchases
             </div>
@@ -271,13 +271,13 @@ const PurchasesList = () => {
                 disabled={currentPage === 1}
                 className={`p-2 rounded ${
                   currentPage === 1
-                    ? "text-gray-400 cursor-not-allowed"
-                    : "text-blue-600 hover:text-blue-800"
+                    ? "text-gray-400 dark:text-gray-600 cursor-not-allowed"
+                    : "text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
                 }`}
               >
                 <ChevronLeft size={20} />
               </button>
-              <span className="text-sm text-gray-700">
+              <span className="text-sm text-gray-700 dark:text-gray-300">
                 Page {currentPage} of {totalPages}
               </span>
               <button
@@ -285,8 +285,8 @@ const PurchasesList = () => {
                 disabled={currentPage === totalPages}
                 className={`p-2 rounded ${
                   currentPage === totalPages
-                    ? "text-gray-400 cursor-not-allowed"
-                    : "text-blue-600 hover:text-blue-800"
+                    ? "text-gray-400 dark:text-gray-600 cursor-not-allowed"
+                    : "text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
                 }`}
               >
                 <ChevronRight size={20} />

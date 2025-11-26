@@ -74,11 +74,11 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-blue-100">
-      <div className={`grid 1 bg-blue-100 pb-20`}>
+    <div className="min-h-screen flex items-center justify-center bg-white dark:bg-black">
+      <div className={`grid 1 bg-white dark:bg-black pb-20`}>
         <div className="flex flex-col gap-4 my-5 mx-4">
-          <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
-            <h2 className="text-2xl font-bold mb-6 text-center">
+          <div className="bg-white dark:bg-slate-800 p-8 rounded-lg shadow-md w-full max-w-md">
+            <h2 className="text-2xl font-bold mb-6 text-center text-gray-800 dark:text-white">
               Welcome to Budget Tracker
             </h2>
             <form className="space-y-4" onSubmit={handleSignIn}>
@@ -86,7 +86,7 @@ const Auth = () => {
                 <input
                   type="email"
                   placeholder="Email"
-                  className="w-full p-2 border rounded"
+                  className="w-full p-2 border dark:border-gray-600 rounded bg-white dark:bg-slate-700 text-gray-800 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                 />
@@ -95,17 +95,17 @@ const Auth = () => {
                 <input
                   type="password"
                   placeholder="Password"
-                  className="w-full p-2 border rounded"
+                  className="w-full p-2 border dark:border-gray-600 rounded bg-white dark:bg-slate-700 text-gray-800 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                 />
               </div>
-              {error && <div className="text-red-500 text-sm">{error}</div>}
+              {error && <div className="text-red-500 dark:text-red-400 text-sm">{error}</div>}
               <div className="space-x-4">
                 <button
                   type="submit"
                   disabled={loading}
-                  className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 disabled:opacity-50"
+                  className="bg-blue-500 dark:bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-600 dark:hover:bg-blue-700 disabled:opacity-50"
                 >
                   {loading ? "Loading..." : "Sign In"}
                 </button>
@@ -113,7 +113,7 @@ const Auth = () => {
                   type="button"
                   onClick={handleSignUp}
                   disabled={loading}
-                  className="bg-white text-blue-500 px-4 py-2 rounded border border-blue-500 hover:bg-blue-50 disabled:opacity-50"
+                  className="bg-white dark:bg-slate-700 text-blue-500 dark:text-blue-400 px-4 py-2 rounded border border-blue-500 dark:border-blue-400 hover:bg-blue-50 dark:hover:bg-slate-600 disabled:opacity-50"
                 >
                   Sign Up
                 </button>

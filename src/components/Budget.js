@@ -204,15 +204,15 @@ function Budget() {
   }, [groups, income, calculateTotalSpent]);
 
   return (
-    <div className="w-full mx-auto p-6 bg-white shadow-lg rounded-lg">
-      <h1 className="text-3xl font-bold text-center text-gray-800 mb-6">
+    <div className="w-full mx-auto p-6 bg-white dark:bg-slate-800 shadow-lg rounded-lg">
+      <h1 className="text-3xl font-bold text-center text-gray-800 dark:text-white mb-6">
         Budget
       </h1>
       <div className="flex justify-between items-start mb-6">
-        <div className="text-xl font-semibold">Income: ${income}</div>
+        <div className="text-xl font-semibold text-gray-800 dark:text-white">Income: ${income}</div>
         <button
           onClick={handleAddGroup}
-          className="flex items-center bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition-colors"
+          className="flex items-center bg-blue-500 dark:bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-600 dark:hover:bg-blue-700 transition-colors"
         >
           {!isSmallScreen && <PlusCircle className="mr-2" size={20} />}
           Add Group
@@ -220,22 +220,22 @@ function Budget() {
       </div>
 
       {groups.map((group) => (
-        <div key={group.id} className="mb-6 bg-gray-50 p-4 rounded-lg border">
+        <div key={group.id} className="mb-6 bg-gray-50 dark:bg-slate-700 p-4 rounded-lg border dark:border-gray-600">
           <div className="flex justify-between items-center mb-4">
             <input
               type="text"
               value={tempGroupNames[group.id] ?? group.name}
               onChange={(e) => handleGroupInputChange(group.id, e.target.value)}
-              className="text-xl font-semibold text-gray-700 bg-transparent border-b border-gray-300 w-full hover:bg-blue-200 rounded-sm pl-2"
+              className="text-xl font-semibold text-gray-700 dark:text-gray-200 bg-transparent border-b border-gray-300 dark:border-gray-600 w-full hover:bg-blue-200 dark:hover:bg-slate-600 rounded-sm pl-2"
             />
             <div className="flex space-x-1">
-              <div className="flex items-center ml-2 px-3 py-1 border rounded-md bg-gray-200">
+              <div className="flex items-center ml-2 px-3 py-1 border dark:border-gray-600 rounded-md bg-gray-200 dark:bg-slate-600 text-gray-800 dark:text-white">
                 {group.budget_items.reduce((sum, item) => sum + item.budget, 0)}
                 $
               </div>
               <button
                 onClick={() => handleAddItem(group.id)}
-                className="flex items-center bg-blue-500 text-white px-2 py-1 rounded-md hover:bg-blue-600 transition-colors"
+                className="flex items-center bg-blue-500 dark:bg-blue-600 text-white px-2 py-1 rounded-md hover:bg-blue-600 dark:hover:bg-blue-700 transition-colors"
               >
                 <PlusCircle size={isSmallScreen ? 24 : 30} />
                 {!isSmallScreen && <span className="text-sm">Add Item</span>}
@@ -250,7 +250,7 @@ function Budget() {
                     handleDeleteGroup(group.id);
                   }
                 }}
-                className="flex items-center bg-red-500 text-white px-2 py-1 rounded-md hover:bg-red-600 transition-colors"
+                className="flex items-center bg-red-500 dark:bg-red-600 text-white px-2 py-1 rounded-md hover:bg-red-600 dark:hover:bg-red-700 transition-colors"
               >
                 <Trash2 size={isSmallScreen ? 24 : 30} />
                 {!isSmallScreen && (
@@ -261,19 +261,19 @@ function Budget() {
           </div>
 
           <div className="overflow-x-auto rounded-md">
-            <table className="w-full border bg-blue-50 rounded-md">
+            <table className="w-full border dark:border-gray-600 bg-gray-50 dark:bg-slate-600 rounded-md">
               <thead>
-                <tr className="bg-blue-100">
-                  <th className="w-full p-3 font-semibold text-left text-gray-700">
+                <tr className="bg-gray-100 dark:bg-slate-500">
+                  <th className="w-full p-3 font-semibold text-left text-gray-700 dark:text-gray-200">
                     Item
                   </th>
-                  <th className="w-15 p-3 font-semibold text-left text-gray-700">
+                  <th className="w-15 p-3 font-semibold text-left text-gray-700 dark:text-gray-200">
                     Budget
                   </th>
-                  <th className="w-15 p-3 font-semibold text-left text-gray-700">
+                  <th className="w-15 p-3 font-semibold text-left text-gray-700 dark:text-gray-200">
                     Spent
                   </th>
-                  <th className="w-10 p-3 font-semibold text-gray-700"></th>
+                  <th className="w-10 p-3 font-semibold text-gray-700 dark:text-gray-200"></th>
                 </tr>
               </thead>
               <tbody>
@@ -286,7 +286,7 @@ function Budget() {
                         onChange={(e) =>
                           handleItemInputChange(item.id, e.target.value)
                         }
-                        className="w-full px-2 bg-transparent hover:bg-blue-200 rounded-sm"
+                        className="w-full px-2 bg-transparent hover:bg-gray-200 dark:hover:bg-slate-500 rounded-sm text-gray-800 dark:text-white"
                       />
                     </td>
                     <td className="p-1">
@@ -296,17 +296,17 @@ function Budget() {
                         onBlur={(e) =>
                           handleItemBudgetChange(item.id, e.target.value)
                         }
-                        className="w-full px-2 bg-transparent hover:bg-blue-200 rounded-sm"
+                        className="w-full px-2 bg-transparent hover:bg-gray-200 dark:hover:bg-slate-500 rounded-sm text-gray-800 dark:text-white"
                       />
                     </td>
                     <td className="p-1 w-10">
                       <span
                         className={`text-sm ${
                           calculateSpent(item.id) > item.budget
-                            ? "text-red-500"
+                            ? "text-red-500 dark:text-red-400"
                             : calculateSpent(item.id) === item.budget
-                            ? "text-yellow-500"
-                            : "text-green-500"
+                            ? "text-yellow-500 dark:text-yellow-400"
+                            : "text-green-500 dark:text-green-400"
                         }`}
                       >
                         ${calculateSpent(item.id).toFixed(2)}
@@ -315,7 +315,7 @@ function Budget() {
                     <td className="p-1">
                       <button
                         onClick={() => handleDeleteItem(item.id)}
-                        className="text-red-500 hover:text-red-700"
+                        className="text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300"
                       >
                         <Trash2 size={isSmallScreen ? 20 : 24} />
                       </button>
@@ -329,30 +329,30 @@ function Budget() {
       ))}
 
       <div className="grid sm:grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-4 bg-white p-4 rounded-lg shadow">
+        <div className="space-y-4 bg-white dark:bg-slate-700 p-4 rounded-lg shadow border dark:border-gray-600">
           <div className="flex justify-between">
-            <span className="text-gray-600">Total Budgeted:</span>
-            <span className="font-semibold">
+            <span className="text-gray-600 dark:text-gray-300">Total Budgeted:</span>
+            <span className="font-semibold text-gray-800 dark:text-white">
               ${totals.totalBudget.toFixed(2)}
             </span>
           </div>
           <div className="flex justify-between">
-            <span className="text-gray-600">Remaining Budget:</span>
-            <span className="font-semibold">
+            <span className="text-gray-600 dark:text-gray-300">Remaining Budget:</span>
+            <span className="font-semibold text-gray-800 dark:text-white">
               ${totals.remainingBudget.toFixed(2)}
             </span>
           </div>
         </div>
-        <div className="space-y-4 bg-white p-4 rounded-lg shadow">
+        <div className="space-y-4 bg-white dark:bg-slate-700 p-4 rounded-lg shadow border dark:border-gray-600">
           <div className="flex justify-between">
-            <span className="text-gray-600">Total Spent:</span>
-            <span className="font-semibold">
+            <span className="text-gray-600 dark:text-gray-300">Total Spent:</span>
+            <span className="font-semibold text-gray-800 dark:text-white">
               ${totals.totalSpent.toFixed(2)}
             </span>
           </div>
           <div className="flex justify-between">
-            <span className="text-gray-600">Remaining:</span>
-            <span className="font-semibold">
+            <span className="text-gray-600 dark:text-gray-300">Remaining:</span>
+            <span className="font-semibold text-gray-800 dark:text-white">
               ${totals.remainingSpent.toFixed(2)}
             </span>
           </div>

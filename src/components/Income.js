@@ -99,17 +99,17 @@ function Income() {
   } = calculateTaxes();
 
   return (
-    <div className="w-full mx-auto p-6 bg-white shadow-lg rounded-lg">
-      <h1 className="text-3xl font-bold text-center text-gray-800 mb-6">
+    <div className="w-full mx-auto p-6 bg-white dark:bg-slate-800 shadow-lg rounded-lg">
+      <h1 className="text-3xl font-bold text-center text-gray-800 dark:text-white mb-6">
         Income
       </h1>
 
       <div className="grid md:grid-cols-2 gap-6">
-        <div className="bg-gray-50 p-4 rounded-lg border">
-          <h2 className="text-xl font-semibold mb-4 text-gray-700">Earnings</h2>
+        <div className="bg-gray-50 dark:bg-slate-700 p-4 rounded-lg border dark:border-gray-600">
+          <h2 className="text-xl font-semibold mb-4 text-gray-700 dark:text-gray-200">Earnings</h2>
           <div className="space-y-4">
             <div>
-              <label className="block text-gray-600 mb-2">Pay Frequency</label>
+              <label className="block text-gray-600 dark:text-gray-300 mb-2">Pay Frequency</label>
               <select
                 value={
                   editableField === "payFrequency"
@@ -137,7 +137,7 @@ function Income() {
                     console.error("Error updating payFrequency:", err);
                   }
                 }}
-                className="w-full p-2 border rounded-md"
+                className="w-full p-2 border dark:border-gray-600 rounded-md bg-white dark:bg-slate-600 text-gray-800 dark:text-white"
               >
                 {["Weekly", "Bi-Weekly", "Monthly", "Semi-Monthly"].map(
                   (freq) => (
@@ -149,7 +149,7 @@ function Income() {
               </select>
             </div>
             <div>
-              <label className="block text-gray-600 mb-2">Yearly Salary</label>
+              <label className="block text-gray-600 dark:text-gray-300 mb-2">Yearly Salary</label>
               <input
                 type="number"
                 value={
@@ -160,19 +160,19 @@ function Income() {
                 onChange={(e) => setTempValue(e.target.value)}
                 onBlur={() => handleInputChange("yearlySalary")}
                 onClick={() => handleCellClick("yearlySalary")}
-                className="w-full p-2 border rounded-md"
+                className="w-full p-2 border dark:border-gray-600 rounded-md bg-white dark:bg-slate-600 text-gray-800 dark:text-white"
               />
             </div>
           </div>
         </div>
 
-        <div className="bg-gray-50 p-4 rounded-lg border">
-          <h2 className="text-xl font-semibold mb-4 text-gray-700">
+        <div className="bg-gray-50 dark:bg-slate-700 p-4 rounded-lg border dark:border-gray-600">
+          <h2 className="text-xl font-semibold mb-4 text-gray-700 dark:text-gray-200">
             Retirement
           </h2>
           <div className="space-y-4">
             <div>
-              <label className="block text-gray-600 mb-2">
+              <label className="block text-gray-600 dark:text-gray-300 mb-2">
                 401K Contribution (%)
               </label>
               <input
@@ -185,11 +185,11 @@ function Income() {
                 onChange={(e) => setTempValue(e.target.value)}
                 onBlur={() => handleInputChange("retirementContribution")}
                 onClick={() => handleCellClick("retirementContribution")}
-                className="w-full p-2 border rounded-md"
+                className="w-full p-2 border dark:border-gray-600 rounded-md bg-white dark:bg-slate-600 text-gray-800 dark:text-white"
               />
             </div>
             <div>
-              <label className="block text-gray-600 mb-2">
+              <label className="block text-gray-600 dark:text-gray-300 mb-2">
                 Employer Match (%)
               </label>
               <input
@@ -202,18 +202,18 @@ function Income() {
                 onChange={(e) => setTempValue(e.target.value)}
                 onBlur={() => handleInputChange("employerMatch")}
                 onClick={() => handleCellClick("employerMatch")}
-                className="w-full p-2 border rounded-md"
+                className="w-full p-2 border dark:border-gray-600 rounded-md bg-white dark:bg-slate-600 text-gray-800 dark:text-white"
               />
             </div>
             <div>
-              <label className="block text-gray-600 mb-2">
+              <label className="block text-gray-600 dark:text-gray-300 mb-2">
                 Total Annual 401K
               </label>
               <input
                 type="text"
                 value={`$${totalAnnual401K}`}
                 readOnly
-                className="w-full p-2 border rounded-md bg-gray-200"
+                className="w-full p-2 border dark:border-gray-600 rounded-md bg-gray-200 dark:bg-slate-600 text-gray-800 dark:text-white"
               />
             </div>
           </div>
@@ -221,12 +221,12 @@ function Income() {
       </div>
 
       <div className="grid md:grid-cols-2 gap-6 mt-6">
-        <div className="bg-gray-50 p-4 rounded-lg border">
-          <h2 className="text-xl font-semibold mb-4 text-gray-700">Taxes</h2>
+        <div className="bg-gray-50 dark:bg-slate-700 p-4 rounded-lg border dark:border-gray-600">
+          <h2 className="text-xl font-semibold mb-4 text-gray-700 dark:text-gray-200">Taxes</h2>
           <div className="space-y-4">
             <div className="flex items-center space-x-2">
               <div className="flex-grow">
-                <label className="block text-gray-600 mb-2">
+                <label className="block text-gray-600 dark:text-gray-300 mb-2">
                   Federal Tax (%)
                 </label>
                 <input
@@ -239,23 +239,23 @@ function Income() {
                   onChange={(e) => setTempValue(e.target.value)}
                   onBlur={() => handleInputChange("federalTaxRate")}
                   onClick={() => handleCellClick("federalTaxRate")}
-                  className="w-full p-2 border rounded-md"
+                  className="w-full p-2 border dark:border-gray-600 rounded-md bg-white dark:bg-slate-600 text-gray-800 dark:text-white"
                 />
               </div>
               <div className="flex-grow mt-auto">
-                <label className="block text-gray-600 mb-2"></label>
+                <label className="block text-gray-600 dark:text-gray-300 mb-2"></label>
                 <input
                   type="text"
                   value={`$${federalTax}`}
                   readOnly
-                  className="w-full p-2 border rounded-md bg-gray-200"
+                  className="w-full p-2 border dark:border-gray-600 rounded-md bg-gray-200 dark:bg-slate-600 text-gray-800 dark:text-white"
                 />
               </div>
             </div>
 
             <div className="flex items-center space-x-2">
               <div className="flex-grow">
-                <label className="block text-gray-600 mb-2">
+                <label className="block text-gray-600 dark:text-gray-300 mb-2">
                   Medicare Tax (%)
                 </label>
                 <input
@@ -268,23 +268,23 @@ function Income() {
                   onChange={(e) => setTempValue(e.target.value)}
                   onBlur={() => handleInputChange("medicareTaxRate")}
                   onClick={() => handleCellClick("medicareTaxRate")}
-                  className="w-full p-2 border rounded-md"
+                  className="w-full p-2 border dark:border-gray-600 rounded-md bg-white dark:bg-slate-600 text-gray-800 dark:text-white"
                 />
               </div>
               <div className="flex-grow mt-auto">
-                <label className="block text-gray-600 mb-2"></label>
+                <label className="block text-gray-600 dark:text-gray-300 mb-2"></label>
                 <input
                   type="text"
                   value={`$${medicareTax}`}
                   readOnly
-                  className="w-full p-2 border rounded-md bg-gray-200"
+                  className="w-full p-2 border dark:border-gray-600 rounded-md bg-gray-200 dark:bg-slate-600 text-gray-800 dark:text-white"
                 />
               </div>
             </div>
 
             <div className="flex items-center space-x-2">
               <div className="flex-grow">
-                <label className="block text-gray-600 mb-2">
+                <label className="block text-gray-600 dark:text-gray-300 mb-2">
                   Social Security Tax (%)
                 </label>
                 <input
@@ -297,23 +297,23 @@ function Income() {
                   onChange={(e) => setTempValue(e.target.value)}
                   onBlur={() => handleInputChange("socialSecurityTaxRate")}
                   onClick={() => handleCellClick("socialSecurityTaxRate")}
-                  className="w-full p-2 border rounded-md"
+                  className="w-full p-2 border dark:border-gray-600 rounded-md bg-white dark:bg-slate-600 text-gray-800 dark:text-white"
                 />
               </div>
               <div className="flex-grow mt-auto">
-                <label className="block text-gray-600 mb-2"></label>
+                <label className="block text-gray-600 dark:text-gray-300 mb-2"></label>
                 <input
                   type="text"
                   value={`$${socialSecurityTax}`}
                   readOnly
-                  className="w-full p-2 border rounded-md bg-gray-200"
+                  className="w-full p-2 border dark:border-gray-600 rounded-md bg-gray-200 dark:bg-slate-600 text-gray-800 dark:text-white"
                 />
               </div>
             </div>
 
             <div className="flex items-center space-x-2">
               <div className="flex-grow">
-                <label className="block text-gray-600 mb-2">
+                <label className="block text-gray-600 dark:text-gray-300 mb-2">
                   State Tax (%)
                 </label>
                 <input
@@ -326,22 +326,22 @@ function Income() {
                   onChange={(e) => setTempValue(e.target.value)}
                   onBlur={() => handleInputChange("stateTaxRate")}
                   onClick={() => handleCellClick("stateTaxRate")}
-                  className="w-full p-2 border rounded-md"
+                  className="w-full p-2 border dark:border-gray-600 rounded-md bg-white dark:bg-slate-600 text-gray-800 dark:text-white"
                 />
               </div>
               <div className="flex-grow mt-auto">
-                <label className="block text-gray-600 mb-2"></label>
+                <label className="block text-gray-600 dark:text-gray-300 mb-2"></label>
                 <input
                   type="text"
                   value={`$${stateTax}`}
                   readOnly
-                  className="w-full p-2 border rounded-md bg-gray-200"
+                  className="w-full p-2 border dark:border-gray-600 rounded-md bg-gray-200 dark:bg-slate-600 text-gray-800 dark:text-white"
                 />
               </div>
             </div>
-            <div className="flex items-center space-x-2 mt-4 pt-4 border-t">
+            <div className="flex items-center space-x-2 mt-4 pt-4 border-t dark:border-gray-600">
               <div className="flex-grow">
-                <label className="block text-gray-600 mb-2 font-semibold">
+                <label className="block text-gray-600 dark:text-gray-300 mb-2 font-semibold">
                   Total Annual Taxes
                 </label>
               </div>
@@ -355,20 +355,20 @@ function Income() {
                     stateTax
                   ).toFixed(2)}`}
                   readOnly
-                  className="w-full p-2 border rounded-md bg-gray-200"
+                  className="w-full p-2 border dark:border-gray-600 rounded-md bg-gray-200 dark:bg-slate-600 text-gray-800 dark:text-white"
                 />
               </div>
             </div>
           </div>
         </div>
 
-        <div className="bg-gray-50 p-4 rounded-lg border">
-          <h2 className="text-xl font-semibold mb-4 text-gray-700">
+        <div className="bg-gray-50 dark:bg-slate-700 p-4 rounded-lg border dark:border-gray-600">
+          <h2 className="text-xl font-semibold mb-4 text-gray-700 dark:text-gray-200">
             Income Summary
           </h2>
           <div className="space-y-4">
             <div>
-              <label className="block text-gray-600 mb-2">
+              <label className="block text-gray-600 dark:text-gray-300 mb-2">
                 Take Home Pay ({incomeData.payFrequency})
               </label>
               <input
@@ -387,18 +387,18 @@ function Income() {
                   }
                 })()}`}
                 readOnly
-                className="w-full p-2 border rounded-md bg-gray-200"
+                className="w-full p-2 border dark:border-gray-600 rounded-md bg-gray-200 dark:bg-slate-600 text-gray-800 dark:text-white"
               />
             </div>
             <div>
-              <label className="block text-gray-600 mb-2">
+              <label className="block text-gray-600 dark:text-gray-300 mb-2">
                 Annual Take Home Pay
               </label>
               <input
                 type="text"
                 value={`$${takeHomePay}`}
                 readOnly
-                className="w-full p-2 border rounded-md bg-gray-200"
+                className="w-full p-2 border dark:border-gray-600 rounded-md bg-gray-200 dark:bg-slate-600 text-gray-800 dark:text-white"
               />
             </div>
           </div>

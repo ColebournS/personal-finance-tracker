@@ -158,7 +158,7 @@ const BulkPurchaseImport = () => {
     <>
       <button
         onClick={() => dialogRef.current?.showModal()}
-        className="w-full bg-green-500 text-white py-2 rounded-md hover:bg-green-600 transition-colors flex items-center justify-center mt-4"
+        className="w-full bg-green-500 dark:bg-green-600 text-white py-2 rounded-md hover:bg-green-600 dark:hover:bg-green-700 transition-colors flex items-center justify-center mt-4"
       >
         <Upload className="mr-2" size={20} />
         Bulk Import
@@ -166,21 +166,21 @@ const BulkPurchaseImport = () => {
 
       <dialog
         ref={dialogRef}
-        className="w-full max-w-3xl rounded-lg p-6 backdrop:bg-black backdrop:bg-opacity-50"
+        className="w-full max-w-3xl rounded-lg p-6 backdrop:bg-black backdrop:bg-opacity-50 bg-white dark:bg-slate-800"
       >
         <div className="space-y-4">
           <div className="flex justify-between items-center">
-            <h2 className="text-xl font-bold">Bulk Import Purchases</h2>
+            <h2 className="text-xl font-bold text-gray-800 dark:text-white">Bulk Import Purchases</h2>
             <button
               onClick={() => dialogRef.current?.close()}
-              className="text-gray-500 hover:text-gray-700"
+              className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
             >
               <X size={20} />
             </button>
           </div>
 
           {error && (
-            <div className="bg-red-50 border-l-4 border-red-400 p-4 text-red-700">
+            <div className="bg-red-50 dark:bg-red-900/20 border-l-4 border-red-400 dark:border-red-600 p-4 text-red-700 dark:text-red-300">
               <div className="flex">
                 <AlertCircle className="h-5 w-5 mr-2" />
                 <span>{error}</span>
@@ -189,10 +189,10 @@ const BulkPurchaseImport = () => {
           )}
 
           <div>
-            <label className="block text-sm font-medium mb-2">
+            <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-200">
               Paste your data (tab, comma, or semicolon separated):
             </label>
-            <div className="text-xs text-gray-500 mb-2">
+            <div className="text-xs text-gray-500 dark:text-gray-400 mb-2">
               Example format:
               <br />
               Item Name,Cost,Date
@@ -202,21 +202,21 @@ const BulkPurchaseImport = () => {
             <textarea
               value={rawData}
               onChange={handlePaste}
-              className="w-full h-32 p-2 border rounded-md font-mono text-sm"
+              className="w-full h-32 p-2 border dark:border-gray-600 rounded-md font-mono text-sm bg-white dark:bg-slate-700 text-gray-800 dark:text-white"
               placeholder="Item Name,Cost,Date"
             />
           </div>
 
           {headers.length > 0 && (
             <div className="space-y-4">
-              <h3 className="font-medium">Map Columns</h3>
+              <h3 className="font-medium text-gray-800 dark:text-white">Map Columns</h3>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm mb-1">Item Name*</label>
+                  <label className="block text-sm mb-1 text-gray-700 dark:text-gray-200">Item Name*</label>
                   <select
                     value={mappings.itemName}
                     onChange={(e) => handleMapping("itemName", e.target.value)}
-                    className="w-full p-2 border rounded-md"
+                    className="w-full p-2 border dark:border-gray-600 rounded-md bg-white dark:bg-slate-700 text-gray-800 dark:text-white"
                   >
                     <option value="">Select column</option>
                     {headers.map((h) => (
@@ -227,11 +227,11 @@ const BulkPurchaseImport = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm mb-1">Cost*</label>
+                  <label className="block text-sm mb-1 text-gray-700 dark:text-gray-200">Cost*</label>
                   <select
                     value={mappings.cost}
                     onChange={(e) => handleMapping("cost", e.target.value)}
-                    className="w-full p-2 border rounded-md"
+                    className="w-full p-2 border dark:border-gray-600 rounded-md bg-white dark:bg-slate-700 text-gray-800 dark:text-white"
                   >
                     <option value="">Select column</option>
                     {headers.map((h) => (
@@ -242,11 +242,11 @@ const BulkPurchaseImport = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm mb-1">Date (Optional)</label>
+                  <label className="block text-sm mb-1 text-gray-700 dark:text-gray-200">Date (Optional)</label>
                   <select
                     value={mappings.date}
                     onChange={(e) => handleMapping("date", e.target.value)}
-                    className="w-full p-2 border rounded-md"
+                    className="w-full p-2 border dark:border-gray-600 rounded-md bg-white dark:bg-slate-700 text-gray-800 dark:text-white"
                   >
                     <option value="">Select column</option>
                     {headers.map((h) => (
@@ -260,28 +260,28 @@ const BulkPurchaseImport = () => {
 
               {preview.length > 0 && (
                 <div>
-                  <h3 className="font-medium mb-2">
+                  <h3 className="font-medium mb-2 text-gray-800 dark:text-white">
                     Preview ({preview.length} rows)
                   </h3>
-                  <div className="max-h-48 overflow-auto border rounded-md">
-                    <table className="min-w-full divide-y divide-gray-200">
-                      <thead className="bg-gray-50">
+                  <div className="max-h-48 overflow-auto border dark:border-gray-600 rounded-md">
+                    <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-600">
+                      <thead className="bg-gray-50 dark:bg-slate-700">
                         <tr>
                           {headers.map((header) => (
                             <th
                               key={header}
-                              className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                              className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
                             >
                               {header}
                             </th>
                           ))}
                         </tr>
                       </thead>
-                      <tbody className="bg-white divide-y divide-gray-200">
+                      <tbody className="bg-white dark:bg-slate-600 divide-y divide-gray-200 dark:divide-gray-600">
                         {preview.slice(0, 5).map((row, idx) => (
                           <tr key={idx}>
                             {headers.map((header) => (
-                              <td key={header} className="px-4 py-2 text-sm">
+                              <td key={header} className="px-4 py-2 text-sm text-gray-800 dark:text-white">
                                 {row[header]}
                               </td>
                             ))}
@@ -295,10 +295,10 @@ const BulkPurchaseImport = () => {
             </div>
           )}
 
-          <div className="flex justify-end space-x-2 mt-4 pt-4 border-t">
+          <div className="flex justify-end space-x-2 mt-4 pt-4 border-t dark:border-gray-600">
             <button
               onClick={() => dialogRef.current?.close()}
-              className="px-4 py-2 border rounded-md hover:bg-gray-100"
+              className="px-4 py-2 border dark:border-gray-600 rounded-md hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-800 dark:text-white"
             >
               <X className="mr-2 inline-block" size={16} />
               Cancel
@@ -306,7 +306,7 @@ const BulkPurchaseImport = () => {
             <button
               onClick={handleImport}
               disabled={!preview.length || !mappings.itemName || !mappings.cost}
-              className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-4 py-2 bg-blue-500 dark:bg-blue-600 text-white rounded-md hover:bg-blue-600 dark:hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Save className="mr-2 inline-block" size={16} />
               Import

@@ -382,25 +382,25 @@ function BudgetVsSpentChart() {
     : 0;
 
   return (
-    <div className="w-full mx-auto p-6 bg-white shadow-lg rounded-lg">
+    <div className="w-full mx-auto p-6 bg-white dark:bg-slate-800 shadow-lg rounded-lg">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-3xl font-bold text-gray-800 flex items-center">
-          <BarChart3 className="mr-2 text-blue-600" size={28} />
+        <h1 className="text-3xl font-bold text-gray-800 dark:text-white flex items-center">
+          <BarChart3 className="mr-2 text-blue-600 dark:text-blue-400" size={28} />
           Budget vs Spent
         </h1>
         <button
           onClick={handleRefresh}
-          className="bg-blue-100 text-blue-600 p-2 rounded-full hover:bg-blue-200 transition-colors"
+          className="bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 p-2 rounded-full hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors"
           title="Refresh data"
         >
           <RefreshCw size={20} className={isLoading ? "animate-spin" : ""} />
         </button>
       </div>
       {/* Date selection card */}
-      <div className="bg-white rounded-lg p-6 mb-6 shadow border border-gray-100">
+      <div className="bg-white dark:bg-slate-700 rounded-lg p-6 mb-6 shadow border border-gray-100 dark:border-gray-600">
         <div className="flex items-center gap-2 mb-4">
-          <Calendar className="text-blue-600" size={20} />
-          <h2 className="font-semibold text-gray-800 text-lg">Date Range</h2>
+          <Calendar className="text-blue-600 dark:text-blue-400" size={20} />
+          <h2 className="font-semibold text-gray-800 dark:text-white text-lg">Date Range</h2>
         </div>
 
         <div className="space-y-5">
@@ -409,7 +409,7 @@ function BudgetVsSpentChart() {
             <div>
               <label
                 htmlFor="fromDate"
-                className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2"
+                className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-200 mb-1 sm:mb-2"
               >
                 From Date
               </label>
@@ -419,13 +419,13 @@ function BudgetVsSpentChart() {
                 name="fromDate"
                 value={dateRange.fromDate}
                 onChange={handleDateChange}
-                className="w-full rounded-md border border-gray-300 px-2 py-1 sm:px-4 sm:py-2 text-xs sm:text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                className="w-full rounded-md border border-gray-300 dark:border-gray-600 px-2 py-1 sm:px-4 sm:py-2 text-xs sm:text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-white dark:bg-slate-600 text-gray-800 dark:text-white"
               />
             </div>
             <div>
               <label
                 htmlFor="toDate"
-                className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2"
+                className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-200 mb-1 sm:mb-2"
               >
                 To Date
               </label>
@@ -435,7 +435,7 @@ function BudgetVsSpentChart() {
                 name="toDate"
                 value={dateRange.toDate}
                 onChange={handleDateChange}
-                className="w-full rounded-md border border-gray-300 px-2 py-1 sm:px-4 sm:py-2 text-xs sm:text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                className="w-full rounded-md border border-gray-300 dark:border-gray-600 px-2 py-1 sm:px-4 sm:py-2 text-xs sm:text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-white dark:bg-slate-600 text-gray-800 dark:text-white"
               />
             </div>
           </div>
@@ -444,19 +444,19 @@ function BudgetVsSpentChart() {
           <div className="flex gap-2 min-w-0">
             <button
               onClick={setCurrentMonth}
-              className="bg-blue-50 text-blue-700 px-3 py-1.5 rounded hover:bg-blue-600 hover:text-white transition-colors font-medium whitespace-nowrap flex-1 min-w-0 text-[min(2vw,12px)]"
+              className="bg-blue-50 dark:bg-blue-900 text-blue-700 dark:text-blue-300 px-3 py-1.5 rounded hover:bg-blue-600 hover:text-white dark:hover:bg-blue-700 transition-colors font-medium whitespace-nowrap flex-1 min-w-0 text-[min(2vw,12px)]"
             >
               Current Month
             </button>
             <button
               onClick={setPreviousMonth}
-              className="bg-blue-50 text-blue-700 px-3 py-1.5 rounded hover:bg-blue-600 hover:text-white transition-colors font-medium whitespace-nowrap flex-1 min-w-0 text-[min(2vw,12px)]"
+              className="bg-blue-50 dark:bg-blue-900 text-blue-700 dark:text-blue-300 px-3 py-1.5 rounded hover:bg-blue-600 hover:text-white dark:hover:bg-blue-700 transition-colors font-medium whitespace-nowrap flex-1 min-w-0 text-[min(2vw,12px)]"
             >
               Previous Month
             </button>
             <button
               onClick={setCurrentYear}
-              className="bg-blue-50 text-blue-700 px-3 py-1.5 rounded hover:bg-blue-600 hover:text-white transition-colors font-medium whitespace-nowrap flex-1 min-w-0 text-[min(2vw,12px)]"
+              className="bg-blue-50 dark:bg-blue-900 text-blue-700 dark:text-blue-300 px-3 py-1.5 rounded hover:bg-blue-600 hover:text-white dark:hover:bg-blue-700 transition-colors font-medium whitespace-nowrap flex-1 min-w-0 text-[min(2vw,12px)]"
             >
               Current Year
             </button>
@@ -465,33 +465,33 @@ function BudgetVsSpentChart() {
       </div>
       {/* Budget summary card */}
       <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-6">
-        <div className="bg-blue-100 rounded-lg p-2 sm:p-4 shadow-sm">
-          <p className="text-xs sm:text-sm font-medium text-blue-800 mb-1">
+        <div className="bg-blue-100 dark:bg-blue-900 rounded-lg p-2 sm:p-4 shadow-sm">
+          <p className="text-xs sm:text-sm font-medium text-blue-800 dark:text-blue-300 mb-1">
             Total Budgeted
           </p>
-          <p className="text-xs sm:text-sm font-bold text-blue-900">
+          <p className="text-xs sm:text-sm font-bold text-blue-900 dark:text-blue-100">
             ${totalBudgeted.toFixed(2)}
           </p>
         </div>
-        <div className="bg-red-100 rounded-lg p-2 sm:p-4 shadow-sm">
-          <p className="text-xs sm:text-sm font-medium text-red-800 mb-1">
+        <div className="bg-red-100 dark:bg-red-900 rounded-lg p-2 sm:p-4 shadow-sm">
+          <p className="text-xs sm:text-sm font-medium text-red-800 dark:text-red-300 mb-1">
             Total Spent
           </p>
-          <p className="text-xs sm:text-sm font-bold text-red-900">
+          <p className="text-xs sm:text-sm font-bold text-red-900 dark:text-red-100">
             ${totalSpent.toFixed(2)}
           </p>
         </div>
         <div
           className={`${
-            percentOfBudgetUsed > 100 ? "bg-red-100" : "bg-green-100"
+            percentOfBudgetUsed > 100 ? "bg-red-100 dark:bg-red-900" : "bg-green-100 dark:bg-green-900"
           } rounded-lg p-2 sm:p-4 shadow-sm`}
         >
-          <p className="text-xs sm:text-sm font-medium text-gray-800 mb-1">
+          <p className="text-xs sm:text-sm font-medium text-gray-800 dark:text-gray-200 mb-1">
             Budget Usage
           </p>
           <p
             className={`text-xs sm:text-sm font-bold ${
-              percentOfBudgetUsed > 100 ? "text-red-900" : "text-green-900"
+              percentOfBudgetUsed > 100 ? "text-red-900 dark:text-red-100" : "text-green-900 dark:text-green-100"
             }`}
           >
             {percentOfBudgetUsed.toFixed(1)}%
@@ -500,8 +500,8 @@ function BudgetVsSpentChart() {
       </div>
 
       {/* Chart */}
-      <div className="w-full bg-white rounded-lg shadow p-5 mb-6 border border-gray-200">
-        <h3 className="text-lg font-semibold text-gray-800 mb-4">
+      <div className="w-full bg-white dark:bg-slate-700 rounded-lg shadow p-5 mb-6 border border-gray-200 dark:border-gray-600">
+        <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">
           Budget vs. Spending
         </h3>
         <div className="h-80 md:h-96 w-full">
@@ -521,23 +521,23 @@ function BudgetVsSpentChart() {
 
       {/* Category visibility controls */}
       <div
-        className={`bg-white rounded-lg p-4 shadow border border-gray-200 ${
+        className={`bg-white dark:bg-slate-700 rounded-lg p-4 shadow border border-gray-200 dark:border-gray-600 ${
           !isOpen ? "w-fit" : "w-full"
         }`}
       >
         <div
-          className="flex items-center gap-2 cursor-pointer hover:text-blue-600 transition-colors whitespace-nowrap"
+          className="flex items-center gap-2 cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors whitespace-nowrap"
           onClick={() => setIsOpen(!isOpen)}
         >
-          <Eye className="text-blue-500" size={20} />
-          <h2 className="font-semibold text-gray-800 text-lg">
+          <Eye className="text-blue-500 dark:text-blue-400" size={20} />
+          <h2 className="font-semibold text-gray-800 dark:text-white text-lg">
             Category Visibility
           </h2>
           <div className="ml-2">
             {isOpen ? (
-              <ChevronUp size={18} className="text-gray-500" />
+              <ChevronUp size={18} className="text-gray-500 dark:text-gray-400" />
             ) : (
-              <ChevronDown size={18} className="text-gray-500" />
+              <ChevronDown size={18} className="text-gray-500 dark:text-gray-400" />
             )}
           </div>
         </div>
@@ -550,20 +550,20 @@ function BudgetVsSpentChart() {
                 onClick={() => toggleItemVisibility(item.id)}
                 className={`px-3 py-1.5 rounded-full flex items-center gap-2 text-sm font-medium transition-all ${
                   item.hidden
-                    ? "bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-800"
-                    : "bg-blue-50 text-blue-600 hover:bg-blue-100 hover:text-blue-700 ring-1 ring-blue-200"
+                    ? "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 hover:text-gray-800 dark:hover:text-gray-200"
+                    : "bg-blue-50 dark:bg-blue-900 text-blue-600 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-800 hover:text-blue-700 dark:hover:text-blue-200 ring-1 ring-blue-200 dark:ring-blue-700"
                 }`}
               >
                 {item.hidden ? (
-                  <EyeOff size={14} className="text-gray-500" />
+                  <EyeOff size={14} className="text-gray-500 dark:text-gray-400" />
                 ) : (
-                  <Eye size={14} className="text-blue-500" />
+                  <Eye size={14} className="text-blue-500 dark:text-blue-400" />
                 )}
                 <span>{item.name}</span>
               </button>
             ))}
             {budgetItems.length === 0 && (
-              <p className="text-gray-500 italic px-2 py-4 w-full text-center">
+              <p className="text-gray-500 dark:text-gray-400 italic px-2 py-4 w-full text-center">
                 No budget items found
               </p>
             )}

@@ -65,8 +65,8 @@ function CurrentBudget() {
   };
 
   return (
-    <div className="w-full mx-auto p-6 bg-white shadow-lg rounded-lg">
-      <h1 className="text-3xl font-bold text-center text-gray-800 mb-6">
+    <div className="w-full mx-auto p-6 bg-white dark:bg-slate-800 shadow-lg rounded-lg">
+      <h1 className="text-3xl font-bold text-center text-gray-800 dark:text-white mb-6">
         Current Budget
       </h1>
       <Doughnut data={data} options={options} />

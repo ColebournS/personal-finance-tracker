@@ -58,18 +58,18 @@ const AddPurchase = () => {
   };
 
   return (
-    <div className="w-full mx-auto p-6 bg-white shadow-lg rounded-lg relative">
+    <div className="w-full mx-auto p-6 bg-white dark:bg-slate-800 shadow-lg rounded-lg relative">
       {showSuccess && (
         <div className="success-animation fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-50">
-          <div className="bg-white p-8 rounded-lg shadow-2xl transform transition-all duration-500 animate-bounce-in">
+          <div className="bg-white dark:bg-slate-800 p-8 rounded-lg shadow-2xl transform transition-all duration-500 animate-bounce-in">
             <div className="text-center">
-              <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-green-100 mb-6">
-                <CheckCircle className="w-16 h-16 text-green-500 animate-pulse" />
+              <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-green-100 dark:bg-green-900 mb-6">
+                <CheckCircle className="w-16 h-16 text-green-500 dark:text-green-400 animate-pulse" />
               </div>
-              <h2 className="text-2xl font-bold text-gray-800 mb-2">
+              <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-2">
                 Success!
               </h2>
-              <p className="text-gray-600 mb-4">Your purchase has been added</p>
+              <p className="text-gray-600 dark:text-gray-300 mb-4">Your purchase has been added</p>
               <div className="sparkles">
                 <div className="sparkle" style={{ "--delay": "0s" }}></div>
                 <div className="sparkle" style={{ "--delay": "0.3s" }}></div>
@@ -167,24 +167,24 @@ const AddPurchase = () => {
         }
       `}</style>
 
-      <h1 className="text-3xl font-bold text-center text-gray-800 mb-6">
+      <h1 className="text-3xl font-bold text-center text-gray-800 dark:text-white mb-6">
         Add Purchase
       </h1>
       <form onSubmit={handleSubmit} className="space-y-4 mb-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-gray-700 mb-2">Item Name</label>
+            <label className="block text-gray-700 dark:text-gray-200 mb-2">Item Name</label>
             <input
               type="text"
               name="itemName"
               value={formData.itemName}
               onChange={handleChange}
               required
-              className="w-full px-3 py-2 border rounded-md hover:bg-blue-200"
+              className="w-full px-3 py-2 border dark:border-gray-600 rounded-md hover:bg-gray-100 dark:hover:bg-slate-700 bg-white dark:bg-slate-700 text-gray-800 dark:text-white"
             />
           </div>
           <div>
-            <label className="block text-gray-700 mb-2">Cost</label>
+            <label className="block text-gray-700 dark:text-gray-200 mb-2">Cost</label>
             <input
               type="number"
               name="cost"
@@ -193,17 +193,17 @@ const AddPurchase = () => {
               required
               min="0"
               step="0.01"
-              className="w-full px-3 py-2 border rounded-md hover:bg-blue-200"
+              className="w-full px-3 py-2 border dark:border-gray-600 rounded-md hover:bg-gray-100 dark:hover:bg-slate-700 bg-white dark:bg-slate-700 text-gray-800 dark:text-white"
             />
           </div>
           <div>
-            <label className="block text-gray-700 mb-2">Budget Item</label>
+            <label className="block text-gray-700 dark:text-gray-200 mb-2">Budget Item</label>
             <select
               name="budgetItemId"
               value={formData.budgetItemId}
               onChange={handleChange}
               required
-              className="w-full px-3 py-2 border rounded-md hover:bg-blue-200"
+              className="w-full px-3 py-2 border dark:border-gray-600 rounded-md hover:bg-gray-100 dark:hover:bg-slate-700 bg-white dark:bg-slate-700 text-gray-800 dark:text-white"
             >
               <option value="">Select a budget item</option>
               {budgetGroups.map((group) => (
@@ -221,7 +221,7 @@ const AddPurchase = () => {
 
         <button
           type="submit"
-          className="w-full bg-blue-500 text-white py-2 rounded-md hover:bg-blue-600 transition-colors flex items-center justify-center"
+          className="w-full bg-blue-500 dark:bg-blue-600 text-white py-2 rounded-md hover:bg-blue-600 dark:hover:bg-blue-700 transition-colors flex items-center justify-center"
         >
           <Save className="mr-2" size={20} />
           Add Purchase
