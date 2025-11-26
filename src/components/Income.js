@@ -2,7 +2,7 @@ import React, { useState, useCallback, useRef, useEffect } from "react";
 import supabase from "../supabaseClient";
 import { useData } from "../DataContext";
 import { DollarSign, PiggyBank, Receipt, TrendingUp, PlusCircle, Trash2 } from "lucide-react";
-import { encryptValue, decryptValue } from "../utils/encryption";
+import { encryptValue } from "../utils/encryption";
 
 function Income() {
   const { income: incomeData, userId, refetchIncome } = useData();

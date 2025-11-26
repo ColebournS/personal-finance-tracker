@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Bar } from "react-chartjs-2";
 import ChartDataLabels from "chartjs-plugin-datalabels";
 import {
@@ -53,7 +53,7 @@ function BudgetVsSpentChart() {
       .split("T")[0],
   });
 
-  const fetchBudgetData = async () => {
+  const fetchBudgetData = useCallback(async () => {
     if (!userId) return;
 
     setIsLoading(true);
@@ -127,7 +127,7 @@ function BudgetVsSpentChart() {
     setChartData(chartConfig);
     setIsLoading(false);
     return chartConfig;
-  };
+  }, [userId, dateRange]);
 
   useEffect(() => {
     if (userId) {
@@ -166,7 +166,7 @@ function BudgetVsSpentChart() {
         supabase.removeChannel(purchasesSubscription);
       };
     }
-  }, [userId, dateRange]);
+  }, [userId, dateRange, fetchBudgetData]);
 
   const toggleItemVisibility = async (itemId) => {
     const item = budgetItems.find((item) => item.id === itemId);
