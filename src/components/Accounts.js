@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import supabase from "../supabaseClient";
-import { Trash2, PlusCircle, X, Search, ArrowUpDown, ArrowUp, ArrowDown, TrendingUp } from "lucide-react";
+import { Trash2, PlusCircle, X, Search, ArrowUpDown, ArrowUp, ArrowDown, TrendingUp, Link as LinkIcon, AlertCircle } from "lucide-react";
 import { useAuth } from "../AuthContext";
-import { encryptValue, decryptValue } from "../utils/encryption";
+import { encryptValue, decryptValue, decryptString } from "../utils/encryption";
+import SimpleFinSetup from "./SimpleFinSetup";
+import { syncAccounts } from "../utils/simplefinService";
 
 function Accounts() {
   const { user } = useAuth();
@@ -16,6 +18,7 @@ function Accounts() {
     value: "",
     interest_rate: "",
     montly_contribution: "",
+    account_type: "investment",
   });
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState("All");
@@ -30,6 +33,12 @@ function Accounts() {
   const [tempMonthlyContributions, setTempMonthlyContributions] = useState({});
   const [projectionMonths, setProjectionMonths] = useState(12);
   const debounceTimers = useRef({});
+  
+  // SimpleFin state
+  const [showSimpleFinSetup, setShowSimpleFinSetup] = useState(false);
+  const [simpleFinAccessUrl, setSimpleFinAccessUrl] = useState(null);
+  const [syncing, setSyncing] = useState(false);
+  const [syncError, setSyncError] = useState("");
 
   // Fetch accounts from Supabase
   const fetchAccounts = useCallback(async () => {
@@ -61,9 +70,151 @@ function Accounts() {
     }
   }, [user?.id]);
 
+  // Fetch SimpleFin access URL from profile
+  const fetchSimpleFinProfile = useCallback(async () => {
+    if (!user?.id) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("simplefin_access_url")
+        .eq("id", user.id)
+        .single();
+
+      if (error) {
+        console.error("Error fetching SimpleFin profile:", error);
+        return;
+      }
+      
+      if (data?.simplefin_access_url) {
+        try {
+          const decryptedUrl = decryptString(data.simplefin_access_url, user.id);
+          if (decryptedUrl && decryptedUrl.startsWith('http')) {
+            setSimpleFinAccessUrl(decryptedUrl);
+          }
+        } catch (decryptError) {
+          console.error('Decryption error:', decryptError);
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching SimpleFin profile:", error);
+    }
+  }, [user?.id]);
+
+  // Sync accounts from SimpleFin
+  const handleSimpleFinSync = useCallback(async () => {
+    if (!simpleFinAccessUrl || !user?.id) return;
+    
+    setSyncing(true);
+    setSyncError("");
+    
+    try {
+      // Fetch fresh accounts directly to avoid stale closure
+      const { data: accountsData } = await supabase
+        .from("accounts")
+        .select("*")
+        .eq("user_id", user.id);
+      
+      const currentAccounts = (accountsData || []).map(account => ({
+        ...account,
+        value: decryptValue(account.value, user.id),
+        interest_rate: decryptValue(account.interest_rate, user.id),
+        montly_contribution: decryptValue(account.montly_contribution, user.id)
+      }));
+      
+      // Sync with SimpleFin
+      const { accountsToCreate, accountsToUpdate } = await syncAccounts(
+        simpleFinAccessUrl,
+        currentAccounts
+      );
+
+      console.log('Sync results:', {
+        toCreate: accountsToCreate.length,
+        toUpdate: accountsToUpdate.length,
+        newAccounts: accountsToCreate
+      });
+
+      // Create new accounts
+      for (const newAccount of accountsToCreate) {
+        console.log('Creating new account:', newAccount);
+        const encryptedValue = encryptValue(newAccount.value, user.id);
+        const encryptedInterestRate = encryptValue(newAccount.interest_rate, user.id);
+        const encryptedMonthlyContribution = encryptValue(newAccount.montly_contribution, user.id);
+        
+        const { data, error } = await supabase.from("accounts").insert([{
+          ...newAccount,
+          value: encryptedValue,
+          interest_rate: encryptedInterestRate,
+          montly_contribution: encryptedMonthlyContribution,
+          user_id: user.id,
+        }]).select();
+        
+        if (error) {
+          console.error('Error inserting account:', error);
+          throw error;
+        }
+        console.log('Account created successfully:', data);
+      }
+
+      // Update existing accounts
+      for (const updatedAccount of accountsToUpdate) {
+        const encryptedValue = encryptValue(updatedAccount.value, user.id);
+        const encryptedInterestRate = encryptValue(updatedAccount.interest_rate, user.id);
+        const encryptedMonthlyContribution = encryptValue(updatedAccount.montly_contribution, user.id);
+        
+        const { error } = await supabase
+          .from("accounts")
+          .update({
+            value: encryptedValue,
+            interest_rate: encryptedInterestRate,
+            montly_contribution: encryptedMonthlyContribution,
+            account_type: updatedAccount.account_type,
+            type: updatedAccount.type,
+            last_synced: updatedAccount.last_synced,
+            is_simplefin_synced: true,
+          })
+          .eq("id", updatedAccount.id);
+        
+        if (error) {
+          console.error('Error updating account:', error);
+          throw error;
+        }
+      }
+
+      // Refresh accounts list
+      await fetchAccounts();
+      
+    } catch (error) {
+      console.error("SimpleFin sync error:", error);
+      
+      if (error.message.includes('RATE_LIMIT')) {
+        setSyncError("Rate limit reached. Please wait a moment and try again.");
+      } else if (error.message.includes('UNAUTHORIZED')) {
+        setSyncError("SimpleFin connection expired. Please reconnect.");
+        setSimpleFinAccessUrl(null);
+      } else {
+        setSyncError(error.message || "Failed to sync accounts");
+      }
+    } finally {
+      setSyncing(false);
+    }
+  }, [simpleFinAccessUrl, user?.id, fetchAccounts]);
+
+
   useEffect(() => {
     fetchAccounts();
-  }, [fetchAccounts]);
+    fetchSimpleFinProfile();
+  }, [fetchAccounts, fetchSimpleFinProfile]);
+
+  // Auto-sync on page load if SimpleFin is connected (only once)
+  const hasAutoSynced = useRef(false);
+  
+  useEffect(() => {
+    if (simpleFinAccessUrl && !syncing && !hasAutoSynced.current) {
+      hasAutoSynced.current = true;
+      handleSimpleFinSync();
+    }
+  }, [simpleFinAccessUrl]); // Only run when access URL changes, not when handleSimpleFinSync changes
 
   // Debounced update function
   const debounceUpdate = useCallback((key, callback, delay = 500) => {
@@ -96,8 +247,15 @@ function Accounts() {
     });
   };
 
-  // Handle value change
+  // Handle value change (only for manual accounts)
   const handleValueChange = (accountId, value) => {
+    // Check if account is SimpleFin synced
+    const account = accounts.find(acc => acc.id === accountId);
+    if (account?.is_simplefin_synced) {
+      // Don't allow editing SimpleFin account values
+      return;
+    }
+    
     setTempValues((prev) => ({ ...prev, [accountId]: value }));
     
     const numericValue = parseFloat(value) || 0;
@@ -156,15 +314,21 @@ function Accounts() {
   const handleTypeChange = (accountId, value) => {
     setTempTypes((prev) => ({ ...prev, [accountId]: value }));
     
+    // Map account_type to legacy type field
+    const legacyType = (value === 'credit' || value === 'loan') ? 'Loan' : 'Investment';
+    
     // Update local state immediately
     setAccounts((prev) =>
-      prev.map((acc) => (acc.id === accountId ? { ...acc, type: value } : acc))
+      prev.map((acc) => (acc.id === accountId ? { ...acc, account_type: value, type: legacyType } : acc))
     );
     
     debounceUpdate(`type-${accountId}`, async () => {
       const { error } = await supabase
         .from("accounts")
-        .update({ type: value })
+        .update({ 
+          account_type: value,
+          type: legacyType 
+        })
         .eq("id", accountId);
       
       if (error) {
@@ -218,6 +382,7 @@ function Accounts() {
       value: "",
       interest_rate: "",
       montly_contribution: "",
+      account_type: "investment",
     });
   };
 
@@ -254,6 +419,8 @@ function Accounts() {
       interest_rate: encryptedInterestRate,
       montly_contribution: encryptedMonthlyContribution,
       type: newAccount.type,
+      account_type: newAccount.account_type || newAccount.type.toLowerCase(),
+      is_simplefin_synced: false,
       user_id: user.id,
     };
 
@@ -315,7 +482,20 @@ function Accounts() {
 
     // Apply type filter
     if (filterType !== "All") {
-      filtered = filtered.filter((account) => account.type === filterType);
+      // Map filter to both legacy type and new account_type
+      if (filterType === "Investment") {
+        filtered = filtered.filter((account) => 
+          account.type === "Investment" || 
+          ['checking', 'savings', 'investment'].includes(account.account_type)
+        );
+      } else if (filterType === "Loan") {
+        filtered = filtered.filter((account) => 
+          account.type === "Loan" || 
+          ['credit', 'loan'].includes(account.account_type)
+        );
+      } else {
+        filtered = filtered.filter((account) => account.type === filterType);
+      }
     }
 
     // Apply search filter
@@ -420,8 +600,13 @@ function Accounts() {
     return futureValueFromPresent + futureValueFromContributions;
   };
 
-  // Generate projection data for the selected accounts
+  // Generate projection data for investment and loan accounts only
   const projectionData = useMemo(() => {
+    // Filter to only investment and loan accounts
+    const projectableAccounts = filteredAndSortedAccounts.filter(
+      acc => acc.account_type === 'investment' || acc.account_type === 'loan'
+    );
+    
     let monthsToShow;
     
     if (projectionMonths <= 12) {
@@ -450,7 +635,7 @@ function Accounts() {
       relevantMonths.sort((a, b) => a - b);
     }
     
-    return filteredAndSortedAccounts.map(account => ({
+    return projectableAccounts.map(account => ({
       account,
       projections: relevantMonths.map(months => ({
         month: months,
@@ -481,17 +666,40 @@ function Accounts() {
 
   return (
     <div className="w-full mx-auto p-6 bg-white dark:bg-slate-800 shadow-lg rounded-lg">
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold text-gray-800 dark:text-white">
-          Accounts
-        </h1>
-        <button
-          onClick={handleAddAccount}
-          className="flex items-center gap-2 bg-blue-500 dark:bg-blue-600 hover:bg-blue-600 dark:hover:bg-blue-700 hover:shadow-lg text-white px-5 py-2.5 rounded-lg transition-all font-medium"
-        >
-          <PlusCircle size={20} />
-          Add Account
-        </button>
+      <div className="flex flex-col gap-4 mb-8">
+        <div className="flex justify-between items-center">
+          <h1 className="text-3xl font-bold text-gray-800 dark:text-white">
+            Accounts
+          </h1>
+          <div className="flex items-center gap-3">
+            {!simpleFinAccessUrl && (
+              <button
+                onClick={() => setShowSimpleFinSetup(true)}
+                className="flex items-center gap-2 bg-purple-500 dark:bg-purple-600 hover:bg-purple-600 dark:hover:bg-purple-700 hover:shadow-lg text-white px-4 py-2.5 rounded-lg transition-all font-medium"
+              >
+                <LinkIcon size={20} />
+                Connect SimpleFin
+              </button>
+            )}
+            <button
+              onClick={handleAddAccount}
+              className="flex items-center gap-2 bg-blue-500 dark:bg-blue-600 hover:bg-blue-600 dark:hover:bg-blue-700 hover:shadow-lg text-white px-5 py-2.5 rounded-lg transition-all font-medium"
+            >
+              <PlusCircle size={20} />
+              Add Manually
+            </button>
+          </div>
+        </div>
+        
+        {/* SimpleFin Status */}
+        {syncError && (
+          <div className="flex items-center gap-2 text-sm">
+            <div className="flex items-center gap-2 text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 px-3 py-2 rounded-lg">
+              <AlertCircle size={16} />
+              <span>{syncError}</span>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Summary Cards */}
@@ -618,23 +826,8 @@ function Accounts() {
                     <SortIcon columnKey="value" />
                   </div>
                 </th>
-                <th 
-                  onClick={() => handleSort("interest_rate")}
-                  className="px-4 py-4 font-semibold text-left text-gray-700 dark:text-gray-200 text-sm uppercase tracking-wider cursor-pointer hover:bg-gray-300 dark:hover:bg-slate-500 transition-colors select-none whitespace-nowrap"
-                >
-                  <div className="flex items-center gap-2">
-                    Interest Rate
-                    <SortIcon columnKey="interest_rate" />
-                  </div>
-                </th>
-                <th 
-                  onClick={() => handleSort("montly_contribution")}
-                  className="px-4 py-4 font-semibold text-left text-gray-700 dark:text-gray-200 text-sm uppercase tracking-wider cursor-pointer hover:bg-gray-300 dark:hover:bg-slate-500 transition-colors select-none whitespace-nowrap"
-                >
-                  <div className="flex items-center gap-2">
-                    Monthly Contribution
-                    <SortIcon columnKey="montly_contribution" />
-                  </div>
+                <th className="px-4 py-4 font-semibold text-left text-gray-700 dark:text-gray-200 text-sm uppercase tracking-wider whitespace-nowrap">
+                  Interest Rate / Monthly Contribution
                 </th>
                 <th className="px-4 py-4 font-semibold text-center text-gray-700 dark:text-gray-200 text-sm uppercase tracking-wider whitespace-nowrap w-24">
                   
@@ -675,25 +868,42 @@ function Accounts() {
                     }`}
                   >
                     <td className="px-4 py-3" style={{ minWidth: "200px" }}>
-                      <input
-                        type="text"
-                        value={tempNames[account.id] ?? account.name}
-                        onChange={(e) => handleNameChange(account.id, e.target.value)}
-                        className="w-full min-w-0 px-3 py-2 bg-white dark:bg-slate-600 hover:bg-gray-50 dark:hover:bg-slate-500 rounded-md text-gray-800 dark:text-white border border-gray-300 dark:border-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition-all"
-                        placeholder="Account name"
-                      />
+                      <div className="flex items-center gap-2">
+                        {account.is_simplefin_synced && (
+                          <div className="flex-shrink-0 w-2 h-2 bg-green-500 rounded-full" title="Synced from SimpleFin"></div>
+                        )}
+                        <input
+                          type="text"
+                          value={tempNames[account.id] ?? account.name}
+                          onChange={(e) => handleNameChange(account.id, e.target.value)}
+                          className="w-full min-w-0 px-3 py-2 bg-white dark:bg-slate-600 hover:bg-gray-50 dark:hover:bg-slate-500 rounded-md text-gray-800 dark:text-white border border-gray-300 dark:border-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition-all"
+                          placeholder="Account name"
+                        />
+                      </div>
                     </td>
                     <td className="px-4 py-3" style={{ minWidth: "150px" }}>
                       <select
-                        value={tempTypes[account.id] ?? account.type ?? "Investment"}
+                        value={tempTypes[account.id] ?? account.account_type ?? account.type?.toLowerCase() ?? "investment"}
                         onChange={(e) => handleTypeChange(account.id, e.target.value)}
                         className="w-full min-w-0 px-3 py-2 bg-white dark:bg-slate-600 hover:bg-gray-50 dark:hover:bg-slate-500 rounded-md text-gray-800 dark:text-white border border-gray-300 dark:border-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition-all cursor-pointer"
                       >
-                        <option value="Investment" className="bg-white dark:bg-slate-700">
+                        <option value="checking" className="bg-white dark:bg-slate-700">
+                          Checking
+                        </option>
+                        <option value="savings" className="bg-white dark:bg-slate-700">
+                          Savings
+                        </option>
+                        <option value="credit" className="bg-white dark:bg-slate-700">
+                          Credit Card
+                        </option>
+                        <option value="investment" className="bg-white dark:bg-slate-700">
                           Investment
                         </option>
-                        <option value="Loan" className="bg-white dark:bg-slate-700">
+                        <option value="loan" className="bg-white dark:bg-slate-700">
                           Loan
+                        </option>
+                        <option value="other" className="bg-white dark:bg-slate-700">
+                          Other
                         </option>
                       </select>
                     </td>
@@ -707,40 +917,51 @@ function Accounts() {
                           step="0.01"
                           value={tempValues[account.id] ?? account.value ?? 0}
                           onChange={(e) => handleValueChange(account.id, e.target.value)}
-                          className="w-full min-w-0 pl-7 pr-3 py-2 bg-white dark:bg-slate-600 hover:bg-gray-50 dark:hover:bg-slate-500 rounded-md text-gray-800 dark:text-white border border-gray-300 dark:border-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition-all"
+                          disabled={account.is_simplefin_synced}
+                          readOnly={account.is_simplefin_synced}
+                          className={`w-full min-w-0 pl-7 pr-3 py-2 rounded-md text-gray-800 dark:text-white border transition-all ${
+                            account.is_simplefin_synced 
+                              ? 'bg-gray-100 dark:bg-slate-700 border-gray-200 dark:border-gray-600 cursor-not-allowed'
+                              : 'bg-white dark:bg-slate-600 hover:bg-gray-50 dark:hover:bg-slate-500 border-gray-300 dark:border-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none'
+                          }`}
                           placeholder="0.00"
+                          title={account.is_simplefin_synced ? "Value is synced from SimpleFin" : ""}
                         />
                       </div>
                     </td>
-                    <td className="px-4 py-3" style={{ minWidth: "140px" }}>
-                      <div className="relative">
-                        <input
-                          type="number"
-                          step="0.01"
-                          value={tempInterestRates[account.id] ?? account.interest_rate ?? 0}
-                          onChange={(e) => handleInterestRateChange(account.id, e.target.value)}
-                          className="w-full min-w-0 px-3 py-2 pr-8 bg-white dark:bg-slate-600 hover:bg-gray-50 dark:hover:bg-slate-500 rounded-md text-gray-800 dark:text-white border border-gray-300 dark:border-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition-all"
-                          placeholder="0.00"
-                        />
-                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 font-medium">
-                          %
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3" style={{ minWidth: "180px" }}>
-                      <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 font-medium">
-                          $
-                        </span>
-                        <input
-                          type="number"
-                          step="0.01"
-                          value={tempMonthlyContributions[account.id] ?? account.montly_contribution ?? 0}
-                          onChange={(e) => handleMonthlyContributionChange(account.id, e.target.value)}
-                          className="w-full min-w-0 pl-7 pr-3 py-2 bg-white dark:bg-slate-600 hover:bg-gray-50 dark:hover:bg-slate-500 rounded-md text-gray-800 dark:text-white border border-gray-300 dark:border-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition-all"
-                          placeholder="0.00"
-                        />
-                      </div>
+                    <td className="px-4 py-3" style={{ minWidth: "300px" }}>
+                      {(account.account_type === 'investment' || account.account_type === 'loan') ? (
+                        <div className="flex gap-2">
+                          <div className="relative flex-1">
+                            <input
+                              type="number"
+                              step="0.01"
+                              value={tempInterestRates[account.id] ?? account.interest_rate ?? 0}
+                              onChange={(e) => handleInterestRateChange(account.id, e.target.value)}
+                              className="w-full px-3 py-2 pr-8 bg-white dark:bg-slate-600 hover:bg-gray-50 dark:hover:bg-slate-500 rounded-md text-gray-800 dark:text-white border border-gray-300 dark:border-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition-all"
+                              placeholder="Rate %"
+                            />
+                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 font-medium">
+                              %
+                            </span>
+                          </div>
+                          <div className="relative flex-1">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 font-medium">
+                              $
+                            </span>
+                            <input
+                              type="number"
+                              step="0.01"
+                              value={tempMonthlyContributions[account.id] ?? account.montly_contribution ?? 0}
+                              onChange={(e) => handleMonthlyContributionChange(account.id, e.target.value)}
+                              className="w-full pl-7 pr-3 py-2 bg-white dark:bg-slate-600 hover:bg-gray-50 dark:hover:bg-slate-500 rounded-md text-gray-800 dark:text-white border border-gray-300 dark:border-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition-all"
+                              placeholder="Monthly"
+                            />
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="text-gray-400 dark:text-gray-500 text-sm italic">N/A</span>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-center">
                       <button
@@ -764,7 +985,7 @@ function Accounts() {
       </div>
 
       {/* Future Value Projections */}
-      {filteredAndSortedAccounts.length > 0 && (
+      {filteredAndSortedAccounts.filter(acc => acc.account_type === 'investment' || acc.account_type === 'loan').length > 0 && (
         <div className="mt-8">
           <div className="flex justify-between items-center mb-6">
             <div>
@@ -1002,15 +1223,25 @@ function Accounts() {
                   Account Type <span className="text-red-500">*</span>
                 </label>
                 <select
-                  value={newAccount.type}
-                  onChange={(e) =>
-                    setNewAccount({ ...newAccount, type: e.target.value })
-                  }
+                  value={newAccount.account_type}
+                  onChange={(e) => {
+                    const accountType = e.target.value;
+                    const legacyType = (accountType === 'credit' || accountType === 'loan') ? 'Loan' : 'Investment';
+                    setNewAccount({ 
+                      ...newAccount, 
+                      account_type: accountType,
+                      type: legacyType 
+                    });
+                  }}
                   className="w-full px-4 py-3 bg-gray-50 dark:bg-slate-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-800 dark:text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition-all cursor-pointer"
                   required
                 >
-                  <option value="Investment">Investment</option>
-                  <option value="Loan">Loan</option>
+                  <option value="checking">Checking</option>
+                  <option value="savings">Savings</option>
+                  <option value="credit">Credit Card</option>
+                  <option value="investment">Investment</option>
+                  <option value="loan">Loan</option>
+                  <option value="other">Other</option>
                 </select>
               </div>
 
@@ -1036,58 +1267,63 @@ function Accounts() {
                 </div>
               </div>
 
-              {/* Interest Rate */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">
-                  Interest Rate
-                </label>
-                <div className="relative">
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={newAccount.interest_rate}
-                    onChange={(e) =>
-                      setNewAccount({
-                        ...newAccount,
-                        interest_rate: e.target.value,
-                      })
-                    }
-                    className="w-full px-4 pr-9 py-3 bg-gray-50 dark:bg-slate-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-800 dark:text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition-all"
-                    placeholder="0.00"
-                  />
-                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 font-medium text-lg">
-                    %
-                  </span>
-                </div>
-              </div>
+              {/* Interest Rate & Monthly Contribution - Only for Investment/Loan */}
+              {(newAccount.account_type === 'investment' || newAccount.account_type === 'loan') && (
+                <>
+                  {/* Interest Rate */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">
+                      Interest Rate
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={newAccount.interest_rate}
+                        onChange={(e) =>
+                          setNewAccount({
+                            ...newAccount,
+                            interest_rate: e.target.value,
+                          })
+                        }
+                        className="w-full px-4 pr-9 py-3 bg-gray-50 dark:bg-slate-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-800 dark:text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition-all"
+                        placeholder="0.00"
+                      />
+                      <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 font-medium text-lg">
+                        %
+                      </span>
+                    </div>
+                  </div>
 
-              {/* Monthly Contribution */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">
-                  Monthly Contribution
-                </label>
-                <div className="relative">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 font-medium text-lg">
-                    $
-                  </span>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={newAccount.montly_contribution}
-                    onChange={(e) =>
-                      setNewAccount({
-                        ...newAccount,
-                        montly_contribution: e.target.value,
-                      })
-                    }
-                    className="w-full pl-9 pr-4 py-3 bg-gray-50 dark:bg-slate-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-800 dark:text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition-all"
-                    placeholder="0.00"
-                  />
-                </div>
-                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                  Amount added or paid monthly
-                </p>
-              </div>
+                  {/* Monthly Contribution */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">
+                      Monthly {newAccount.account_type === 'loan' ? 'Payment' : 'Contribution'}
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 font-medium text-lg">
+                        $
+                      </span>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={newAccount.montly_contribution}
+                        onChange={(e) =>
+                          setNewAccount({
+                            ...newAccount,
+                            montly_contribution: e.target.value,
+                          })
+                        }
+                        className="w-full pl-9 pr-4 py-3 bg-gray-50 dark:bg-slate-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-800 dark:text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition-all"
+                        placeholder="0.00"
+                      />
+                    </div>
+                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                      {newAccount.account_type === 'loan' ? 'Amount paid monthly' : 'Amount added monthly'}
+                    </p>
+                  </div>
+                </>
+              )}
 
               {/* Form Actions */}
               <div className="flex gap-3 pt-4">
@@ -1114,6 +1350,18 @@ function Accounts() {
           </div>
         </div>
       )}
+
+      {/* SimpleFin Setup Modal */}
+      <SimpleFinSetup
+        isOpen={showSimpleFinSetup}
+        onClose={() => setShowSimpleFinSetup(false)}
+        onSuccess={(accessUrl) => {
+          setSimpleFinAccessUrl(accessUrl);
+          hasAutoSynced.current = false;
+        }}
+        userId={user?.id}
+      />
+
     </div>
   );
 }

@@ -83,7 +83,7 @@ const AddPurchase = () => {
         </div>
       )}
 
-      <style jsx>{`
+      <style>{`
         @keyframes bounceIn {
           0% {
             transform: scale(0.3);

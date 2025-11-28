@@ -33,6 +33,21 @@ export const decryptValue = (encryptedValue, userId) => {
   }
 };
 
+// Decrypt a string value (for non-numeric data like URLs)
+export const decryptString = (encryptedValue, userId) => {
+  if (!encryptedValue) return '';
+  
+  try {
+    const key = getEncryptionKey(userId);
+    const decrypted = CryptoJS.AES.decrypt(encryptedValue, key);
+    const decryptedStr = decrypted.toString(CryptoJS.enc.Utf8);
+    return decryptedStr;
+  } catch (error) {
+    console.error('String decryption error:', error);
+    return '';
+  }
+};
+
 // Encrypt account object
 export const encryptAccountData = (account, userId) => {
   return {
