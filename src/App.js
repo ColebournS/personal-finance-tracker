@@ -23,9 +23,9 @@ const CurrentBudget = lazy(() => import("./components/Charts/CurrentBudget"));
 const BudgetVsSpent = lazy(() => import("./components/Charts/BudgetVsSpent"));
 const SettingsButton = lazy(() => import("./components/SettingsButton"));
 const SettingsMobile = lazy(() => import("./components/SettingsMobile"));
-const ThemeToggle = lazy(() => import("./components/ThemeToggle"));
 const TopNav = lazy(() => import("./components/TopNav"));
 const Accounts = lazy(() => import("./components/Accounts"));
+const NotFound = lazy(() => import("./components/NotFound"));
 
 const BottomNav = () => {
   const location = window.location;
@@ -152,6 +152,7 @@ function AppContent({ isMobile, takeHomePay, setTakeHomePay }) {
                       </div>
                     }
                   />
+                  {/* Capitalized routes (primary for mobile) */}
                   <Route
                     path="/Income"
                     element={
@@ -203,9 +204,31 @@ function AppContent({ isMobile, takeHomePay, setTakeHomePay }) {
                       </div>
                     }
                   />
+                  {/* Lowercase routes (redirects for desktop compatibility) */}
+                  <Route
+                    path="/income"
+                    element={<Navigate to="/Income" replace />}
+                  />
+                  <Route
+                    path="/budget"
+                    element={<Navigate to="/Budget" replace />}
+                  />
+                  <Route
+                    path="/purchases"
+                    element={<Navigate to="/Purchases" replace />}
+                  />
+                  <Route
+                    path="/accounts"
+                    element={<Navigate to="/" replace />}
+                  />
+                  {/* Catch all */}
                   <Route
                     path="*"
-                    element={<Navigate to="/" replace />}
+                    element={
+                      <Suspense fallback={<LoadingSpinner />}>
+                        <NotFound isMobile={true} />
+                      </Suspense>
+                    }
                   />
                 </Routes>
                 <BottomNav />
@@ -215,9 +238,8 @@ function AppContent({ isMobile, takeHomePay, setTakeHomePay }) {
                 <Suspense fallback={<div />}>
                   <TopNav />
                 </Suspense>
-                <div className="fixed top-2 right-2 z-50 flex gap-2">
+                <div className="fixed top-2 right-2 z-50">
                   <Suspense fallback={<div />}>
-                    <ThemeToggle />
                     <SettingsButton />
                   </Suspense>
                 </div>
@@ -227,6 +249,7 @@ function AppContent({ isMobile, takeHomePay, setTakeHomePay }) {
                       path="/"
                       element={<Navigate to="/budget" replace />}
                     />
+                    {/* Lowercase routes (primary) */}
                     <Route
                       path="/income"
                       element={
@@ -279,9 +302,31 @@ function AppContent({ isMobile, takeHomePay, setTakeHomePay }) {
                         </div>
                       }
                     />
+                    {/* Capitalized routes (redirects for mobile compatibility) */}
+                    <Route
+                      path="/Income"
+                      element={<Navigate to="/income" replace />}
+                    />
+                    <Route
+                      path="/Budget"
+                      element={<Navigate to="/budget" replace />}
+                    />
+                    <Route
+                      path="/Purchases"
+                      element={<Navigate to="/purchases" replace />}
+                    />
+                    <Route
+                      path="/Settings"
+                      element={<Navigate to="/budget" replace />}
+                    />
+                    {/* Catch all */}
                     <Route
                       path="*"
-                      element={<Navigate to="/budget" replace />}
+                      element={
+                        <Suspense fallback={<LoadingSpinner />}>
+                          <NotFound isMobile={false} />
+                        </Suspense>
+                      }
                     />
                   </Routes>
                 </div>

@@ -124,7 +124,8 @@ export const DataProvider = ({ children }) => {
             budget_items (
               id,
               name,
-              budget
+              budget,
+              is_active
             )
           `
           )
@@ -160,7 +161,8 @@ export const DataProvider = ({ children }) => {
                   budget_items (
                     id,
                     name,
-                    budget
+                    budget,
+                    is_active
                   )
                 `
                 )
@@ -168,17 +170,28 @@ export const DataProvider = ({ children }) => {
                 .order("name");
 
               if (!newError) {
-                setBudgetGroups(newData || []);
+                const decryptedGroups = (newData || []).map(group => ({
+                  ...group,
+                  budget_items: (group.budget_items || [])
+                    .filter(item => item.is_active !== false) // Filter out inactive items
+                    .map(item => ({
+                      ...item,
+                      budget: decryptValue(item.budget, userId),
+                    })),
+                }));
+                setBudgetGroups(decryptedGroups);
               }
             }
           } else {
-            // Decrypt budget values for each budget item
+            // Filter out inactive budget items and decrypt budget values
             const decryptedBudgetGroups = data.map(group => ({
               ...group,
-              budget_items: (group.budget_items || []).map(item => ({
-                ...item,
-                budget: decryptValue(item.budget, userId),
-              })),
+              budget_items: (group.budget_items || [])
+                .filter(item => item.is_active !== false) // Filter out inactive items
+                .map(item => ({
+                  ...item,
+                  budget: decryptValue(item.budget, userId),
+                })),
             }));
             setBudgetGroups(decryptedBudgetGroups);
           }
@@ -204,6 +217,9 @@ export const DataProvider = ({ children }) => {
             cost,
             timestamp,
             budget_item_id,
+            simplefin_transaction_id,
+            is_simplefin_synced,
+            is_deleted,
             budget_items (
               id,
               name,
@@ -216,6 +232,7 @@ export const DataProvider = ({ children }) => {
           `
           )
           .eq("user_id", userId)
+          .eq("is_deleted", false)
           .order("timestamp", { ascending: false });
 
         if (error) {

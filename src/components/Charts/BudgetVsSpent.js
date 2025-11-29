@@ -66,6 +66,7 @@ function BudgetVsSpentChart() {
         name,
         budget,
         hidden,
+        is_active,
         purchases (cost)
         `
       )
@@ -79,8 +80,9 @@ function BudgetVsSpentChart() {
       return;
     }
 
-    // Decrypt budget values for each item
-    const decryptedItems = items.map(item => ({
+    // Filter out inactive budget items and decrypt budget values
+    const activeItems = (items || []).filter(item => item.is_active !== false);
+    const decryptedItems = activeItems.map(item => ({
       ...item,
       budget: decryptValue(item.budget, userId),
     }));

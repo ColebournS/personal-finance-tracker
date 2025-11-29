@@ -193,8 +193,39 @@ function Budget() {
   };
 
   const handleDeleteItem = async (itemId) => {
-    await supabase.from("budget_items").delete().eq("id", itemId);
-    refetchBudgetGroups();
+    try {
+      // Check if there are any purchases associated with this budget item
+      const { data: associatedPurchases, error: purchaseError } = await supabase
+        .from("purchases")
+        .select("id")
+        .eq("budget_item_id", itemId)
+        .limit(1);
+
+      if (purchaseError) throw purchaseError;
+
+      if (associatedPurchases && associatedPurchases.length > 0) {
+        // Soft delete: mark as inactive instead of deleting
+        const { error: updateError } = await supabase
+          .from("budget_items")
+          .update({ is_active: false })
+          .eq("id", itemId);
+
+        if (updateError) throw updateError;
+      } else {
+        // Hard delete: no purchases associated, safe to delete
+        const { error: deleteError } = await supabase
+          .from("budget_items")
+          .delete()
+          .eq("id", itemId);
+
+        if (deleteError) throw deleteError;
+      }
+
+      refetchBudgetGroups();
+    } catch (error) {
+      console.error("Error deleting budget item:", error);
+      alert("Failed to delete budget item. Please try again.");
+    }
   };
 
   const handleDeleteGroup = async (groupId) => {

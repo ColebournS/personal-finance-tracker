@@ -17,25 +17,6 @@ export async function claimAccessUrl(setupToken) {
       throw new Error('Invalid setup token format');
     }
 
-    // Try direct connection first (SimpleFin may allow CORS for claim URL)
-    try {
-      const directResponse = await fetch(claimUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (directResponse.ok) {
-        const data = await directResponse.text();
-        if (data && data.startsWith('http')) {
-          return data.trim();
-        }
-      }
-    } catch (directError) {
-      // Direct connection failed, use Edge Function
-    }
-
     // Use Supabase Edge Function
     const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
     const supabaseKey = process.env.REACT_APP_SUPABASE_ANON_KEY;
@@ -80,37 +61,32 @@ export async function claimAccessUrl(setupToken) {
 /**
  * Fetches account data from SimpleFin API
  * @param {string} accessUrl - The access URL obtained from claiming
+ * @param {Object} options - Optional parameters for the request
+ * @param {number} options.startDate - Unix timestamp for transaction start date
+ * @param {number} options.endDate - Unix timestamp for transaction end date
  * @returns {Promise<Object>} - Account data from SimpleFin
  */
-export async function fetchAccounts(accessUrl) {
+export async function fetchAccounts(accessUrl, options = {}) {
   try {
     if (!accessUrl || !accessUrl.startsWith('http')) {
       throw new Error('Invalid access URL');
     }
 
     // Append /accounts to the access URL
-    const accountsUrl = `${accessUrl}/accounts`;
-    console.log('Fetching from SimpleFin, URL (masked):', accessUrl.substring(0, 30) + '...');
-
-    // Try direct connection first
-    try {
-      const directResponse = await fetch(accountsUrl, {
-        method: 'GET',
-        headers: {
-          'Accept': 'application/json',
-        },
-      });
-
-      if (directResponse.ok) {
-        const data = await directResponse.json();
-        console.log('Got response from direct connection, accounts:', data?.accounts?.length);
-        return data;
-      }
-    } catch (directError) {
-      console.log('Direct connection failed, using Edge Function');
-      // Direct connection failed, use Edge Function
+    let accountsUrl = `${accessUrl}/accounts`;
+    
+    // Add date range parameters if provided
+    const params = [];
+    if (options.startDate) {
+      params.push(`start-date=${options.startDate}`);
     }
-
+    if (options.endDate) {
+      params.push(`end-date=${options.endDate}`);
+    }
+    if (params.length > 0) {
+      accountsUrl += `?${params.join('&')}`;
+    }
+    
     // Use Supabase Edge Function
     const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
     const supabaseKey = process.env.REACT_APP_SUPABASE_ANON_KEY;
@@ -123,8 +99,6 @@ export async function fetchAccounts(accessUrl) {
       },
       body: JSON.stringify({ url: accountsUrl, method: 'GET' }),
     });
-
-    console.log('Edge Function response status:', response.status);
 
     if (!response.ok) {
       if (response.status === 429) {
@@ -139,8 +113,6 @@ export async function fetchAccounts(accessUrl) {
     }
 
     const data = await response.json();
-    console.log('Got response from Edge Function, accounts:', data?.accounts?.length);
-    console.log('Raw SimpleFin data:', data);
     return data;
   } catch (error) {
     if (error.message.startsWith('RATE_LIMIT') || error.message.startsWith('UNAUTHORIZED')) {
@@ -200,7 +172,6 @@ export function mapSimpleFinAccount(sfAccount) {
     last_synced: new Date().toISOString(),
     interest_rate: 0,
     montly_contribution: 0,
-    type: (accountType === 'credit' || accountType === 'loan') ? 'Loan' : 'Investment',
   };
 }
 
@@ -251,6 +222,43 @@ export async function retryWithBackoff(apiCall, maxRetries = 3) {
 }
 
 /**
+ * Maps a SimpleFin transaction to our app's purchase format
+ * @param {Object} sfTransaction - SimpleFin transaction object
+ * @param {string} accountId - Local account ID
+ * @param {string} simpleFinAccountId - SimpleFin account ID
+ * @returns {Object} - Mapped purchase object for our app
+ */
+export function mapSimpleFinTransaction(sfTransaction, accountId, simpleFinAccountId) {
+  // SimpleFin transactions have negative amounts for purchases/debits
+  // We store purchases as positive amounts
+  const amount = Math.abs(parseFloat(sfTransaction.amount) || 0);
+  
+  // Skip transactions with zero amount or positive amounts (deposits/credits)
+  // We only want to import purchases (negative amounts in SimpleFin)
+  if (sfTransaction.amount >= 0 || amount === 0) {
+    return null;
+  }
+  
+  // Parse transaction date (SimpleFin uses Unix timestamp in seconds)
+  let transactionDate = new Date();
+  if (sfTransaction.posted) {
+    transactionDate = new Date(sfTransaction.posted * 1000);
+  } else if (sfTransaction.transacted_at) {
+    transactionDate = new Date(sfTransaction.transacted_at * 1000);
+  }
+  
+  return {
+    simplefin_transaction_id: sfTransaction.id,
+    simplefin_account_id: simpleFinAccountId,
+    item_name: sfTransaction.description || sfTransaction.payee || 'Unknown Transaction',
+    cost: amount,
+    timestamp: transactionDate.toISOString(),
+    is_simplefin_synced: true,
+    budget_item_id: null, // User will categorize manually
+  };
+}
+
+/**
  * Syncs SimpleFin accounts with local database
  * @param {string} accessUrl - SimpleFin access URL
  * @param {Array} existingAccounts - Current accounts from database
@@ -261,10 +269,6 @@ export async function syncAccounts(accessUrl, existingAccounts = []) {
     // Fetch accounts from SimpleFin with retry logic
     const data = await retryWithBackoff(() => fetchAccounts(accessUrl));
     
-    console.log('SimpleFin API returned:', data);
-    console.log('Number of accounts from SimpleFin:', data?.accounts?.length);
-    console.log('Existing accounts in database:', existingAccounts.length);
-    
     if (!data || !data.accounts || !Array.isArray(data.accounts)) {
       throw new Error('Invalid response format from SimpleFin');
     }
@@ -274,10 +278,7 @@ export async function syncAccounts(accessUrl, existingAccounts = []) {
 
     // Process each SimpleFin account
     for (const sfAccount of data.accounts) {
-      console.log('Processing SimpleFin account:', sfAccount.name, 'ID:', sfAccount.id);
-      
       const mappedAccount = mapSimpleFinAccount(sfAccount);
-      console.log('Mapped to:', mappedAccount);
       
       // Check if account already exists
       const existingAccount = existingAccounts.find(
@@ -285,7 +286,6 @@ export async function syncAccounts(accessUrl, existingAccounts = []) {
       );
 
       if (existingAccount) {
-        console.log('Account exists, will update:', existingAccount.name);
         // Update existing account
         accountsToUpdate.push({
           id: existingAccount.id,
@@ -295,23 +295,89 @@ export async function syncAccounts(accessUrl, existingAccounts = []) {
           name: existingAccount.name || mappedAccount.name,
         });
       } else {
-        console.log('New account detected:', mappedAccount.name);
         // New account to create
         accountsToCreate.push(mappedAccount);
       }
     }
 
-    console.log('Final sync summary:', {
-      fromSimpleFin: data.accounts.length,
-      inDatabase: existingAccounts.length,
-      toCreate: accountsToCreate.length,
-      toUpdate: accountsToUpdate.length
-    });
-
     return {
       accountsToCreate,
       accountsToUpdate,
       totalSynced: data.accounts.length,
+      rawData: data, // Include raw data for transaction processing
+    };
+  } catch (error) {
+    throw error;
+  }
+}
+
+/**
+ * Syncs SimpleFin transactions with local purchases table
+ * @param {string} accessUrl - SimpleFin access URL
+ * @param {Array} localAccounts - Current accounts from database (with local IDs)
+ * @param {Array} existingPurchases - Current purchases from database
+ * @returns {Promise<Object>} - Object with transactions to create
+ */
+export async function syncTransactions(accessUrl, localAccounts = [], existingPurchases = []) {
+  try {
+    // Request transactions from the last 90 days
+    const endDate = Math.floor(Date.now() / 1000); // Current time in Unix timestamp
+    const startDate = endDate - (90 * 24 * 60 * 60); // 90 days ago
+    
+    // Fetch accounts from SimpleFin with retry logic (includes transactions)
+    const data = await retryWithBackoff(() => fetchAccounts(accessUrl, { startDate, endDate }));
+    
+    if (!data || !data.accounts || !Array.isArray(data.accounts)) {
+      throw new Error('Invalid response format from SimpleFin');
+    }
+
+    const transactionsToCreate = [];
+    
+    // Get set of existing SimpleFin transaction IDs for duplicate detection
+    // Include both active and deleted purchases to prevent re-importing deleted transactions
+    const existingTransactionIds = new Set(
+      existingPurchases
+        .filter(p => p.simplefin_transaction_id)
+        .map(p => p.simplefin_transaction_id)
+    );
+
+    // Process each SimpleFin account
+    for (const sfAccount of data.accounts) {
+      // Find the corresponding local account
+      const localAccount = localAccounts.find(
+        acc => acc.simplefin_id === sfAccount.id
+      );
+      
+      if (!localAccount) {
+        continue;
+      }
+
+      // Process transactions if they exist
+      if (sfAccount.transactions && Array.isArray(sfAccount.transactions)) {
+        for (const sfTransaction of sfAccount.transactions) {
+          // Skip if we've already imported this transaction
+          if (existingTransactionIds.has(sfTransaction.id)) {
+            continue;
+          }
+          
+          // Map transaction to purchase format
+          const mappedTransaction = mapSimpleFinTransaction(
+            sfTransaction,
+            localAccount.id,
+            sfAccount.id
+          );
+          
+          // Only add if it's a valid purchase (not a deposit/credit)
+          if (mappedTransaction) {
+            transactionsToCreate.push(mappedTransaction);
+          }
+        }
+      }
+    }
+
+    return {
+      transactionsToCreate,
+      totalSynced: transactionsToCreate.length,
     };
   } catch (error) {
     throw error;

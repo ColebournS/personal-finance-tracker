@@ -1,11 +1,9 @@
 import React, { useState, useEffect } from "react";
-import { Download, LogOut, Moon, Sun, RefreshCw, X as XIcon } from "lucide-react";
-import * as XLSX from "xlsx";
+import { LogOut, Moon, Sun, RefreshCw, X as XIcon } from "lucide-react";
 import supabase from "../supabaseClient";
-import BulkPurchaseImport from "./BulkPurchaseImport";
 import { useTheme } from "next-themes";
 import { decryptString, encryptValue, decryptValue } from "../utils/encryption";
-import { syncAccounts } from "../utils/simplefinService";
+import { syncAccounts, syncTransactions } from "../utils/simplefinService";
 
 const SettingsMobile = () => {
   const [userId, setUserId] = useState(null);
@@ -79,6 +77,8 @@ const SettingsMobile = () => {
         newAccounts: accountsToCreate
       });
 
+      const newlyCreatedAccounts = [];
+
       for (const newAccount of accountsToCreate) {
         console.log('Creating new account:', newAccount);
         const encryptedValue = encryptValue(newAccount.value, userId);
@@ -98,6 +98,14 @@ const SettingsMobile = () => {
           throw error;
         }
         console.log('Account created successfully:', data);
+        if (data && data[0]) {
+          newlyCreatedAccounts.push({
+            ...data[0],
+            value: newAccount.value,
+            interest_rate: newAccount.interest_rate,
+            montly_contribution: newAccount.montly_contribution
+          });
+        }
       }
 
       for (const updatedAccount of accountsToUpdate) {
@@ -119,6 +127,10 @@ const SettingsMobile = () => {
           .eq("id", updatedAccount.id);
       }
 
+      // Sync transactions after accounts are synced
+      const allAccounts = [...decryptedAccounts, ...newlyCreatedAccounts];
+      await syncTransactionsFromSettings(allAccounts);
+
       setLastSyncTime(new Date());
       
     } catch (error) {
@@ -126,6 +138,45 @@ const SettingsMobile = () => {
       alert("Failed to sync accounts. Please try again.");
     } finally {
       setSyncing(false);
+    }
+  };
+
+  const syncTransactionsFromSettings = async (currentAccounts) => {
+    try {
+      // Fetch ALL existing purchases (including deleted ones) for duplicate detection
+      // Deleted purchases prevent re-syncing transactions that were manually removed
+      const { data: purchasesData } = await supabase
+        .from("purchases")
+        .select("simplefin_transaction_id, simplefin_account_id, is_deleted")
+        .eq("user_id", userId);
+
+      // Sync transactions
+      const { transactionsToCreate } = await syncTransactions(
+        simpleFinAccessUrl,
+        currentAccounts,
+        purchasesData || []
+      );
+
+      if (transactionsToCreate.length === 0) {
+        console.log("No new transactions to sync");
+        return;
+      }
+
+      console.log(`Syncing ${transactionsToCreate.length} new transactions`);
+
+      // Create new purchases from transactions
+      for (const transaction of transactionsToCreate) {
+        await supabase.from("purchases").insert([{
+          ...transaction,
+          user_id: userId,
+        }]);
+      }
+
+      console.log(`Successfully synced ${transactionsToCreate.length} transactions`);
+      
+    } catch (error) {
+      console.error("Transaction sync error:", error);
+      // Don't show error to user as this is secondary to account sync
     }
   };
 
@@ -156,63 +207,6 @@ const SettingsMobile = () => {
     }
   };
 
-  const exportToExcel = async () => {
-    try {
-      const { data: budgetGroups, error: groupsError } = await supabase
-        .from("budget_groups")
-        .select("*")
-        .eq("id", userId);
-
-      if (groupsError) throw groupsError;
-
-      const { data: budgetItems, error: itemsError } = await supabase
-        .from("budget_items")
-        .select("*")
-        .eq("id", userId);
-
-      if (itemsError) throw itemsError;
-
-      const { data: purchases, error: purchasesError } = await supabase
-        .from("purchases")
-        .select("*")
-        .eq("id", userId);
-
-      if (purchasesError) throw purchasesError;
-
-      const budgetItemsData = budgetItems.map((item) => {
-        const group = budgetGroups.find((g) => g.id === item.group_id);
-        return {
-          Group: group?.name || "Unknown",
-          ItemName: item.name,
-          Budget: item.budget,
-          ItemID: item.id,
-        };
-      });
-
-      const purchasesData = purchases.map((purchase) => ({
-        ItemName: purchase.item_name,
-        Cost: purchase.cost,
-        BudgetGroup: purchase.budget_item_id,
-        Timestamp: new Date(purchase.timestamp).toLocaleString(),
-      }));
-
-      const workbook = XLSX.utils.book_new();
-
-      const budgetItemsSheet = XLSX.utils.json_to_sheet(budgetItemsData);
-      XLSX.utils.book_append_sheet(workbook, budgetItemsSheet, "Budget Items");
-
-      const purchasesSheet = XLSX.utils.json_to_sheet(purchasesData);
-      XLSX.utils.book_append_sheet(workbook, purchasesSheet, "Purchases");
-
-      const groupsSheet = XLSX.utils.json_to_sheet(budgetGroups);
-      XLSX.utils.book_append_sheet(workbook, groupsSheet, "Budget Groups");
-
-      XLSX.writeFile(workbook, "Budget_Export.xlsx");
-    } catch (error) {
-      console.error("Error exporting data to Excel: ", error);
-      throw error;
-    }
-  };
 
 
   return (
@@ -273,16 +267,6 @@ const SettingsMobile = () => {
             </button>
           </div>
         )}
-
-        <button
-          onClick={exportToExcel}
-          className="w-full flex items-center justify-center gap-2 p-2 text-sm font-medium text-white bg-blue-600 dark:bg-blue-700 hover:bg-blue-700 dark:hover:bg-blue-800 rounded-md transition-colors"
-        >
-          <Download className="w-4 h-4" />
-          Export Data
-        </button>
-
-        <BulkPurchaseImport />
 
         <div className="border-t border-gray-200 dark:border-gray-600 pt-4">
           <button

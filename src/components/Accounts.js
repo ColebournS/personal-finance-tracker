@@ -2,19 +2,20 @@ import React, { useState, useEffect, useCallback, useRef, useMemo } from "react"
 import supabase from "../supabaseClient";
 import { Trash2, PlusCircle, X, Search, ArrowUpDown, ArrowUp, ArrowDown, TrendingUp, Link as LinkIcon, AlertCircle } from "lucide-react";
 import { useAuth } from "../AuthContext";
+import { useData } from "../DataContext";
 import { encryptValue, decryptValue, decryptString } from "../utils/encryption";
 import SimpleFinSetup from "./SimpleFinSetup";
-import { syncAccounts } from "../utils/simplefinService";
+import { syncAccounts, syncTransactions } from "../utils/simplefinService";
 
 function Accounts() {
   const { user } = useAuth();
+  const { purchases, refetchPurchases } = useData();
   const [accounts, setAccounts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [newAccount, setNewAccount] = useState({
     name: "",
-    type: "Investment",
     value: "",
     interest_rate: "",
     montly_contribution: "",
@@ -39,6 +40,8 @@ function Accounts() {
   const [simpleFinAccessUrl, setSimpleFinAccessUrl] = useState(null);
   const [syncing, setSyncing] = useState(false);
   const [syncError, setSyncError] = useState("");
+  const [syncingTransactions, setSyncingTransactions] = useState(false);
+  const [transactionSyncStatus, setTransactionSyncStatus] = useState("");
 
   // Fetch accounts from Supabase
   const fetchAccounts = useCallback(async () => {
@@ -101,8 +104,68 @@ function Accounts() {
     }
   }, [user?.id]);
 
+  // Sync transactions from SimpleFin
+  const handleTransactionSync = useCallback(async (currentAccounts) => {
+    if (!simpleFinAccessUrl || !user?.id) return 0;
+    
+    setSyncingTransactions(true);
+    setTransactionSyncStatus("Syncing transactions...");
+    
+    try {
+      // Fetch ALL existing purchases (including deleted ones) for duplicate detection
+      const { data: allPurchases } = await supabase
+        .from("purchases")
+        .select("simplefin_transaction_id, simplefin_account_id, is_deleted")
+        .eq("user_id", user.id);
+      
+      // Sync transactions
+      const { transactionsToCreate } = await syncTransactions(
+        simpleFinAccessUrl,
+        currentAccounts,
+        allPurchases || []
+      );
+
+      console.log('Transaction sync results:', {
+        toCreate: transactionsToCreate.length,
+      });
+
+      if (transactionsToCreate.length === 0) {
+        setTransactionSyncStatus("No new transactions to sync");
+        return 0;
+      }
+
+      // Create new purchases from transactions
+      for (const transaction of transactionsToCreate) {
+        const { error } = await supabase.from("purchases").insert([{
+          ...transaction,
+          user_id: user.id,
+        }]);
+        
+        if (error) {
+          console.error('Error inserting transaction as purchase:', error);
+          throw error;
+        }
+      }
+
+      // Refresh purchases list
+      await refetchPurchases();
+      
+      setTransactionSyncStatus(`Synced ${transactionsToCreate.length} new transaction${transactionsToCreate.length !== 1 ? 's' : ''}`);
+      return transactionsToCreate.length;
+      
+    } catch (error) {
+      console.error("SimpleFin transaction sync error:", error);
+      setTransactionSyncStatus("Failed to sync transactions");
+      throw error;
+    } finally {
+      setSyncingTransactions(false);
+      // Clear status after 5 seconds
+      setTimeout(() => setTransactionSyncStatus(""), 5000);
+    }
+  }, [simpleFinAccessUrl, user?.id, purchases, refetchPurchases]);
+
   // Sync accounts from SimpleFin
-  const handleSimpleFinSync = useCallback(async () => {
+  const handleSimpleFinSync = useCallback(async (syncTransactionsAfter = true) => {
     if (!simpleFinAccessUrl || !user?.id) return;
     
     setSyncing(true);
@@ -135,6 +198,7 @@ function Accounts() {
       });
 
       // Create new accounts
+      const newlyCreatedAccounts = [];
       for (const newAccount of accountsToCreate) {
         console.log('Creating new account:', newAccount);
         const encryptedValue = encryptValue(newAccount.value, user.id);
@@ -154,6 +218,14 @@ function Accounts() {
           throw error;
         }
         console.log('Account created successfully:', data);
+        if (data && data[0]) {
+          newlyCreatedAccounts.push({
+            ...data[0],
+            value: newAccount.value,
+            interest_rate: newAccount.interest_rate,
+            montly_contribution: newAccount.montly_contribution
+          });
+        }
       }
 
       // Update existing accounts
@@ -162,14 +234,13 @@ function Accounts() {
         const encryptedInterestRate = encryptValue(updatedAccount.interest_rate, user.id);
         const encryptedMonthlyContribution = encryptValue(updatedAccount.montly_contribution, user.id);
         
+        // Don't update account_type during sync - preserve user's manual changes
         const { error } = await supabase
           .from("accounts")
           .update({
             value: encryptedValue,
             interest_rate: encryptedInterestRate,
             montly_contribution: encryptedMonthlyContribution,
-            account_type: updatedAccount.account_type,
-            type: updatedAccount.type,
             last_synced: updatedAccount.last_synced,
             is_simplefin_synced: true,
           })
@@ -183,6 +254,12 @@ function Accounts() {
 
       // Refresh accounts list
       await fetchAccounts();
+      
+      // Sync transactions after accounts are synced
+      if (syncTransactionsAfter) {
+        const updatedAccounts = [...currentAccounts, ...newlyCreatedAccounts];
+        await handleTransactionSync(updatedAccounts);
+      }
       
     } catch (error) {
       console.error("SimpleFin sync error:", error);
@@ -198,7 +275,7 @@ function Accounts() {
     } finally {
       setSyncing(false);
     }
-  }, [simpleFinAccessUrl, user?.id, fetchAccounts]);
+  }, [simpleFinAccessUrl, user?.id, fetchAccounts, handleTransactionSync]);
 
 
   useEffect(() => {
@@ -314,20 +391,16 @@ function Accounts() {
   const handleTypeChange = (accountId, value) => {
     setTempTypes((prev) => ({ ...prev, [accountId]: value }));
     
-    // Map account_type to legacy type field
-    const legacyType = (value === 'credit' || value === 'loan') ? 'Loan' : 'Investment';
-    
     // Update local state immediately
     setAccounts((prev) =>
-      prev.map((acc) => (acc.id === accountId ? { ...acc, account_type: value, type: legacyType } : acc))
+      prev.map((acc) => (acc.id === accountId ? { ...acc, account_type: value } : acc))
     );
     
     debounceUpdate(`type-${accountId}`, async () => {
       const { error } = await supabase
         .from("accounts")
         .update({ 
-          account_type: value,
-          type: legacyType 
+          account_type: value
         })
         .eq("id", accountId);
       
@@ -378,7 +451,6 @@ function Accounts() {
     setShowModal(false);
     setNewAccount({
       name: "",
-      type: "Investment",
       value: "",
       interest_rate: "",
       montly_contribution: "",
@@ -418,8 +490,7 @@ function Accounts() {
       value: encryptedValue,
       interest_rate: encryptedInterestRate,
       montly_contribution: encryptedMonthlyContribution,
-      type: newAccount.type,
-      account_type: newAccount.account_type || newAccount.type.toLowerCase(),
+      account_type: newAccount.account_type,
       is_simplefin_synced: false,
       user_id: user.id,
     };
@@ -482,19 +553,14 @@ function Accounts() {
 
     // Apply type filter
     if (filterType !== "All") {
-      // Map filter to both legacy type and new account_type
       if (filterType === "Investment") {
         filtered = filtered.filter((account) => 
-          account.type === "Investment" || 
-          ['checking', 'savings', 'investment'].includes(account.account_type)
+          ['checking', 'savings', 'investment', 'other'].includes(account.account_type)
         );
       } else if (filterType === "Loan") {
         filtered = filtered.filter((account) => 
-          account.type === "Loan" || 
           ['credit', 'loan'].includes(account.account_type)
         );
-      } else {
-        filtered = filtered.filter((account) => account.type === filterType);
       }
     }
 
@@ -538,7 +604,7 @@ function Accounts() {
   const totals = accounts.reduce(
     (acc, account) => {
       const value = Number(account.value) || 0;
-      if (account.type === "Loan") {
+      if (['credit', 'loan'].includes(account.account_type)) {
         acc.totalLoans += value;
       } else {
         acc.totalInvestments += value;
@@ -566,7 +632,7 @@ function Accounts() {
     const monthlyContribution = Number(account.montly_contribution) || 0;
     
     // For loans, we need to calculate month by month to stop at zero
-    if (account.type === "Loan") {
+    if (['credit', 'loan'].includes(account.account_type)) {
       let balance = presentValue;
       
       for (let i = 0; i < months; i++) {
@@ -700,6 +766,20 @@ function Accounts() {
             </div>
           </div>
         )}
+        
+        {/* Transaction Sync Status */}
+        {transactionSyncStatus && (
+          <div className="flex items-center gap-2 text-sm">
+            <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-3 py-2 rounded-lg">
+              {syncingTransactions ? (
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 dark:border-blue-400"></div>
+              ) : (
+                <AlertCircle size={16} />
+              )}
+              <span>{transactionSyncStatus}</span>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Summary Cards */}
@@ -778,7 +858,7 @@ function Accounts() {
                 : "bg-white dark:bg-slate-700 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-slate-600"
             }`}
           >
-            Investments ({accounts.filter(a => a.type === "Investment").length})
+            Investments ({accounts.filter(a => ['checking', 'savings', 'investment', 'other'].includes(a.account_type)).length})
           </button>
           <button
             onClick={() => setFilterType("Loan")}
@@ -788,7 +868,7 @@ function Accounts() {
                 : "bg-white dark:bg-slate-700 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-slate-600"
             }`}
           >
-            Loans ({accounts.filter(a => a.type === "Loan").length})
+            Loans ({accounts.filter(a => ['credit', 'loan'].includes(a.account_type)).length})
           </button>
         </div>
       </div>
@@ -809,12 +889,12 @@ function Accounts() {
                   </div>
                 </th>
                 <th 
-                  onClick={() => handleSort("type")}
+                  onClick={() => handleSort("account_type")}
                   className="px-4 py-4 font-semibold text-left text-gray-700 dark:text-gray-200 text-sm uppercase tracking-wider cursor-pointer hover:bg-gray-300 dark:hover:bg-slate-500 transition-colors select-none whitespace-nowrap"
                 >
                   <div className="flex items-center gap-2">
                     Type
-                    <SortIcon columnKey="type" />
+                    <SortIcon columnKey="account_type" />
                   </div>
                 </th>
                 <th 
@@ -883,7 +963,7 @@ function Accounts() {
                     </td>
                     <td className="px-4 py-3" style={{ minWidth: "150px" }}>
                       <select
-                        value={tempTypes[account.id] ?? account.account_type ?? account.type?.toLowerCase() ?? "investment"}
+                        value={tempTypes[account.id] ?? account.account_type ?? "investment"}
                         onChange={(e) => handleTypeChange(account.id, e.target.value)}
                         className="w-full min-w-0 px-3 py-2 bg-white dark:bg-slate-600 hover:bg-gray-50 dark:hover:bg-slate-500 rounded-md text-gray-800 dark:text-white border border-gray-300 dark:border-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition-all cursor-pointer"
                       >
@@ -1074,7 +1154,7 @@ function Accounts() {
                         
                         // Calculate interest differently for loans vs investments
                         let totalInterest;
-                        if (item.account.type === "Loan") {
+                        if (['credit', 'loan'].includes(item.account.account_type)) {
                           // For loans: interest is what was paid beyond the principal reduction
                           // Total paid = contributions, Principal reduction = initial - final
                           // Interest = Total paid - Principal reduction
@@ -1098,11 +1178,11 @@ function Accounts() {
                                 Contributions: ${formatCurrency(totalContributions)}
                               </div>
                               <div className={`${
-                                item.account.type === "Loan"
+                                ['credit', 'loan'].includes(item.account.account_type)
                                   ? "text-red-600 dark:text-red-400"
                                   : "text-green-600 dark:text-green-400"
                               }`}>
-                                {item.account.type === "Loan" ? "Interest Paid" : "Interest Earned"}: ${formatCurrency(Math.abs(totalInterest))}
+                                {['credit', 'loan'].includes(item.account.account_type) ? "Interest Paid" : "Interest Earned"}: ${formatCurrency(Math.abs(totalInterest))}
                               </div>
                             </div>
                           </td>
@@ -1132,7 +1212,7 @@ function Accounts() {
                         const contributions = monthlyContribution * proj.month;
                         const initialValue = Number(item.account.value || 0);
                         
-                        if (item.account.type === "Loan") {
+                        if (['credit', 'loan'].includes(item.account.account_type)) {
                           // Loans subtract from net worth
                           totalFuture -= projValue;
                           totalContributions += contributions;
@@ -1225,12 +1305,9 @@ function Accounts() {
                 <select
                   value={newAccount.account_type}
                   onChange={(e) => {
-                    const accountType = e.target.value;
-                    const legacyType = (accountType === 'credit' || accountType === 'loan') ? 'Loan' : 'Investment';
                     setNewAccount({ 
                       ...newAccount, 
-                      account_type: accountType,
-                      type: legacyType 
+                      account_type: e.target.value
                     });
                   }}
                   className="w-full px-4 py-3 bg-gray-50 dark:bg-slate-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-800 dark:text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition-all cursor-pointer"

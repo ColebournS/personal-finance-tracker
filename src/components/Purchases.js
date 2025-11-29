@@ -1,26 +1,105 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import supabase from "../supabaseClient.js";
-import { Trash2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Trash2, ChevronLeft, ChevronRight, Edit2, Search, X, Calendar, DollarSign, Tag, ArrowUpDown, RotateCcw } from "lucide-react";
 import { useData } from "../DataContext";
 
 const PurchasesList = () => {
-  const { purchases, budgetGroups, refetchPurchases } = useData();
+  const { purchases, budgetGroups, refetchPurchases, userId } = useData();
   const [editingId, setEditingId] = useState(null);
   const [editableField, setEditableField] = useState(null);
   const [editingValue, setEditingValue] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterBudgetItem, setFilterBudgetItem] = useState("");
+  const [sortConfig, setSortConfig] = useState({ key: "timestamp", direction: "desc" });
+  const [showDeleted, setShowDeleted] = useState(false);
+  const [deletedPurchases, setDeletedPurchases] = useState([]);
+  const itemsPerPage = 15;
+
+  // Fetch deleted purchases when showing hidden view
+  const fetchDeletedPurchases = async () => {
+    if (!userId) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from("purchases")
+        .select(`
+          id,
+          item_name,
+          cost,
+          timestamp,
+          budget_item_id,
+          simplefin_transaction_id,
+          is_simplefin_synced,
+          is_deleted,
+          budget_items (
+            id,
+            name,
+            budget,
+            budget_groups (
+              id,
+              name
+            )
+          )
+        `)
+        .eq("user_id", userId)
+        .eq("is_deleted", true)
+        .order("timestamp", { ascending: false });
+
+      if (error) throw error;
+      setDeletedPurchases(data || []);
+    } catch (error) {
+      console.error("Error fetching deleted purchases:", error);
+    }
+  };
 
   const handleDelete = async (id) => {
     try {
-      const { error } = await supabase.from("purchases").delete().eq("id", id);
+      // Find the purchase to check if it's SimpleFin synced
+      const purchase = purchases.find(p => p.id === id);
+      
+      if (purchase?.is_simplefin_synced) {
+        // Soft delete for SimpleFin purchases to prevent re-sync
+        const { error } = await supabase
+          .from("purchases")
+          .update({ is_deleted: true })
+          .eq("id", id);
+
+        if (error) throw error;
+      } else {
+        // Hard delete for manual purchases
+        const { error } = await supabase
+          .from("purchases")
+          .delete()
+          .eq("id", id);
+
+        if (error) throw error;
+      }
+
+      await refetchPurchases();
+      if (showDeleted) {
+        await fetchDeletedPurchases();
+      }
+    } catch (error) {
+      console.error("Error deleting purchase:", error);
+      alert("Failed to delete purchase. Please try again.");
+    }
+  };
+
+  const handleRestore = async (id) => {
+    try {
+      const { error } = await supabase
+        .from("purchases")
+        .update({ is_deleted: false })
+        .eq("id", id);
 
       if (error) throw error;
 
       await refetchPurchases();
+      await fetchDeletedPurchases();
     } catch (error) {
-      console.error("Error deleting purchase:", error);
-      alert("Failed to delete purchase. Please try again.");
+      console.error("Error restoring purchase:", error);
+      alert("Failed to restore purchase. Please try again.");
     }
   };
 
@@ -84,11 +163,67 @@ const PurchasesList = () => {
     }
   };
 
+  // Filter and sort purchases
+  const filteredAndSortedPurchases = useMemo(() => {
+    // Use deleted purchases if showing hidden, otherwise use active purchases
+    let filtered = showDeleted ? [...deletedPurchases] : [...purchases];
+
+    // Apply search filter
+    if (searchTerm) {
+      filtered = filtered.filter(
+        (p) =>
+          p.item_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          p.budget_items?.name?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    // Apply budget item filter
+    if (filterBudgetItem === 'uncategorized') {
+      // Show only uncategorized purchases
+      filtered = filtered.filter((p) => !p.budget_item_id);
+    } else if (filterBudgetItem) {
+      // Show purchases for specific budget item
+      filtered = filtered.filter((p) => p.budget_item_id === filterBudgetItem);
+    }
+
+    // Apply sorting
+    filtered.sort((a, b) => {
+      let aValue, bValue;
+
+      switch (sortConfig.key) {
+        case "timestamp":
+          aValue = new Date(a.timestamp);
+          bValue = new Date(b.timestamp);
+          break;
+        case "item_name":
+          aValue = a.item_name?.toLowerCase() || "";
+          bValue = b.item_name?.toLowerCase() || "";
+          break;
+        case "cost":
+          aValue = a.cost;
+          bValue = b.cost;
+          break;
+        case "budget_item":
+          aValue = a.budget_items?.name?.toLowerCase() || "";
+          bValue = b.budget_items?.name?.toLowerCase() || "";
+          break;
+        default:
+          return 0;
+      }
+
+      if (aValue < bValue) return sortConfig.direction === "asc" ? -1 : 1;
+      if (aValue > bValue) return sortConfig.direction === "asc" ? 1 : -1;
+      return 0;
+    });
+
+    return filtered;
+  }, [purchases, deletedPurchases, showDeleted, searchTerm, filterBudgetItem, sortConfig]);
+
   // Calculate pagination values
-  const totalPages = Math.ceil(purchases.length / itemsPerPage);
+  const totalPages = Math.ceil(filteredAndSortedPurchases.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
-  const currentPurchases = purchases.slice(startIndex, endIndex);
+  const currentPurchases = filteredAndSortedPurchases.slice(startIndex, endIndex);
 
   const handleNextPage = () => {
     if (currentPage < totalPages) {
@@ -102,33 +237,208 @@ const PurchasesList = () => {
     }
   };
 
-  return (
-    <div className="w-full max-w-screen overflow-x-auto p-6 bg-white dark:bg-slate-800 shadow-lg rounded-lg">
-      <h1 className="text-3xl font-bold text-center text-gray-800 dark:text-white mb-6">
-        Purchases
-      </h1>
+  const handleSort = (key) => {
+    setSortConfig((prev) => ({
+      key,
+      direction: prev.key === key && prev.direction === "asc" ? "desc" : "asc",
+    }));
+  };
 
-      <div className="w-full overflow-x-auto">
-        <div className="inline-block min-w-full align-middle">
-          <table className="min-w-full table-auto border dark:border-gray-600 bg-gray-50 dark:bg-slate-700 rounded-md">
-            <thead>
-              <tr className="bg-gray-100 dark:bg-slate-600">
-                <th className="p-3 text-left text-gray-700 dark:text-gray-200">Date</th>
-                <th className="p-3 text-left text-gray-700 dark:text-gray-200">Item Name</th>
-                <th className="p-3 text-left text-gray-700 dark:text-gray-200">Cost</th>
-                <th className="p-3 text-left text-gray-700 dark:text-gray-200">Budget Item</th>
-                <th className="p-3 w-10"></th>
+  const getSortIcon = (key) => {
+    if (sortConfig.key !== key) return <ArrowUpDown size={14} className="opacity-40" />;
+    return sortConfig.direction === "asc" ? (
+      <ArrowUpDown size={14} className="text-blue-600 dark:text-blue-400" />
+    ) : (
+      <ArrowUpDown size={14} className="text-blue-600 dark:text-blue-400 rotate-180" />
+    );
+  };
+
+  return (
+    <div className="w-full bg-white dark:bg-slate-800 shadow-xl rounded-xl overflow-hidden">
+      {/* Header */}
+      <div className="bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-700 dark:to-indigo-700 px-6 py-8">
+          <h1 className="text-3xl font-bold text-white">
+            Purchase History
+          </h1>
+      </div>
+
+        {/* Filters and Search */}
+        <div className="p-6 border-b dark:border-slate-700 bg-gray-50 dark:bg-slate-900/50">
+          <div className="flex flex-col sm:flex-row gap-4">
+            {/* Search */}
+            <div className="flex-1 relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500" size={20} />
+              <input
+                type="text"
+                placeholder="Search purchases..."
+                value={searchTerm}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="w-full pl-10 pr-10 py-2.5 border dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-800 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+              />
+              {searchTerm && (
+                <button
+                  onClick={() => setSearchTerm("")}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                >
+                  <X size={18} />
+                </button>
+              )}
+            </div>
+
+            {/* Budget Item Filter */}
+            <div className="sm:w-64">
+              <select
+                value={filterBudgetItem}
+                onChange={(e) => {
+                  setFilterBudgetItem(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="w-full px-4 py-2.5 border dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-800 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+              >
+                <option value="">All Purchases</option>
+                <option value="uncategorized">Uncategorized</option>
+                {budgetGroups.map((group) => (
+                  <optgroup key={group.id} label={group.name}>
+                    {group.budget_items?.map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.name}
+                      </option>
+                    ))}
+                  </optgroup>
+                ))}
+              </select>
+            </div>
+
+            {/* Show Hidden Toggle */}
+            <div>
+              <button
+                onClick={async () => {
+                  const newShowDeleted = !showDeleted;
+                  setShowDeleted(newShowDeleted);
+                  if (newShowDeleted) {
+                    await fetchDeletedPurchases();
+                  }
+                  setCurrentPage(1);
+                }}
+                className={`px-4 py-2.5 rounded-lg font-medium transition-all ${
+                  showDeleted
+                    ? "bg-orange-500 dark:bg-orange-600 text-white shadow-md"
+                    : "bg-white dark:bg-slate-700 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-slate-600"
+                }`}
+              >
+                {showDeleted ? "Show Active" : "Show Hidden"}
+              </button>
+            </div>
+          </div>
+
+          {/* Active Filters Display */}
+          {(searchTerm || filterBudgetItem) && (
+            <div className="mt-3 flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+              <span>Active filters:</span>
+              {searchTerm && (
+                <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-md">
+                  Search: "{searchTerm}"
+                </span>
+              )}
+              {filterBudgetItem && (
+                <span className="px-2 py-1 bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 rounded-md">
+                  Budget Item
+                </span>
+              )}
+              <button
+                onClick={() => {
+                  setSearchTerm("");
+                  setFilterBudgetItem("");
+                }}
+                className="ml-2 text-blue-600 dark:text-blue-400 hover:underline"
+              >
+                Clear all
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Table */}
+        {currentPurchases.length === 0 ? (
+          <div className="p-12 text-center">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 dark:bg-slate-700 mb-4">
+              <Search className="text-gray-400" size={32} />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+              No purchases found
+            </h3>
+            <p className="text-gray-500 dark:text-gray-400">
+              {searchTerm || filterBudgetItem
+                ? "Try adjusting your filters"
+                : "Start by adding your first purchase"}
+            </p>
+          </div>
+        ) : (
+          <>
+            {/* Desktop Table View - Hidden on Mobile */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-slate-700">
+                <thead className="bg-gray-50 dark:bg-slate-900">
+                  <tr>
+                    <th
+                      onClick={() => handleSort("timestamp")}
+                      className="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors group"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Calendar size={16} className="text-gray-400" />
+                        Date
+                        {getSortIcon("timestamp")}
+                      </div>
+                    </th>
+                    <th
+                      onClick={() => handleSort("item_name")}
+                      className="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors group"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Tag size={16} className="text-gray-400" />
+                        Item Name
+                        {getSortIcon("item_name")}
+                      </div>
+                    </th>
+                    <th
+                      onClick={() => handleSort("cost")}
+                      className="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors group"
+                    >
+                      <div className="flex items-center gap-2">
+                        <DollarSign size={16} className="text-gray-400" />
+                        Cost
+                        {getSortIcon("cost")}
+                      </div>
+                    </th>
+                    <th
+                      onClick={() => handleSort("budget_item")}
+                      className="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors group"
+                    >
+                      <div className="flex items-center gap-2">
+                        Budget Item
+                        {getSortIcon("budget_item")}
+                      </div>
+                    </th>
+                    <th className="px-6 py-4 text-right text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                      
+                    </th>
               </tr>
             </thead>
-            <tbody>
+                <tbody className="bg-white dark:bg-slate-800 divide-y divide-gray-200 dark:divide-slate-700">
               {currentPurchases.map((purchase) => (
-                <tr key={purchase.id} className="border-b dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-slate-600">
+                    <tr
+                      key={purchase.id}
+                      className="hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors group"
+                    >
+                      {/* Date Cell */}
                   <td
                     onClick={() => handleCellEditStart("timestamp", purchase)}
-                    className="p-2 text-gray-800 dark:text-white"
+                        className="px-6 py-4 whitespace-nowrap cursor-pointer"
                   >
-                    {editableField === "timestamp" &&
-                    editingId === purchase.id ? (
+                        {editableField === "timestamp" && editingId === purchase.id ? (
                       <input
                         type="date"
                         value={editingValue}
@@ -138,30 +448,29 @@ const PurchasesList = () => {
                           setEditableField(null);
                           setEditingId(null);
                         }}
-                        className="w-full px-2 py-1 border dark:border-gray-600 rounded bg-white dark:bg-slate-600 text-gray-800 dark:text-white"
+                            className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg bg-white dark:bg-slate-600 text-gray-800 dark:text-white focus:ring-2 focus:ring-blue-500 transition-all"
                         autoFocus
                       />
                     ) : (
-                      new Date(purchase.timestamp).toLocaleDateString(
-                        undefined,
-                        {
-                          month: "numeric",
+                          <div className="flex items-center gap-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                            <span className="text-sm font-medium text-gray-900 dark:text-white">
+                              {new Date(purchase.timestamp).toLocaleDateString(undefined, {
+                                month: "short",
                           day: "numeric",
-                        }
-                      )
+                                year: "numeric",
+                              })}
+                            </span>
+                            <Edit2 size={14} className="opacity-0 group-hover:opacity-50 transition-opacity" />
+                          </div>
                     )}
                   </td>
+
+                      {/* Item Name Cell */}
                   <td
                     onClick={() => handleCellEditStart("itemName", purchase)}
-                    className="p-2 truncate text-gray-800 dark:text-white"
-                    style={{
-                      maxWidth: "6ch",
-                      overflow: "hidden",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    {editableField === "itemName" &&
-                    editingId === purchase.id ? (
+                        className="px-6 py-4 cursor-pointer"
+                      >
+                        {editableField === "itemName" && editingId === purchase.id ? (
                       <input
                         type="text"
                         value={editingValue}
@@ -171,16 +480,23 @@ const PurchasesList = () => {
                           setEditableField(null);
                           setEditingId(null);
                         }}
-                        className="w-full px-2 py-1 border dark:border-gray-600 rounded bg-white dark:bg-slate-600 text-gray-800 dark:text-white"
+                            className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg bg-white dark:bg-slate-600 text-gray-800 dark:text-white focus:ring-2 focus:ring-blue-500 transition-all"
                         autoFocus
                       />
                     ) : (
-                      purchase.item_name
+                          <div className="flex items-center gap-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                            <span className="text-sm font-medium text-gray-900 dark:text-white">
+                              {purchase.item_name}
+                            </span>
+                            <Edit2 size={14} className="opacity-0 group-hover:opacity-50 transition-opacity" />
+                          </div>
                     )}
                   </td>
+
+                      {/* Cost Cell */}
                   <td
                     onClick={() => handleCellEditStart("cost", purchase)}
-                    className="p-2 text-gray-800 dark:text-white"
+                        className="px-6 py-4 whitespace-nowrap cursor-pointer"
                   >
                     {editableField === "cost" && editingId === purchase.id ? (
                       <input
@@ -192,23 +508,27 @@ const PurchasesList = () => {
                           setEditableField(null);
                           setEditingId(null);
                         }}
-                        className="w-full px-2 py-1 border dark:border-gray-600 rounded bg-white dark:bg-slate-600 text-gray-800 dark:text-white"
+                            className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg bg-white dark:bg-slate-600 text-gray-800 dark:text-white focus:ring-2 focus:ring-blue-500 transition-all"
                         min="0"
                         step="0.01"
                         autoFocus
                       />
                     ) : (
-                      `$${purchase.cost.toFixed(2)}`
+                          <div className="flex items-center gap-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                            <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                              ${purchase.cost.toFixed(2)}
+                            </span>
+                            <Edit2 size={14} className="opacity-0 group-hover:opacity-50 transition-opacity" />
+                          </div>
                     )}
                   </td>
-                  <td
-                    onClick={() =>
-                      handleCellEditStart("budgetItemId", purchase)
-                    }
-                    className="p-2 text-overflow:ellipsis text-gray-800 dark:text-white"
-                  >
-                    {editableField === "budgetItemId" &&
-                    editingId === purchase.id ? (
+
+                      {/* Budget Item Cell */}
+                      <td
+                        onClick={() => handleCellEditStart("budgetItemId", purchase)}
+                        className="px-6 py-4 cursor-pointer"
+                      >
+                        {editableField === "budgetItemId" && editingId === purchase.id ? (
                       <select
                         value={editingValue}
                         onChange={(e) => {
@@ -220,7 +540,7 @@ const PurchasesList = () => {
                           setEditableField(null);
                           setEditingId(null);
                         }}
-                        className="w-full px-2 py-1 border dark:border-gray-600 rounded bg-white dark:bg-slate-600 text-gray-800 dark:text-white"
+                            className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg bg-white dark:bg-slate-600 text-gray-800 dark:text-white focus:ring-2 focus:ring-blue-500 transition-all"
                         autoFocus
                       >
                         <option value="">Select a budget item</option>
@@ -235,66 +555,286 @@ const PurchasesList = () => {
                         ))}
                       </select>
                     ) : (
-                      purchase.budget_items?.name
+                          <div className="flex items-center gap-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-purple-100 dark:bg-purple-900/50 text-purple-800 dark:text-purple-200">
+                              {purchase.budget_items?.name || "Uncategorized"}
+                            </span>
+                            <Edit2 size={14} className="opacity-0 group-hover:opacity-50 transition-opacity" />
+                          </div>
                     )}
                   </td>
-                  <td className="p-2 text-center">
-                    <button
-                      onClick={() => {
-                        if (
-                          window.confirm(
-                            "Are you sure you want to delete this purchase?"
-                          )
-                        ) {
-                          handleDelete(purchase.id);
-                        }
-                      }}
-                      className="text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-colors"
-                    >
-                      <Trash2 size={20} />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
 
-          {/* Pagination Controls */}
-          <div className="mt-4 flex items-center justify-between">
-            <div className="text-sm text-gray-700 dark:text-gray-300">
-              Showing {startIndex + 1} to {Math.min(endIndex, purchases.length)}{" "}
-              of {purchases.length} purchases
+                      {/* Actions Cell */}
+                      <td className="px-6 py-4 whitespace-nowrap text-right">
+                        {showDeleted ? (
+                          <button
+                            onClick={() => {
+                              if (
+                                window.confirm(
+                                  "Are you sure you want to restore this purchase?"
+                                )
+                              ) {
+                                handleRestore(purchase.id);
+                              }
+                            }}
+                            className="inline-flex items-center justify-center p-2 text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-all"
+                            title="Restore purchase"
+                          >
+                            <RotateCcw size={18} />
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => {
+                              if (
+                                window.confirm(
+                                  "Are you sure you want to delete this purchase?"
+                                )
+                              ) {
+                                handleDelete(purchase.id);
+                              }
+                            }}
+                            className="inline-flex items-center justify-center p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all"
+                            title="Delete purchase"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-            <div className="flex items-center space-x-2">
+
+            {/* Mobile Card View - Hidden on Desktop */}
+            <div className="md:hidden px-4 py-3 space-y-3">
+              {currentPurchases.map((purchase) => (
+                <div
+                  key={purchase.id}
+                  className="bg-white dark:bg-slate-800 rounded-xl shadow-md hover:shadow-lg border border-gray-200 dark:border-slate-700 p-4 transition-all duration-200 hover:scale-[1.01]"
+                >
+                  {/* Header: Date and Delete */}
+                  <div className="flex items-center justify-between mb-3 pb-2.5 border-b border-gray-100 dark:border-slate-700">
+                    <div
+                      onClick={() => handleCellEditStart("timestamp", purchase)}
+                      className="cursor-pointer flex-1"
+                    >
+                      {editableField === "timestamp" && editingId === purchase.id ? (
+                        <input
+                          type="date"
+                          value={editingValue}
+                          onChange={(e) => setEditingValue(e.target.value)}
+                          onBlur={() => {
+                            handleCellUpdate("timestamp", editingValue);
+                            setEditableField(null);
+                            setEditingId(null);
+                          }}
+                          className="px-2 py-1 border dark:border-gray-600 rounded-md bg-white dark:bg-slate-600 text-gray-800 dark:text-white text-sm focus:ring-2 focus:ring-blue-500"
+                          autoFocus
+                        />
+                      ) : (
+                        <div className="flex items-center gap-1.5">
+                          <div className="p-1 bg-blue-50 dark:bg-blue-900/20 rounded">
+                            <Calendar size={12} className="text-blue-600 dark:text-blue-400" />
+                          </div>
+                          <span className="text-xs font-semibold text-gray-600 dark:text-gray-300">
+                            {new Date(purchase.timestamp).toLocaleDateString(undefined, {
+                              month: "short",
+                              day: "numeric",
+                              year: "numeric",
+                            })}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    {showDeleted ? (
+                      <button
+                        onClick={() => {
+                          if (
+                            window.confirm(
+                              "Are you sure you want to restore this purchase?"
+                            )
+                          ) {
+                            handleRestore(purchase.id);
+                          }
+                        }}
+                        className="p-2 text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-all active:scale-95"
+                        title="Restore purchase"
+                      >
+                        <RotateCcw size={16} />
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          if (
+                            window.confirm(
+                              "Are you sure you want to delete this purchase?"
+                            )
+                          ) {
+                            handleDelete(purchase.id);
+                          }
+                        }}
+                        className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all active:scale-95"
+                        title="Delete purchase"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Item Name */}
+                  <div
+                    onClick={() => handleCellEditStart("itemName", purchase)}
+                    className="mb-3 cursor-pointer group"
+                  >
+                    {editableField === "itemName" && editingId === purchase.id ? (
+                      <input
+                        type="text"
+                        value={editingValue}
+                        onChange={(e) => setEditingValue(e.target.value)}
+                        onBlur={() => {
+                          handleCellUpdate("itemName", editingValue);
+                          setEditableField(null);
+                          setEditingId(null);
+                        }}
+                        className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg bg-white dark:bg-slate-600 text-gray-800 dark:text-white focus:ring-2 focus:ring-blue-500"
+                        autoFocus
+                      />
+                    ) : (
+                      <div className="flex items-start gap-2">
+                        <Tag size={16} className="text-gray-400 dark:text-gray-500 mt-0.5 flex-shrink-0" />
+                        <h3 className="text-base font-bold text-gray-900 dark:text-white leading-snug flex-1 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                          {purchase.item_name}
+                        </h3>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Cost and Budget Item */}
+                  <div className="grid grid-cols-2 gap-2.5">
+                    {/* Cost */}
+                    <div
+                      onClick={() => handleCellEditStart("cost", purchase)}
+                      className="cursor-pointer group"
+                    >
+                      {editableField === "cost" && editingId === purchase.id ? (
+                        <input
+                          type="number"
+                          value={editingValue}
+                          onChange={(e) => setEditingValue(e.target.value)}
+                          onBlur={() => {
+                            handleCellUpdate("cost", editingValue);
+                            setEditableField(null);
+                            setEditingId(null);
+                          }}
+                          className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg bg-white dark:bg-slate-600 text-gray-800 dark:text-white text-sm focus:ring-2 focus:ring-blue-500"
+                          min="0"
+                          step="0.01"
+                          autoFocus
+                        />
+                      ) : (
+                        <div className="flex items-center justify-center gap-1 px-3 py-2 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-lg border border-green-200 dark:border-green-800 group-hover:shadow-sm transition-all h-full">
+                          <DollarSign size={16} className="text-green-600 dark:text-green-400 flex-shrink-0" />
+                          <span className="text-base font-bold text-green-700 dark:text-green-400 truncate">
+                            {purchase.cost.toFixed(2)}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Budget Item */}
+                    <div
+                      onClick={() => handleCellEditStart("budgetItemId", purchase)}
+                      className="cursor-pointer"
+                    >
+                      {editableField === "budgetItemId" && editingId === purchase.id ? (
+                        <select
+                          value={editingValue}
+                          onChange={(e) => {
+                            const newValue = e.target.value;
+                            setEditingValue(newValue);
+                            handleCellUpdate("budgetItemId", newValue);
+                          }}
+                          onBlur={() => {
+                            setEditableField(null);
+                            setEditingId(null);
+                          }}
+                          className="w-full px-2 py-1.5 border dark:border-gray-600 rounded-lg bg-white dark:bg-slate-600 text-gray-800 dark:text-white text-sm focus:ring-2 focus:ring-blue-500"
+                          autoFocus
+                        >
+                          <option value="">Select a budget item</option>
+                          {budgetGroups.map((group) => (
+                            <optgroup key={group.id} label={group.name}>
+                              {group.budget_items?.map((item) => (
+                                <option key={item.id} value={item.id}>
+                                  {item.name}
+                                </option>
+                              ))}
+                            </optgroup>
+                          ))}
+                        </select>
+                      ) : (
+                        <div className="flex items-center justify-center px-3 py-2 rounded-lg text-xs font-semibold bg-gradient-to-r from-purple-100 to-indigo-100 dark:from-purple-900/40 dark:to-indigo-900/40 text-purple-700 dark:text-purple-200 border border-purple-200 dark:border-purple-800 shadow-sm h-full">
+                          <span className="truncate">
+                            {purchase.budget_items?.name || "Uncategorized"}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+
+        {/* Pagination */}
+        {currentPurchases.length > 0 && (
+          <div className="px-6 py-4 bg-gray-50 dark:bg-slate-900/50 border-t dark:border-slate-700">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="text-sm text-gray-600 dark:text-gray-400">
+                Showing <span className="font-semibold text-gray-900 dark:text-white">{startIndex + 1}</span> to{" "}
+                <span className="font-semibold text-gray-900 dark:text-white">
+                  {Math.min(endIndex, filteredAndSortedPurchases.length)}
+                </span>{" "}
+                of{" "}
+                <span className="font-semibold text-gray-900 dark:text-white">
+                  {filteredAndSortedPurchases.length}
+                </span>{" "}
+                purchases
+              </div>
+              <div className="flex items-center gap-2">
               <button
                 onClick={handlePrevPage}
                 disabled={currentPage === 1}
-                className={`p-2 rounded ${
+                  className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all ${
                   currentPage === 1
-                    ? "text-gray-400 dark:text-gray-600 cursor-not-allowed"
-                    : "text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
+                      ? "text-gray-400 dark:text-gray-600 cursor-not-allowed bg-gray-100 dark:bg-slate-800"
+                      : "text-gray-700 dark:text-gray-200 bg-white dark:bg-slate-700 hover:bg-gray-50 dark:hover:bg-slate-600 border border-gray-300 dark:border-slate-600"
                 }`}
               >
-                <ChevronLeft size={20} />
+                  <ChevronLeft size={18} />
+                  Previous
               </button>
-              <span className="text-sm text-gray-700 dark:text-gray-300">
+                <span className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-700 rounded-lg border border-gray-300 dark:border-slate-600">
                 Page {currentPage} of {totalPages}
               </span>
               <button
                 onClick={handleNextPage}
                 disabled={currentPage === totalPages}
-                className={`p-2 rounded ${
+                  className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all ${
                   currentPage === totalPages
-                    ? "text-gray-400 dark:text-gray-600 cursor-not-allowed"
-                    : "text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
+                      ? "text-gray-400 dark:text-gray-600 cursor-not-allowed bg-gray-100 dark:bg-slate-800"
+                      : "text-gray-700 dark:text-gray-200 bg-white dark:bg-slate-700 hover:bg-gray-50 dark:hover:bg-slate-600 border border-gray-300 dark:border-slate-600"
                 }`}
               >
-                <ChevronRight size={20} />
+                  Next
+                  <ChevronRight size={18} />
               </button>
             </div>
           </div>
         </div>
-      </div>
+        )}
     </div>
   );
 };
