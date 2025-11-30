@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import supabase from "../supabaseClient";
-import { Trash2, PlusCircle, Wallet, TrendingDown, TrendingUp, DollarSign, ChevronDown, ChevronRight } from "lucide-react";
+import { Trash2, PlusCircle, Wallet, DollarSign, ChevronDown, ChevronRight } from "lucide-react";
 import { useData } from "../DataContext";
 import { encryptValue } from "../utils/encryption";
 
@@ -236,7 +236,6 @@ function Budget() {
   // Memoize totals calculation
   const totals = useMemo(() => {
     let totalBudget = 0;
-    const totalSpent = calculateTotalSpent;
 
     groups.forEach((group) => {
       if (Array.isArray(group.budget_items)) {
@@ -248,11 +247,8 @@ function Budget() {
 
     return {
       totalBudget,
-      totalSpent,
-      remainingBudget: income - totalBudget,
-      remainingSpent: income - totalSpent,
     };
-  }, [groups, income, calculateTotalSpent]);
+  }, [groups]);
 
   return (
     <div className="w-full mx-auto p-6 bg-white dark:bg-slate-800 shadow-lg rounded-lg">
@@ -271,7 +267,7 @@ function Budget() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 mb-8">
         {/* Monthly Income Card */}
         <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 p-3 md:p-6 rounded-lg border-2 border-blue-200 dark:border-blue-700 shadow-sm">
           <div className="flex items-center mb-1 md:mb-2">
@@ -297,65 +293,26 @@ function Budget() {
             ${formatCurrency(totals.totalBudget)}
           </div>
         </div>
-
-        {/* Total Spent Card */}
-        <div className="bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20 p-3 md:p-6 rounded-lg border-2 border-orange-200 dark:border-orange-700 shadow-sm">
-          <div className="flex items-center mb-1 md:mb-2">
-            <TrendingDown className="w-4 h-4 md:w-5 md:h-5 text-orange-600 dark:text-orange-400 mr-1 md:mr-2" />
-            <div className="text-xs md:text-sm font-medium text-orange-700 dark:text-orange-300">
-              Total Spent
-            </div>
-          </div>
-          <div className="text-lg md:text-3xl font-bold text-orange-600 dark:text-orange-400">
-            ${formatCurrency(totals.totalSpent)}
-          </div>
-        </div>
-
-        {/* Remaining Card */}
-        <div className={`bg-gradient-to-br ${
-          totals.remainingSpent >= 0 
-            ? 'from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 border-green-200 dark:border-green-700' 
-            : 'from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 border-red-200 dark:border-red-700'
-        } p-3 md:p-6 rounded-lg border-2 shadow-sm`}>
-          <div className="flex items-center mb-1 md:mb-2">
-            <TrendingUp className={`w-4 h-4 md:w-5 md:h-5 mr-1 md:mr-2 ${
-              totals.remainingSpent >= 0 
-                ? 'text-green-600 dark:text-green-400' 
-                : 'text-red-600 dark:text-red-400'
-            }`} />
-            <div className={`text-xs md:text-sm font-medium ${
-              totals.remainingSpent >= 0 
-                ? 'text-green-700 dark:text-green-300' 
-                : 'text-red-700 dark:text-red-300'
-            }`}>
-              Remaining
-            </div>
-          </div>
-          <div className={`text-lg md:text-3xl font-bold ${
-            totals.remainingSpent >= 0 
-              ? 'text-green-600 dark:text-green-400' 
-              : 'text-red-600 dark:text-red-400'
-          }`}>
-            ${formatCurrency(totals.remainingSpent)}
-          </div>
-        </div>
       </div>
 
       {/* Budget Groups */}
-      {groups.map((group) => (
+      {groups.map((group) => {
+        const groupTotal = group.budget_items.reduce((sum, item) => sum + item.budget, 0);
+        const groupPercentage = income > 0 ? ((groupTotal / income) * 100).toFixed(1) : 0;
+        
+        return (
         <div key={group.id} className="mb-6 bg-white dark:bg-slate-700 p-6 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700">
-          <div className="flex justify-between items-center gap-2 mb-4">
-            <div className="flex items-center gap-1 sm:gap-2 flex-1 sm:flex-none min-w-0 sm:min-w-fit overflow-hidden">
+          <div className="flex justify-between items-start gap-2 mb-4">
+            <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0">
               <input
                 type="text"
                 value={tempGroupNames[group.id] ?? group.name}
                 onChange={(e) => handleGroupInputChange(group.id, e.target.value)}
-                className="text-base sm:text-lg md:text-xl font-bold text-gray-800 dark:text-white bg-transparent border-b-2 border-transparent hover:border-blue-500 dark:hover:border-blue-400 focus:border-blue-500 dark:focus:border-blue-400 focus:outline-none transition-colors px-1 sm:px-2 py-1 rounded flex-shrink min-w-0 sm:w-auto"
-                style={{ minWidth: '0', width: 'auto' }}
+                className="text-base sm:text-lg md:text-xl font-bold text-gray-800 dark:text-white bg-transparent border-b-2 border-transparent hover:border-blue-500 dark:hover:border-blue-400 focus:border-blue-500 dark:focus:border-blue-400 focus:outline-none transition-colors px-1 sm:px-2 py-1 rounded"
               />
-              <div className="px-2 sm:px-3 md:px-4 py-1 sm:py-1.5 md:py-2 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/30 border border-blue-200 dark:border-blue-700 rounded-lg flex-shrink-0">
-                <span className="text-xs sm:text-sm font-medium text-blue-700 dark:text-blue-300 whitespace-nowrap">
-                  ${formatCurrency(group.budget_items.reduce((sum, item) => sum + item.budget, 0))}
+              <div className="px-3 py-1.5 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/30 border border-blue-200 dark:border-blue-700 rounded-lg">
+                <span className="text-sm font-medium text-blue-700 dark:text-blue-300 whitespace-nowrap">
+                  ${formatCurrency(groupTotal)} <span className="text-xs">({groupPercentage}%)</span>
                 </span>
               </div>
             </div>
@@ -398,23 +355,12 @@ function Budget() {
                   <th className="p-4 font-semibold text-left text-gray-700 dark:text-gray-200 border-b-2 border-gray-300 dark:border-gray-600 whitespace-nowrap">
                     Budget
                   </th>
-                  <th className="p-4 font-semibold text-left text-gray-700 dark:text-gray-200 border-b-2 border-gray-300 dark:border-gray-600 whitespace-nowrap">
-                    Spent
-                  </th>
-                  <th className="p-4 font-semibold text-left text-gray-700 dark:text-gray-200 border-b-2 border-gray-300 dark:border-gray-600 whitespace-nowrap">
-                    Remaining
-                  </th>
                   <th className="p-4 font-semibold text-center text-gray-700 dark:text-gray-200 border-b-2 border-gray-300 dark:border-gray-600">
                   </th>
                 </tr>
               </thead>
               <tbody>
                 {group.budget_items?.map((item, index) => {
-                  const spent = calculateSpent(item.id);
-                  const remaining = item.budget - spent;
-                  const isOverBudget = spent > item.budget;
-                  const isAtBudget = spent === item.budget && item.budget > 0;
-                  
                   return (
                     <tr 
                       key={item.id} 
@@ -444,32 +390,6 @@ function Budget() {
                             className="w-24 px-3 py-2 bg-white dark:bg-slate-700 hover:bg-gray-50 dark:hover:bg-slate-600 rounded-lg text-gray-800 dark:text-white border border-transparent hover:border-gray-300 dark:hover:border-gray-500 focus:border-blue-500 dark:focus:border-blue-400 focus:outline-none transition-colors"
                           />
                         </div>
-                      </td>
-                      <td className="p-1">
-                        <span
-                          className={`font-semibold ${
-                            isOverBudget
-                              ? "text-red-600 dark:text-red-400"
-                              : isAtBudget
-                              ? "text-yellow-600 dark:text-yellow-400"
-                              : "text-green-600 dark:text-green-400"
-                          }`}
-                        >
-                          ${formatCurrency(spent)}
-                        </span>
-                      </td>
-                      <td className="p-1">
-                        <span
-                          className={`font-semibold ${
-                            remaining < 0
-                              ? "text-red-600 dark:text-red-400"
-                              : remaining === 0
-                              ? "text-yellow-600 dark:text-yellow-400"
-                              : "text-green-600 dark:text-green-400"
-                          }`}
-                        >
-                          ${formatCurrency(remaining)}
-                        </span>
                       </td>
                       <td className="p-1 text-center">
                         <button
@@ -503,10 +423,6 @@ function Budget() {
 
               {/* Table Rows */}
               {group.budget_items?.map((item, index) => {
-                const spent = calculateSpent(item.id);
-                const remaining = item.budget - spent;
-                const isOverBudget = spent > item.budget;
-                const isAtBudget = spent === item.budget && item.budget > 0;
                 const isExpanded = expandedItems[item.id];
                 
                 return (
@@ -553,43 +469,7 @@ function Budget() {
                     {/* Expanded Details */}
                     {isExpanded && (
                       <div className="px-3 pb-3 bg-white dark:bg-slate-600">
-                        <div className="mt-2 space-y-2">
-                          {/* Spent */}
-                          <div className="flex justify-between items-center py-2 px-3 rounded-lg bg-gray-50 dark:bg-slate-700">
-                            <span className="text-xs font-semibold text-gray-600 dark:text-gray-300">
-                              SPENT
-                            </span>
-                            <span
-                              className={`font-semibold text-sm ${
-                                isOverBudget
-                                  ? "text-red-600 dark:text-red-400"
-                                  : isAtBudget
-                                  ? "text-yellow-600 dark:text-yellow-400"
-                                  : "text-green-600 dark:text-green-400"
-                              }`}
-                            >
-                              ${formatCurrency(spent)}
-                            </span>
-                          </div>
-
-                          {/* Remaining */}
-                          <div className="flex justify-between items-center py-2 px-3 rounded-lg bg-gray-50 dark:bg-slate-700">
-                            <span className="text-xs font-semibold text-gray-600 dark:text-gray-300">
-                              REMAINING
-                            </span>
-                            <span
-                              className={`font-semibold text-sm ${
-                                remaining < 0
-                                  ? "text-red-600 dark:text-red-400"
-                                  : remaining === 0
-                                  ? "text-yellow-600 dark:text-yellow-400"
-                                  : "text-green-600 dark:text-green-400"
-                              }`}
-                            >
-                              ${formatCurrency(remaining)}
-                            </span>
-                          </div>
-
+                        <div className="mt-2">
                           {/* Delete Button */}
                           <button
                             onClick={() => handleDeleteItem(item.id)}
@@ -607,7 +487,8 @@ function Budget() {
             </div>
           </div>
         </div>
-      ))}
+        );
+      })}
 
       {/* Empty State */}
       {groups.length === 0 && (

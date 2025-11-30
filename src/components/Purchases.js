@@ -8,13 +8,13 @@ const PurchasesList = () => {
   const [editingId, setEditingId] = useState(null);
   const [editableField, setEditableField] = useState(null);
   const [editingValue, setEditingValue] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentMonthIndex, setCurrentMonthIndex] = useState(0);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterBudgetItem, setFilterBudgetItem] = useState("");
   const [sortConfig, setSortConfig] = useState({ key: "timestamp", direction: "desc" });
   const [showDeleted, setShowDeleted] = useState(false);
   const [deletedPurchases, setDeletedPurchases] = useState([]);
-  const itemsPerPage = 15;
+  const [groupBy, setGroupBy] = useState("month"); // "month" or "budget"
 
   // Fetch deleted purchases when showing hidden view
   const fetchDeletedPurchases = async () => {
@@ -119,7 +119,7 @@ const PurchasesList = () => {
         setEditingValue(purchase.cost);
         break;
       case "budgetItemId":
-        setEditingValue(purchase.budget_item_id);
+        setEditingValue(purchase.budget_item_id || "");
         break;
       default:
         setEditingValue("");
@@ -142,7 +142,7 @@ const PurchasesList = () => {
           updateData.cost = parseFloat(value) || 0;
           break;
         case "budgetItemId":
-          updateData.budget_item_id = value;
+          updateData.budget_item_id = value || null;
           break;
       }
 
@@ -163,8 +163,8 @@ const PurchasesList = () => {
     }
   };
 
-  // Filter and sort purchases
-  const filteredAndSortedPurchases = useMemo(() => {
+  // Filter, sort, and group purchases by month
+  const { availableMonths, currentPurchases, currentMonthName, currentMonthTotal, purchasesByCategory } = useMemo(() => {
     // Use deleted purchases if showing hidden, otherwise use active purchases
     let filtered = showDeleted ? [...deletedPurchases] : [...purchases];
 
@@ -216,25 +216,89 @@ const PurchasesList = () => {
       return 0;
     });
 
-    return filtered;
-  }, [purchases, deletedPurchases, showDeleted, searchTerm, filterBudgetItem, sortConfig]);
+    // Group purchases by month
+    const groupedByMonth = {};
+    filtered.forEach((purchase) => {
+      const date = new Date(purchase.timestamp);
+      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      if (!groupedByMonth[monthKey]) {
+        groupedByMonth[monthKey] = [];
+      }
+      groupedByMonth[monthKey].push(purchase);
+    });
+    
+    // Sort months newest first
+    const months = Object.keys(groupedByMonth).sort((a, b) => b.localeCompare(a));
+    
+    // Get current month's purchases
+    const currentMonthKey = months[currentMonthIndex];
+    const currentMonthPurchases = currentMonthKey ? groupedByMonth[currentMonthKey] : [];
+    
+    // Get current month display name and total
+    let monthName = '';
+    let monthTotal = 0;
+    
+    if (currentMonthPurchases.length > 0) {
+      monthTotal = currentMonthPurchases.reduce((sum, p) => sum + p.cost, 0);
+      const date = new Date(currentMonthKey + '-01');
+      monthName = date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    }
+    
+    // If in budget mode, also group current month's purchases by category
+    let categorizedPurchases = {};
+    if (groupBy === "budget" && currentMonthPurchases.length > 0) {
+      currentMonthPurchases.forEach((purchase) => {
+        const budgetKey = purchase.budget_item_id || 'uncategorized';
+        if (!categorizedPurchases[budgetKey]) {
+          categorizedPurchases[budgetKey] = {
+            name: purchase.budget_items?.name || 'Uncategorized',
+            budget: purchase.budget_items?.budget || 0,
+            purchases: [],
+          };
+        }
+        categorizedPurchases[budgetKey].purchases.push(purchase);
+      });
+      
+      // Sort categories alphabetically, but put Uncategorized last
+      const sortedCategories = {};
+      Object.keys(categorizedPurchases)
+        .sort((a, b) => {
+          if (a === 'uncategorized') return 1;
+          if (b === 'uncategorized') return -1;
+          return categorizedPurchases[a].name.localeCompare(categorizedPurchases[b].name);
+        })
+        .forEach(key => {
+          sortedCategories[key] = categorizedPurchases[key];
+        });
+      categorizedPurchases = sortedCategories;
+    }
 
-  // Calculate pagination values
-  const totalPages = Math.ceil(filteredAndSortedPurchases.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const currentPurchases = filteredAndSortedPurchases.slice(startIndex, endIndex);
+    return {
+      availableMonths: months,
+      currentPurchases: currentMonthPurchases,
+      currentMonthName: monthName,
+      currentMonthTotal: monthTotal,
+      purchasesByCategory: categorizedPurchases,
+    };
+  }, [purchases, deletedPurchases, showDeleted, searchTerm, filterBudgetItem, sortConfig, groupBy, currentMonthIndex]);
 
-  const handleNextPage = () => {
-    if (currentPage < totalPages) {
-      setCurrentPage(currentPage + 1);
+  // Calculate pagination info (always by month)
+  const totalMonths = availableMonths.length;
+
+  const handleNextMonth = () => {
+    if (currentMonthIndex < totalMonths - 1) {
+      setCurrentMonthIndex(currentMonthIndex + 1);
     }
   };
 
-  const handlePrevPage = () => {
-    if (currentPage > 1) {
-      setCurrentPage(currentPage - 1);
+  const handlePrevMonth = () => {
+    if (currentMonthIndex > 0) {
+      setCurrentMonthIndex(currentMonthIndex - 1);
     }
+  };
+
+  const handleGroupByToggle = (newGroupBy) => {
+    setGroupBy(newGroupBy);
   };
 
   const handleSort = (key) => {
@@ -253,13 +317,240 @@ const PurchasesList = () => {
     );
   };
 
+  // Helper function to render purchase table rows (desktop)
+  const renderDesktopPurchaseRow = (purchase) => (
+    <tr
+      key={purchase.id}
+      className="hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors group"
+    >
+      {/* Date Cell */}
+      <td
+        onClick={() => handleCellEditStart("timestamp", purchase)}
+        className="px-6 py-4 whitespace-nowrap cursor-pointer"
+      >
+        {editableField === "timestamp" && editingId === purchase.id ? (
+          <input
+            type="date"
+            value={editingValue}
+            onChange={(e) => setEditingValue(e.target.value)}
+            onBlur={() => {
+              handleCellUpdate("timestamp", editingValue);
+              setEditableField(null);
+              setEditingId(null);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.target.blur();
+              }
+            }}
+            className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg bg-white dark:bg-slate-600 text-gray-800 dark:text-white focus:ring-2 focus:ring-blue-500 transition-all"
+            autoFocus
+          />
+        ) : (
+          <div className="flex items-center gap-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+            <span className="text-sm font-medium text-gray-900 dark:text-white">
+              {new Date(purchase.timestamp).toLocaleDateString(undefined, {
+                month: "short",
+                day: "numeric",
+                year: "numeric",
+              })}
+            </span>
+            <Edit2 size={14} className="opacity-0 group-hover:opacity-50 transition-opacity" />
+          </div>
+        )}
+      </td>
+
+      {/* Item Name Cell */}
+      <td
+        onClick={() => handleCellEditStart("itemName", purchase)}
+        className="px-6 py-4 cursor-pointer"
+      >
+        {editableField === "itemName" && editingId === purchase.id ? (
+          <input
+            type="text"
+            value={editingValue}
+            onChange={(e) => setEditingValue(e.target.value)}
+            onBlur={() => {
+              handleCellUpdate("itemName", editingValue);
+              setEditableField(null);
+              setEditingId(null);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.target.blur();
+              }
+            }}
+            className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg bg-white dark:bg-slate-600 text-gray-800 dark:text-white focus:ring-2 focus:ring-blue-500 transition-all"
+            autoFocus
+          />
+        ) : (
+          <div className="flex items-center gap-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+            <span className="text-sm font-medium text-gray-900 dark:text-white">
+              {purchase.item_name}
+            </span>
+            <Edit2 size={14} className="opacity-0 group-hover:opacity-50 transition-opacity" />
+          </div>
+        )}
+      </td>
+
+      {/* Cost Cell */}
+      <td
+        onClick={() => handleCellEditStart("cost", purchase)}
+        className="px-6 py-4 whitespace-nowrap cursor-pointer"
+      >
+        {editableField === "cost" && editingId === purchase.id ? (
+          <input
+            type="number"
+            value={editingValue}
+            onChange={(e) => setEditingValue(e.target.value)}
+            onBlur={() => {
+              handleCellUpdate("cost", editingValue);
+              setEditableField(null);
+              setEditingId(null);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.target.blur();
+              }
+            }}
+            className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg bg-white dark:bg-slate-600 text-gray-800 dark:text-white focus:ring-2 focus:ring-blue-500 transition-all"
+            min="0"
+            step="0.01"
+            autoFocus
+          />
+        ) : (
+          <div className="flex items-center gap-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+            <span className="text-sm font-semibold text-gray-900 dark:text-white">
+              ${purchase.cost.toFixed(2)}
+            </span>
+            <Edit2 size={14} className="opacity-0 group-hover:opacity-50 transition-opacity" />
+          </div>
+        )}
+      </td>
+
+      {/* Budget Item Cell */}
+      <td
+        onClick={() => handleCellEditStart("budgetItemId", purchase)}
+        className="px-6 py-4 cursor-pointer"
+      >
+        {editableField === "budgetItemId" && editingId === purchase.id ? (
+          <select
+            value={editingValue || ""}
+            onChange={(e) => {
+              const newValue = e.target.value;
+              setEditingValue(newValue);
+              handleCellUpdate("budgetItemId", newValue);
+            }}
+            onBlur={() => {
+              setEditableField(null);
+              setEditingId(null);
+            }}
+            className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg bg-white dark:bg-slate-600 text-gray-800 dark:text-white focus:ring-2 focus:ring-blue-500 transition-all"
+            autoFocus
+          >
+            <option value="">Uncategorized</option>
+            {budgetGroups.map((group) => (
+              <optgroup key={group.id} label={group.name}>
+                {group.budget_items?.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.name}
+                  </option>
+                ))}
+              </optgroup>
+            ))}
+          </select>
+        ) : (
+          <div className="flex items-center gap-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-purple-100 dark:bg-purple-900/50 text-purple-800 dark:text-purple-200">
+              {purchase.budget_items?.name || "Uncategorized"}
+            </span>
+            <Edit2 size={14} className="opacity-0 group-hover:opacity-50 transition-opacity" />
+          </div>
+        )}
+      </td>
+
+      {/* Actions Cell */}
+      <td className="px-6 py-4 whitespace-nowrap text-right">
+        {showDeleted ? (
+          <button
+            onClick={() => {
+              if (
+                window.confirm(
+                  "Are you sure you want to restore this purchase?"
+                )
+              ) {
+                handleRestore(purchase.id);
+              }
+            }}
+            className="inline-flex items-center justify-center p-2 text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-all"
+            title="Restore purchase"
+          >
+            <RotateCcw size={18} />
+          </button>
+        ) : (
+          <button
+            onClick={() => {
+              if (
+                window.confirm(
+                  "Are you sure you want to delete this purchase?"
+                )
+              ) {
+                handleDelete(purchase.id);
+              }
+            }}
+            className="inline-flex items-center justify-center p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all"
+            title="Delete purchase"
+          >
+            <Trash2 size={18} />
+          </button>
+        )}
+      </td>
+    </tr>
+  );
+
   return (
     <div className="w-full bg-white dark:bg-slate-800 shadow-xl rounded-xl overflow-hidden">
       {/* Header */}
       <div className="bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-700 dark:to-indigo-700 px-6 py-8">
-          <h1 className="text-3xl font-bold text-white">
-            Purchase History
-          </h1>
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-white mb-2">
+              Purchase History
+            </h1>
+            {totalMonths > 0 && currentMonthName && (
+              <div className="flex items-center gap-2 text-blue-100">
+                <Calendar size={18} />
+                <span className="text-lg font-medium">{currentMonthName}</span>
+              </div>
+            )}
+          </div>
+          
+          {/* Group By Toggle */}
+          <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-lg p-1">
+            <button
+              onClick={() => handleGroupByToggle("month")}
+              className={`flex items-center gap-2 px-4 py-2 rounded-md font-medium transition-all ${
+                groupBy === "month"
+                  ? "bg-white text-blue-600 shadow-md"
+                  : "text-white hover:bg-white/20"
+              }`}
+            >
+              <Calendar size={16} />
+              <span className="hidden sm:inline">List View</span>
+            </button>
+            <button
+              onClick={() => handleGroupByToggle("budget")}
+              className={`flex items-center gap-2 px-4 py-2 rounded-md font-medium transition-all ${
+                groupBy === "budget"
+                  ? "bg-white text-blue-600 shadow-md"
+                  : "text-white hover:bg-white/20"
+              }`}
+            >
+              <Tag size={16} />
+              <span className="hidden sm:inline">By Category</span>
+            </button>
+          </div>
+        </div>
       </div>
 
         {/* Filters and Search */}
@@ -274,7 +565,7 @@ const PurchasesList = () => {
                 value={searchTerm}
                 onChange={(e) => {
                   setSearchTerm(e.target.value);
-                  setCurrentPage(1);
+                  setCurrentMonthIndex(0);
                 }}
                 className="w-full pl-10 pr-10 py-2.5 border dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-800 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
               />
@@ -294,7 +585,7 @@ const PurchasesList = () => {
                 value={filterBudgetItem}
                 onChange={(e) => {
                   setFilterBudgetItem(e.target.value);
-                  setCurrentPage(1);
+                  setCurrentMonthIndex(0);
                 }}
                 className="w-full px-4 py-2.5 border dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-800 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
               >
@@ -321,7 +612,7 @@ const PurchasesList = () => {
                   if (newShowDeleted) {
                     await fetchDeletedPurchases();
                   }
-                  setCurrentPage(1);
+                  setCurrentMonthIndex(0);
                 }}
                 className={`px-4 py-2.5 rounded-lg font-medium transition-all ${
                   showDeleted
@@ -427,182 +718,75 @@ const PurchasesList = () => {
                     </th>
               </tr>
             </thead>
-                <tbody className="bg-white dark:bg-slate-800 divide-y divide-gray-200 dark:divide-slate-700">
-              {currentPurchases.map((purchase) => (
-                    <tr
-                      key={purchase.id}
-                      className="hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors group"
-                    >
-                      {/* Date Cell */}
-                  <td
-                    onClick={() => handleCellEditStart("timestamp", purchase)}
-                        className="px-6 py-4 whitespace-nowrap cursor-pointer"
-                  >
-                        {editableField === "timestamp" && editingId === purchase.id ? (
-                      <input
-                        type="date"
-                        value={editingValue}
-                        onChange={(e) => setEditingValue(e.target.value)}
-                        onBlur={() => {
-                          handleCellUpdate("timestamp", editingValue);
-                          setEditableField(null);
-                          setEditingId(null);
-                        }}
-                            className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg bg-white dark:bg-slate-600 text-gray-800 dark:text-white focus:ring-2 focus:ring-blue-500 transition-all"
-                        autoFocus
-                      />
-                    ) : (
-                          <div className="flex items-center gap-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                            <span className="text-sm font-medium text-gray-900 dark:text-white">
-                              {new Date(purchase.timestamp).toLocaleDateString(undefined, {
-                                month: "short",
-                          day: "numeric",
-                                year: "numeric",
-                              })}
-                            </span>
-                            <Edit2 size={14} className="opacity-0 group-hover:opacity-50 transition-opacity" />
+                <tbody className="bg-white dark:bg-slate-800">
+              {groupBy === "budget" && Object.keys(purchasesByCategory).length > 0 ? (
+                // Grouped by budget category
+                Object.entries(purchasesByCategory).map(([categoryId, categoryData]) => {
+                  const categoryTotal = categoryData.purchases.reduce((sum, p) => sum + p.cost, 0);
+                  const remaining = categoryData.budget - categoryTotal;
+                  
+                  return (
+                    <React.Fragment key={categoryId}>
+                      {/* Category Header Row */}
+                      <tr className="bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20 border-y-2 border-purple-200 dark:border-purple-700">
+                        <td colSpan="5" className="px-6 py-4">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className="p-2 bg-purple-100 dark:bg-purple-900/40 rounded-lg">
+                                <Tag className="text-purple-600 dark:text-purple-400" size={18} />
+                              </div>
+                              <div>
+                                <div className="text-lg font-bold text-purple-900 dark:text-purple-100">
+                                  {categoryData.name}
+                                </div>
+                                <div className="text-sm text-purple-700 dark:text-purple-300">
+                                  {categoryData.purchases.length} {categoryData.purchases.length === 1 ? 'purchase' : 'purchases'}
+                                </div>
+                              </div>
+                            </div>
+                            {categoryData.budget > 0 && (
+                              <div className="flex items-center gap-6">
+                                <div className="text-right">
+                                  <div className="text-xs text-purple-600 dark:text-purple-400 font-medium">Budgeted</div>
+                                  <div className="text-base font-bold text-purple-900 dark:text-purple-100">
+                                    ${categoryData.budget.toFixed(2)}
+                                  </div>
+                                </div>
+                                <div className="text-right">
+                                  <div className="text-xs text-purple-600 dark:text-purple-400 font-medium">Spent</div>
+                                  <div className={`text-base font-bold ${
+                                    categoryTotal > categoryData.budget
+                                      ? 'text-red-600 dark:text-red-400'
+                                      : 'text-green-600 dark:text-green-400'
+                                  }`}>
+                                    ${categoryTotal.toFixed(2)}
+                                  </div>
+                                </div>
+                                <div className="text-right">
+                                  <div className="text-xs text-purple-600 dark:text-purple-400 font-medium">Remaining</div>
+                                  <div className={`text-base font-bold ${
+                                    remaining < 0
+                                      ? 'text-red-600 dark:text-red-400'
+                                      : 'text-green-600 dark:text-green-400'
+                                  }`}>
+                                    ${remaining.toFixed(2)}
+                                  </div>
+                                </div>
+                              </div>
+                            )}
                           </div>
-                    )}
-                  </td>
-
-                      {/* Item Name Cell */}
-                  <td
-                    onClick={() => handleCellEditStart("itemName", purchase)}
-                        className="px-6 py-4 cursor-pointer"
-                      >
-                        {editableField === "itemName" && editingId === purchase.id ? (
-                      <input
-                        type="text"
-                        value={editingValue}
-                        onChange={(e) => setEditingValue(e.target.value)}
-                        onBlur={() => {
-                          handleCellUpdate("itemName", editingValue);
-                          setEditableField(null);
-                          setEditingId(null);
-                        }}
-                            className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg bg-white dark:bg-slate-600 text-gray-800 dark:text-white focus:ring-2 focus:ring-blue-500 transition-all"
-                        autoFocus
-                      />
-                    ) : (
-                          <div className="flex items-center gap-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                            <span className="text-sm font-medium text-gray-900 dark:text-white">
-                              {purchase.item_name}
-                            </span>
-                            <Edit2 size={14} className="opacity-0 group-hover:opacity-50 transition-opacity" />
-                          </div>
-                    )}
-                  </td>
-
-                      {/* Cost Cell */}
-                  <td
-                    onClick={() => handleCellEditStart("cost", purchase)}
-                        className="px-6 py-4 whitespace-nowrap cursor-pointer"
-                  >
-                    {editableField === "cost" && editingId === purchase.id ? (
-                      <input
-                        type="number"
-                        value={editingValue}
-                        onChange={(e) => setEditingValue(e.target.value)}
-                        onBlur={() => {
-                          handleCellUpdate("cost", editingValue);
-                          setEditableField(null);
-                          setEditingId(null);
-                        }}
-                            className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg bg-white dark:bg-slate-600 text-gray-800 dark:text-white focus:ring-2 focus:ring-blue-500 transition-all"
-                        min="0"
-                        step="0.01"
-                        autoFocus
-                      />
-                    ) : (
-                          <div className="flex items-center gap-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                            <span className="text-sm font-semibold text-gray-900 dark:text-white">
-                              ${purchase.cost.toFixed(2)}
-                            </span>
-                            <Edit2 size={14} className="opacity-0 group-hover:opacity-50 transition-opacity" />
-                          </div>
-                    )}
-                  </td>
-
-                      {/* Budget Item Cell */}
-                      <td
-                        onClick={() => handleCellEditStart("budgetItemId", purchase)}
-                        className="px-6 py-4 cursor-pointer"
-                      >
-                        {editableField === "budgetItemId" && editingId === purchase.id ? (
-                      <select
-                        value={editingValue}
-                        onChange={(e) => {
-                          const newValue = e.target.value;
-                          setEditingValue(newValue);
-                          handleCellUpdate("budgetItemId", newValue);
-                        }}
-                        onBlur={() => {
-                          setEditableField(null);
-                          setEditingId(null);
-                        }}
-                            className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg bg-white dark:bg-slate-600 text-gray-800 dark:text-white focus:ring-2 focus:ring-blue-500 transition-all"
-                        autoFocus
-                      >
-                        <option value="">Select a budget item</option>
-                        {budgetGroups.map((group) => (
-                          <optgroup key={group.id} label={group.name}>
-                            {group.budget_items?.map((item) => (
-                              <option key={item.id} value={item.id}>
-                                {item.name}
-                              </option>
-                            ))}
-                          </optgroup>
-                        ))}
-                      </select>
-                    ) : (
-                          <div className="flex items-center gap-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-purple-100 dark:bg-purple-900/50 text-purple-800 dark:text-purple-200">
-                              {purchase.budget_items?.name || "Uncategorized"}
-                            </span>
-                            <Edit2 size={14} className="opacity-0 group-hover:opacity-50 transition-opacity" />
-                          </div>
-                    )}
-                  </td>
-
-                      {/* Actions Cell */}
-                      <td className="px-6 py-4 whitespace-nowrap text-right">
-                        {showDeleted ? (
-                          <button
-                            onClick={() => {
-                              if (
-                                window.confirm(
-                                  "Are you sure you want to restore this purchase?"
-                                )
-                              ) {
-                                handleRestore(purchase.id);
-                              }
-                            }}
-                            className="inline-flex items-center justify-center p-2 text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-all"
-                            title="Restore purchase"
-                          >
-                            <RotateCcw size={18} />
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => {
-                              if (
-                                window.confirm(
-                                  "Are you sure you want to delete this purchase?"
-                                )
-                              ) {
-                                handleDelete(purchase.id);
-                              }
-                            }}
-                            className="inline-flex items-center justify-center p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all"
-                            title="Delete purchase"
-                          >
-                            <Trash2 size={18} />
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
+                        </td>
+                      </tr>
+                      {/* Category Purchases */}
+                      {categoryData.purchases.map((purchase) => renderDesktopPurchaseRow(purchase))}
+                    </React.Fragment>
+                  );
+                })
+              ) : (
+                // Regular list view
+                currentPurchases.map((purchase) => renderDesktopPurchaseRow(purchase))
+              )}
+            </tbody>
               </table>
             </div>
 
@@ -615,10 +799,7 @@ const PurchasesList = () => {
                 >
                   {/* Header: Date and Delete */}
                   <div className="flex items-center justify-between mb-3 pb-2.5 border-b border-gray-100 dark:border-slate-700">
-                    <div
-                      onClick={() => handleCellEditStart("timestamp", purchase)}
-                      className="cursor-pointer flex-1"
-                    >
+                    <div className="cursor-pointer flex-1">
                       {editableField === "timestamp" && editingId === purchase.id ? (
                         <input
                           type="date"
@@ -629,11 +810,27 @@ const PurchasesList = () => {
                             setEditableField(null);
                             setEditingId(null);
                           }}
-                          className="px-2 py-1 border dark:border-gray-600 rounded-md bg-white dark:bg-slate-600 text-gray-800 dark:text-white text-sm focus:ring-2 focus:ring-blue-500"
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.target.blur();
+                            }
+                          }}
+                          className="px-3 py-2 border dark:border-gray-600 rounded-md bg-white dark:bg-slate-600 text-gray-800 dark:text-white text-base focus:ring-2 focus:ring-blue-500"
                           autoFocus
                         />
                       ) : (
-                        <div className="flex items-center gap-1.5">
+                        <div 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleCellEditStart("timestamp", purchase);
+                          }}
+                          onTouchEnd={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            handleCellEditStart("timestamp", purchase);
+                          }}
+                          className="flex items-center gap-1.5 active:opacity-70 transition-opacity"
+                        >
                           <div className="p-1 bg-blue-50 dark:bg-blue-900/20 rounded">
                             <Calendar size={12} className="text-blue-600 dark:text-blue-400" />
                           </div>
@@ -683,10 +880,7 @@ const PurchasesList = () => {
                   </div>
 
                   {/* Item Name */}
-                  <div
-                    onClick={() => handleCellEditStart("itemName", purchase)}
-                    className="mb-3 cursor-pointer group"
-                  >
+                  <div className="mb-3 cursor-pointer group">
                     {editableField === "itemName" && editingId === purchase.id ? (
                       <input
                         type="text"
@@ -697,11 +891,27 @@ const PurchasesList = () => {
                           setEditableField(null);
                           setEditingId(null);
                         }}
-                        className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg bg-white dark:bg-slate-600 text-gray-800 dark:text-white focus:ring-2 focus:ring-blue-500"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.target.blur();
+                          }
+                        }}
+                        className="w-full px-3 py-3 border dark:border-gray-600 rounded-lg bg-white dark:bg-slate-600 text-gray-800 dark:text-white text-base focus:ring-2 focus:ring-blue-500"
                         autoFocus
                       />
                     ) : (
-                      <div className="flex items-start gap-2">
+                      <div 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleCellEditStart("itemName", purchase);
+                        }}
+                        onTouchEnd={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleCellEditStart("itemName", purchase);
+                        }}
+                        className="flex items-start gap-2 active:opacity-70 transition-opacity"
+                      >
                         <Tag size={16} className="text-gray-400 dark:text-gray-500 mt-0.5 flex-shrink-0" />
                         <h3 className="text-base font-bold text-gray-900 dark:text-white leading-snug flex-1 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                           {purchase.item_name}
@@ -713,13 +923,11 @@ const PurchasesList = () => {
                   {/* Cost and Budget Item */}
                   <div className="grid grid-cols-2 gap-2.5">
                     {/* Cost */}
-                    <div
-                      onClick={() => handleCellEditStart("cost", purchase)}
-                      className="cursor-pointer group"
-                    >
+                    <div className="cursor-pointer group">
                       {editableField === "cost" && editingId === purchase.id ? (
                         <input
                           type="number"
+                          inputMode="decimal"
                           value={editingValue}
                           onChange={(e) => setEditingValue(e.target.value)}
                           onBlur={() => {
@@ -727,13 +935,29 @@ const PurchasesList = () => {
                             setEditableField(null);
                             setEditingId(null);
                           }}
-                          className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg bg-white dark:bg-slate-600 text-gray-800 dark:text-white text-sm focus:ring-2 focus:ring-blue-500"
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.target.blur();
+                            }
+                          }}
+                          className="w-full px-3 py-3 border dark:border-gray-600 rounded-lg bg-white dark:bg-slate-600 text-gray-800 dark:text-white text-base focus:ring-2 focus:ring-blue-500"
                           min="0"
                           step="0.01"
                           autoFocus
                         />
                       ) : (
-                        <div className="flex items-center justify-center gap-1 px-3 py-2 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-lg border border-green-200 dark:border-green-800 group-hover:shadow-sm transition-all h-full">
+                        <div 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleCellEditStart("cost", purchase);
+                          }}
+                          onTouchEnd={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            handleCellEditStart("cost", purchase);
+                          }}
+                          className="flex items-center justify-center gap-1 px-3 py-2 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-lg border border-green-200 dark:border-green-800 group-hover:shadow-sm transition-all h-full active:scale-95"
+                        >
                           <DollarSign size={16} className="text-green-600 dark:text-green-400 flex-shrink-0" />
                           <span className="text-base font-bold text-green-700 dark:text-green-400 truncate">
                             {purchase.cost.toFixed(2)}
@@ -743,13 +967,10 @@ const PurchasesList = () => {
                     </div>
                     
                     {/* Budget Item */}
-                    <div
-                      onClick={() => handleCellEditStart("budgetItemId", purchase)}
-                      className="cursor-pointer"
-                    >
+                    <div className="cursor-pointer">
                       {editableField === "budgetItemId" && editingId === purchase.id ? (
                         <select
-                          value={editingValue}
+                          value={editingValue || ""}
                           onChange={(e) => {
                             const newValue = e.target.value;
                             setEditingValue(newValue);
@@ -759,10 +980,10 @@ const PurchasesList = () => {
                             setEditableField(null);
                             setEditingId(null);
                           }}
-                          className="w-full px-2 py-1.5 border dark:border-gray-600 rounded-lg bg-white dark:bg-slate-600 text-gray-800 dark:text-white text-sm focus:ring-2 focus:ring-blue-500"
+                          className="w-full px-3 py-3 border dark:border-gray-600 rounded-lg bg-white dark:bg-slate-600 text-gray-800 dark:text-white text-base focus:ring-2 focus:ring-blue-500"
                           autoFocus
                         >
-                          <option value="">Select a budget item</option>
+                          <option value="">Uncategorized</option>
                           {budgetGroups.map((group) => (
                             <optgroup key={group.id} label={group.name}>
                               {group.budget_items?.map((item) => (
@@ -774,7 +995,18 @@ const PurchasesList = () => {
                           ))}
                         </select>
                       ) : (
-                        <div className="flex items-center justify-center px-3 py-2 rounded-lg text-xs font-semibold bg-gradient-to-r from-purple-100 to-indigo-100 dark:from-purple-900/40 dark:to-indigo-900/40 text-purple-700 dark:text-purple-200 border border-purple-200 dark:border-purple-800 shadow-sm h-full">
+                        <div 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleCellEditStart("budgetItemId", purchase);
+                          }}
+                          onTouchEnd={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            handleCellEditStart("budgetItemId", purchase);
+                          }}
+                          className="flex items-center justify-center px-3 py-2 rounded-lg text-xs font-semibold bg-gradient-to-r from-purple-100 to-indigo-100 dark:from-purple-900/40 dark:to-indigo-900/40 text-purple-700 dark:text-purple-200 border border-purple-200 dark:border-purple-800 shadow-sm h-full active:scale-95 transition-all"
+                        >
                           <span className="truncate">
                             {purchase.budget_items?.name || "Uncategorized"}
                           </span>
@@ -789,46 +1021,51 @@ const PurchasesList = () => {
         )}
 
         {/* Pagination */}
-        {currentPurchases.length > 0 && (
+        {totalMonths > 0 && (
           <div className="px-6 py-4 bg-gray-50 dark:bg-slate-900/50 border-t dark:border-slate-700">
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-              <div className="text-sm text-gray-600 dark:text-gray-400">
-                Showing <span className="font-semibold text-gray-900 dark:text-white">{startIndex + 1}</span> to{" "}
-                <span className="font-semibold text-gray-900 dark:text-white">
-                  {Math.min(endIndex, filteredAndSortedPurchases.length)}
-                </span>{" "}
-                of{" "}
-                <span className="font-semibold text-gray-900 dark:text-white">
-                  {filteredAndSortedPurchases.length}
-                </span>{" "}
-                purchases
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+                <div className="text-sm text-gray-600 dark:text-gray-400">
+                  <span className="font-semibold text-gray-900 dark:text-white">{currentPurchases.length}</span>{" "}
+                  {currentPurchases.length === 1 ? 'purchase' : 'purchases'}{" "}
+                  in{" "}
+                  <span className="font-semibold text-gray-900 dark:text-white">{currentMonthName}</span>
+                </div>
+                {currentPurchases.length > 0 && (
+                  <div className="text-sm font-semibold">
+                    <span className="text-gray-600 dark:text-gray-400">Total: </span>
+                    <span className="text-green-600 dark:text-green-400">
+                      ${currentMonthTotal.toFixed(2)}
+                    </span>
+                  </div>
+                )}
               </div>
               <div className="flex items-center gap-2">
               <button
-                onClick={handlePrevPage}
-                disabled={currentPage === 1}
+                onClick={handlePrevMonth}
+                disabled={currentMonthIndex === 0}
                   className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all ${
-                  currentPage === 1
+                  currentMonthIndex === 0
                       ? "text-gray-400 dark:text-gray-600 cursor-not-allowed bg-gray-100 dark:bg-slate-800"
                       : "text-gray-700 dark:text-gray-200 bg-white dark:bg-slate-700 hover:bg-gray-50 dark:hover:bg-slate-600 border border-gray-300 dark:border-slate-600"
                 }`}
               >
                   <ChevronLeft size={18} />
-                  Previous
+                  <span className="hidden sm:inline">Previous</span>
               </button>
-                <span className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-700 rounded-lg border border-gray-300 dark:border-slate-600">
-                Page {currentPage} of {totalPages}
+                <span className="px-3 sm:px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-700 rounded-lg border border-gray-300 dark:border-slate-600 whitespace-nowrap">
+                  Month {currentMonthIndex + 1} of {totalMonths}
               </span>
               <button
-                onClick={handleNextPage}
-                disabled={currentPage === totalPages}
+                onClick={handleNextMonth}
+                disabled={currentMonthIndex === totalMonths - 1}
                   className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all ${
-                  currentPage === totalPages
+                  currentMonthIndex === totalMonths - 1
                       ? "text-gray-400 dark:text-gray-600 cursor-not-allowed bg-gray-100 dark:bg-slate-800"
                       : "text-gray-700 dark:text-gray-200 bg-white dark:bg-slate-700 hover:bg-gray-50 dark:hover:bg-slate-600 border border-gray-300 dark:border-slate-600"
                 }`}
               >
-                  Next
+                  <span className="hidden sm:inline">Next</span>
                   <ChevronRight size={18} />
               </button>
             </div>

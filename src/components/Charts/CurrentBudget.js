@@ -3,7 +3,7 @@ import { Doughnut } from "react-chartjs-2";
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from "chart.js";
 import ChartDataLabels from "chartjs-plugin-datalabels";
 import { useData } from "../../DataContext";
-import { PieChart, Wallet } from "lucide-react";
+import { PieChart } from "lucide-react";
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 
@@ -162,40 +162,6 @@ function CurrentBudget() {
         <h1 className="text-3xl font-bold text-gray-800 dark:text-white">
           Current Budget
         </h1>
-      </div>
-
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-        <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 p-6 rounded-xl border-2 border-blue-200 dark:border-blue-700 shadow-sm">
-          <div className="flex items-center mb-2">
-            <Wallet className="w-5 h-5 text-blue-600 dark:text-blue-400 mr-2" />
-            <div className="text-sm font-medium text-blue-700 dark:text-blue-300">
-              Monthly Income
-            </div>
-          </div>
-          <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">
-            ${formatCurrency(income)}
-          </div>
-        </div>
-
-        <div className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 p-6 rounded-xl border-2 border-purple-200 dark:border-purple-700 shadow-sm">
-          <div className="flex items-center mb-2">
-            <PieChart className="w-5 h-5 text-purple-600 dark:text-purple-400 mr-2" />
-            <div className="text-sm font-medium text-purple-700 dark:text-purple-300">
-              Total Allocated
-            </div>
-          </div>
-          <div className="text-3xl font-bold text-purple-600 dark:text-purple-400">
-            ${formatCurrency(totalBudget)}
-          </div>
-          <div className="mt-2 text-sm font-medium">
-            <span className={totalBudget <= income ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}>
-              {totalBudget <= income 
-                ? `$${formatCurrency(income - totalBudget)} remaining` 
-                : `$${formatCurrency(totalBudget - income)} over budget`}
-            </span>
-          </div>
-        </div>
       </div>
 
       {/* Chart */}

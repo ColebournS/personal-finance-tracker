@@ -67,10 +67,11 @@ function BudgetVsSpentChart() {
         budget,
         hidden,
         is_active,
-        purchases (cost)
+        purchases!inner (cost, timestamp, is_deleted)
         `
       )
       .eq("user_id", userId)
+      .eq("purchases.is_deleted", false)
       .gte("purchases.timestamp", dateRange.fromDate)
       .lte("purchases.timestamp", dateRange.toDate);
 
