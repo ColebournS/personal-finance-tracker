@@ -14,7 +14,7 @@ const PurchasesList = () => {
   const [sortConfig, setSortConfig] = useState({ key: "timestamp", direction: "desc" });
   const [showDeleted, setShowDeleted] = useState(false);
   const [deletedPurchases, setDeletedPurchases] = useState([]);
-  const [groupBy, setGroupBy] = useState("month"); // "month" or "budget"
+  const groupBy = "budget"; // Always show by budget category
 
   // Fetch deleted purchases when showing hidden view
   const fetchDeletedPurchases = async () => {
@@ -297,10 +297,6 @@ const PurchasesList = () => {
     }
   };
 
-  const handleGroupByToggle = (newGroupBy) => {
-    setGroupBy(newGroupBy);
-  };
-
   const handleSort = (key) => {
     setSortConfig((prev) => ({
       key,
@@ -512,45 +508,15 @@ const PurchasesList = () => {
     <div className="w-full bg-white dark:bg-slate-800 shadow-xl rounded-xl overflow-hidden">
       {/* Header */}
       <div className="bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-700 dark:to-indigo-700 px-6 py-8">
-        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold text-white mb-2">
-              Purchase History
-            </h1>
-            {totalMonths > 0 && currentMonthName && (
-              <div className="flex items-center gap-2 text-blue-100">
-                <Calendar size={18} />
-                <span className="text-lg font-medium">{currentMonthName}</span>
-              </div>
-            )}
+        <h1 className="text-3xl font-bold text-white mb-2">
+          Purchase History
+        </h1>
+        {totalMonths > 0 && currentMonthName && (
+          <div className="flex items-center gap-2 text-blue-100">
+            <Calendar size={18} />
+            <span className="text-lg font-medium">{currentMonthName}</span>
           </div>
-          
-          {/* Group By Toggle */}
-          <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-lg p-1">
-            <button
-              onClick={() => handleGroupByToggle("month")}
-              className={`flex items-center gap-2 px-4 py-2 rounded-md font-medium transition-all ${
-                groupBy === "month"
-                  ? "bg-white text-blue-600 shadow-md"
-                  : "text-white hover:bg-white/20"
-              }`}
-            >
-              <Calendar size={16} />
-              <span className="hidden sm:inline">List View</span>
-            </button>
-            <button
-              onClick={() => handleGroupByToggle("budget")}
-              className={`flex items-center gap-2 px-4 py-2 rounded-md font-medium transition-all ${
-                groupBy === "budget"
-                  ? "bg-white text-blue-600 shadow-md"
-                  : "text-white hover:bg-white/20"
-              }`}
-            >
-              <Tag size={16} />
-              <span className="hidden sm:inline">By Category</span>
-            </button>
-          </div>
-        </div>
+        )}
       </div>
 
         {/* Filters and Search */}
