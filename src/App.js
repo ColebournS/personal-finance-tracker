@@ -173,8 +173,8 @@ function AppContent({ isMobile, takeHomePay, setTakeHomePay }) {
                   <Route
                     path="/Purchases"
                     element={
-                      <div className="bg-white dark:bg-black pb-20">
-                        <div className="flex flex-col gap-4 my-5 mx-4">
+                      <div className="bg-white dark:bg-black min-h-[calc(100vh-56px)] pb-16">
+                        <div className="flex flex-col gap-4 pt-5 px-4">
                           <Suspense fallback={<LoadingSpinner />}>
                             <PurchasesList />
                           </Suspense>
@@ -185,8 +185,8 @@ function AppContent({ isMobile, takeHomePay, setTakeHomePay }) {
                   <Route
                     path="/Analytics"
                     element={
-                      <div className="bg-white dark:bg-black pb-20">
-                        <div className="flex flex-col gap-4 my-5 mx-4">
+                      <div className="bg-white dark:bg-black min-h-[calc(100vh-56px)] pb-16">
+                        <div className="flex flex-col gap-4 pt-5 px-4">
                           <Suspense fallback={<LoadingSpinner />}>
                             <BudgetVsSpent />
                           </Suspense>
@@ -197,8 +197,8 @@ function AppContent({ isMobile, takeHomePay, setTakeHomePay }) {
                   <Route
                     path="/Settings"
                     element={
-                      <div className="bg-white dark:bg-black pb-20">
-                        <div className="flex flex-col gap-4 my-5 mx-4">
+                      <div className="bg-white dark:bg-black min-h-[calc(100vh-56px)] pb-16">
+                        <div className="flex flex-col gap-4 pt-5 px-4">
                           <Suspense fallback={<LoadingSpinner />}>
                             <SettingsMobile />
                           </Suspense>
