@@ -30,74 +30,91 @@ const NotFound = lazy(() => import("./components/NotFound"));
 const BottomNav = () => {
   const location = useLocation();
   const isActive = (path) => location.pathname === path;
+  const [isVisible, setIsVisible] = React.useState(true);
+  const [lastScrollY, setLastScrollY] = React.useState(0);
+  
+  React.useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      
+      if (currentScrollY < lastScrollY || currentScrollY < 10) {
+        // Scrolling up or at top - show navbar
+        setIsVisible(true);
+      } else if (currentScrollY > lastScrollY && currentScrollY > 50) {
+        // Scrolling down and past threshold - hide navbar
+        setIsVisible(false);
+      }
+      
+      setLastScrollY(currentScrollY);
+    };
+    
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [lastScrollY]);
   
   return (
-    <div className="fixed bottom-0 left-0 w-full bg-white dark:bg-slate-800 shadow-md border-t dark:border-gray-600 flex justify-around py-3">
+    <div className={`fixed top-0 left-0 w-full overflow-x-auto flex justify-around py-3 z-50 gap-2 px-2 ml-4 transition-transform duration-300 ${
+      isVisible ? 'translate-y-0' : '-translate-y-full'
+    }`}>
       <Link
         to="/income"
-        className={`flex flex-col items-center ${
+        className={`flex items-center justify-center px-3 py-1 rounded-full border border-gray-400/30 dark:border-gray-500/30 ${
           isActive("/income")
-            ? "text-blue-500 dark:text-blue-400"
-            : "text-gray-600 dark:text-gray-300 hover:text-blue-500 dark:hover:text-blue-400"
+            ? "bg-black dark:bg-white text-white dark:text-black"
+            : "bg-white dark:bg-black text-gray-600 dark:text-gray-300 hover:text-blue-500 dark:hover:text-blue-400"
         }`}
       >
-        <DollarSign size={24} />
-        <span className="text-xs">Income</span>
+        <span className="text-sm font-medium whitespace-nowrap">Income</span>
       </Link>
       <Link
         to="/budget"
-        className={`flex flex-col items-center ${
+        className={`flex items-center justify-center px-3 py-1 rounded-full border border-gray-400/30 dark:border-gray-500/30 ${
           isActive("/budget")
-            ? "text-blue-500 dark:text-blue-400"
-            : "text-gray-600 dark:text-gray-300 hover:text-blue-500 dark:hover:text-blue-400"
+            ? "bg-black dark:bg-white text-white dark:text-black"
+            : "bg-white dark:bg-black text-gray-600 dark:text-gray-300 hover:text-blue-500 dark:hover:text-blue-400"
         }`}
       >
-        <CreditCard size={24} />
-        <span className="text-xs">Budget</span>
+        <span className="text-sm font-medium whitespace-nowrap">Budget</span>
       </Link>
       <Link
         to="/purchases"
-        className={`flex flex-col items-center ${
+        className={`flex items-center justify-center px-3 py-1 rounded-full border border-gray-400/30 dark:border-gray-500/30 ${
           isActive("/purchases")
-            ? "text-blue-500 dark:text-blue-400"
-            : "text-gray-600 dark:text-gray-300 hover:text-blue-500 dark:hover:text-blue-400"
+            ? "bg-black dark:bg-white text-white dark:text-black"
+            : "bg-white dark:bg-black text-gray-600 dark:text-gray-300 hover:text-blue-500 dark:hover:text-blue-400"
         }`}
       >
-        <List size={24} />
-        <span className="text-xs">Purchases</span>
+        <span className="text-sm font-medium whitespace-nowrap">Purchases</span>
       </Link>
       <Link
         to="/analytics"
-        className={`flex flex-col items-center ${
+        className={`flex items-center justify-center px-3 py-1 rounded-full border border-gray-400/30 dark:border-gray-500/30 ${
           isActive("/analytics")
-            ? "text-blue-500 dark:text-blue-400"
-            : "text-gray-600 dark:text-gray-300 hover:text-blue-500 dark:hover:text-blue-400"
+            ? "bg-black dark:bg-white text-white dark:text-black"
+            : "bg-white dark:bg-black text-gray-600 dark:text-gray-300 hover:text-blue-500 dark:hover:text-blue-400"
         }`}
       >
-        <BarChart3 size={24} />
-        <span className="text-xs">Analytics</span>
+        <span className="text-sm font-medium whitespace-nowrap">Analytics</span>
       </Link>
       <Link
         to="/accounts"
-        className={`flex flex-col items-center ${
+        className={`flex items-center justify-center px-3 py-1 rounded-full border border-gray-400/30 dark:border-gray-500/30 ${
           isActive("/accounts")
-            ? "text-blue-500 dark:text-blue-400"
-            : "text-gray-600 dark:text-gray-300 hover:text-blue-500 dark:hover:text-blue-400"
+            ? "bg-black dark:bg-white text-white dark:text-black"
+            : "bg-white dark:bg-black text-gray-600 dark:text-gray-300 hover:text-blue-500 dark:hover:text-blue-400"
         }`}
       >
-        <Wallet size={24} />
-        <span className="text-xs">Accounts</span>
+        <span className="text-sm font-medium whitespace-nowrap">Accounts</span>
       </Link>
       <Link
         to="/settings"
-        className={`flex flex-col items-center ${
+        className={`flex items-center justify-center px-3 py-1 rounded-full border border-gray-400/30 dark:border-gray-500/30 ${
           isActive("/settings")
-            ? "text-blue-500 dark:text-blue-400"
-            : "text-gray-600 dark:text-gray-300 hover:text-blue-500 dark:hover:text-blue-400"
+            ? "bg-black dark:bg-white text-white dark:text-black"
+            : "bg-white dark:bg-black text-gray-600 dark:text-gray-300 hover:text-blue-500 dark:hover:text-blue-400"
         }`}
       >
-        <Settings size={24} />
-        <span className="text-xs">Settings</span>
+        <span className="text-sm font-medium whitespace-nowrap">Settings</span>
       </Link>
     </div>
   );
@@ -159,8 +176,8 @@ function AppContent({ isMobile, takeHomePay, setTakeHomePay }) {
                   <Route
                     path="/Income"
                     element={
-                      <div className="bg-white dark:bg-black min-h-[calc(100vh-56px)] pb-24">
-                        <div className="flex flex-col gap-2 pt-5 px-4">
+                      <div className="bg-white dark:bg-black min-h-screen pt-14 pb-5">
+                        <div className="flex flex-col gap-2 px-4">
                           <Suspense fallback={<LoadingSpinner />}>
                             <Income onTakeHomePayUpdate={setTakeHomePay} />
                             <RecomendedBudget />
@@ -172,8 +189,8 @@ function AppContent({ isMobile, takeHomePay, setTakeHomePay }) {
                   <Route
                     path="/Budget"
                     element={
-                      <div className="bg-white dark:bg-black min-h-[calc(100vh-56px)] pb-24">
-                        <div className="flex flex-col gap-2 pt-5 px-4">
+                      <div className="bg-white dark:bg-black min-h-screen pt-14 pb-5">
+                        <div className="flex flex-col gap-2 px-4">
                           <Suspense fallback={<LoadingSpinner />}>
                             <Budget takeHomePay={takeHomePay} />
                             <CurrentBudget />
@@ -185,8 +202,8 @@ function AppContent({ isMobile, takeHomePay, setTakeHomePay }) {
                   <Route
                     path="/Purchases"
                     element={
-                      <div className="bg-white dark:bg-black min-h-[calc(100vh-56px)] pb-24">
-                        <div className="flex flex-col gap-4 pt-5 px-4">
+                      <div className="bg-white dark:bg-black min-h-screen pt-14 pb-5">
+                        <div className="flex flex-col gap-4 px-4">
                           <Suspense fallback={<LoadingSpinner />}>
                             <PurchasesList />
                           </Suspense>
@@ -197,8 +214,8 @@ function AppContent({ isMobile, takeHomePay, setTakeHomePay }) {
                   <Route
                     path="/Analytics"
                     element={
-                      <div className="bg-white dark:bg-black min-h-[calc(100vh-56px)] pb-24">
-                        <div className="flex flex-col gap-4 pt-5 px-4">
+                      <div className="bg-white dark:bg-black min-h-screen pt-14 pb-5">
+                        <div className="flex flex-col gap-4 px-4">
                           <Suspense fallback={<LoadingSpinner />}>
                             <BudgetVsSpent />
                           </Suspense>
@@ -209,8 +226,8 @@ function AppContent({ isMobile, takeHomePay, setTakeHomePay }) {
                   <Route
                     path="/Settings"
                     element={
-                      <div className="bg-white dark:bg-black min-h-[calc(100vh-56px)] pb-24">
-                        <div className="flex flex-col gap-4 pt-5 px-4">
+                      <div className="bg-white dark:bg-black min-h-screen pt-14 pb-5">
+                        <div className="flex flex-col gap-4 px-4">
                           <Suspense fallback={<LoadingSpinner />}>
                             <SettingsMobile />
                           </Suspense>
@@ -238,8 +255,8 @@ function AppContent({ isMobile, takeHomePay, setTakeHomePay }) {
                   <Route
                     path="/accounts"
                     element={
-                      <div className="bg-white dark:bg-black min-h-[calc(100vh-56px)] pb-24">
-                        <div className="flex flex-col gap-4 pt-5 px-4">
+                      <div className="bg-white dark:bg-black min-h-screen pt-14 pb-5">
+                        <div className="flex flex-col gap-4 px-4">
                           <Suspense fallback={<LoadingSpinner />}>
                             <Accounts />
                           </Suspense>
