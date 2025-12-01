@@ -1,10 +1,12 @@
 import React, { useState, useMemo } from "react";
 import supabase from "../supabaseClient.js";
-import { Trash2, ChevronLeft, ChevronRight, Edit2, Search, X, Calendar, DollarSign, Tag, ArrowUpDown, RotateCcw } from "lucide-react";
+import { Trash2, ChevronLeft, ChevronRight, Edit2, Search, X, Calendar, DollarSign, Tag, ArrowUpDown, RotateCcw, Plus } from "lucide-react";
 import { useData } from "../DataContext";
+import AddPurchase from "./AddPurchase";
 
 const PurchasesList = () => {
   const { purchases, budgetGroups, refetchPurchases, userId } = useData();
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [editableField, setEditableField] = useState(null);
   const [editingValue, setEditingValue] = useState("");
@@ -14,6 +16,7 @@ const PurchasesList = () => {
   const [sortConfig, setSortConfig] = useState({ key: "timestamp", direction: "desc" });
   const [showDeleted, setShowDeleted] = useState(false);
   const [deletedPurchases, setDeletedPurchases] = useState([]);
+  const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   const groupBy = "budget"; // Always show by budget category
 
   // Fetch deleted purchases when showing hidden view
@@ -55,26 +58,13 @@ const PurchasesList = () => {
 
   const handleDelete = async (id) => {
     try {
-      // Find the purchase to check if it's SimpleFin synced
-      const purchase = purchases.find(p => p.id === id);
-      
-      if (purchase?.is_simplefin_synced) {
-        // Soft delete for SimpleFin purchases to prevent re-sync
-        const { error } = await supabase
-          .from("purchases")
-          .update({ is_deleted: true })
-          .eq("id", id);
+      // Soft delete all purchases so they can be restored
+      const { error } = await supabase
+        .from("purchases")
+        .update({ is_deleted: true })
+        .eq("id", id);
 
-        if (error) throw error;
-      } else {
-        // Hard delete for manual purchases
-        const { error } = await supabase
-          .from("purchases")
-          .delete()
-          .eq("id", id);
-
-        if (error) throw error;
-      }
+      if (error) throw error;
 
       await refetchPurchases();
       if (showDeleted) {
@@ -240,7 +230,9 @@ const PurchasesList = () => {
     
     if (currentMonthPurchases.length > 0) {
       monthTotal = currentMonthPurchases.reduce((sum, p) => sum + p.cost, 0);
-      const date = new Date(currentMonthKey + '-01');
+      // Parse year and month from key (format: "YYYY-MM")
+      const [year, month] = currentMonthKey.split('-').map(Number);
+      const date = new Date(year, month - 1, 1); // month is 0-indexed
       monthName = date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
     }
     
@@ -505,72 +497,93 @@ const PurchasesList = () => {
   );
 
   return (
-    <div className="w-full bg-white dark:bg-slate-800 shadow-xl rounded-xl overflow-hidden">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-700 dark:to-indigo-700 px-6 py-8">
-        <h1 className="text-3xl font-bold text-white mb-2">
-          Purchase History
-        </h1>
-        {totalMonths > 0 && currentMonthName && (
-          <div className="flex items-center gap-2 text-blue-100">
-            <Calendar size={18} />
-            <span className="text-lg font-medium">{currentMonthName}</span>
+    <>
+      <AddPurchase isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} />
+      
+      <div className="w-full bg-white dark:bg-slate-800 shadow-xl rounded-xl overflow-hidden">
+        {/* Header */}
+        <div className="px-3 md:px-6 py-3 md:py-8 border-b border-gray-200 dark:border-gray-700">
+          <div className="flex items-center justify-between mb-1 md:mb-2">
+            <h1 className="text-sm md:text-3xl font-bold text-gray-800 dark:text-white">
+              Purchase History
+            </h1>
+            <button
+              onClick={() => setIsAddModalOpen(true)}
+              className="flex items-center gap-1 md:gap-2 px-3 py-1.5 md:px-4 md:py-2 bg-blue-500 dark:bg-blue-600 hover:bg-blue-600 dark:hover:bg-blue-700 text-white rounded-lg transition-all shadow-md hover:shadow-lg font-semibold text-xs md:text-base"
+            >
+              <Plus size={16} className="md:w-5 md:h-5" />
+              <span className="hidden sm:inline">Add Purchase</span>
+            </button>
           </div>
-        )}
-      </div>
+          {totalMonths > 0 && currentMonthName && (
+            <div className="flex items-center gap-1.5 md:gap-2 text-gray-600 dark:text-gray-400">
+              <Calendar size={14} className="md:w-[18px] md:h-[18px]" />
+              <span className="text-xs md:text-lg font-medium">{currentMonthName}</span>
+            </div>
+          )}
+        </div>
 
         {/* Filters and Search */}
-        <div className="p-6 border-b dark:border-slate-700 bg-gray-50 dark:bg-slate-900/50">
-          <div className="flex flex-col sm:flex-row gap-4">
-            {/* Search */}
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500" size={20} />
-              <input
-                type="text"
-                placeholder="Search purchases..."
-                value={searchTerm}
-                onChange={(e) => {
-                  setSearchTerm(e.target.value);
-                  setCurrentMonthIndex(0);
-                }}
-                className="w-full pl-10 pr-10 py-2.5 border dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-800 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-              />
-              {searchTerm && (
-                <button
-                  onClick={() => setSearchTerm("")}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                >
-                  <X size={18} />
-                </button>
-              )}
-            </div>
-
-            {/* Budget Item Filter */}
-            <div className="sm:w-64">
-              <select
-                value={filterBudgetItem}
-                onChange={(e) => {
-                  setFilterBudgetItem(e.target.value);
-                  setCurrentMonthIndex(0);
-                }}
-                className="w-full px-4 py-2.5 border dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-800 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+        <div className="p-3 md:p-6 border-b dark:border-slate-700 bg-gray-50 dark:bg-slate-900/50">
+          {!isSearchExpanded ? (
+            // Default view - All controls on one row
+            <div className="flex gap-2 md:gap-4">
+              {/* Search Icon Button - Mobile only */}
+              <button
+                onClick={() => setIsSearchExpanded(true)}
+                className="sm:hidden flex items-center justify-center w-8 h-8 bg-white dark:bg-slate-800 text-gray-600 dark:text-gray-400 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition-all flex-shrink-0"
               >
-                <option value="">All Purchases</option>
-                <option value="uncategorized">Uncategorized</option>
-                {budgetGroups.map((group) => (
-                  <optgroup key={group.id} label={group.name}>
-                    {group.budget_items?.map((item) => (
-                      <option key={item.id} value={item.id}>
-                        {item.name}
-                      </option>
-                    ))}
-                  </optgroup>
-                ))}
-              </select>
-            </div>
+                <Search size={16} />
+              </button>
+              
+              {/* Desktop: Always show search bar */}
+              <div className="hidden sm:flex flex-1 relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500" size={16} />
+                <input
+                  type="text"
+                  placeholder="Search purchases..."
+                  value={searchTerm}
+                  onChange={(e) => {
+                    setSearchTerm(e.target.value);
+                    setCurrentMonthIndex(0);
+                  }}
+                  className="w-full pl-10 pr-10 py-2.5 border dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-800 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-base"
+                />
+                {searchTerm && (
+                  <button
+                    onClick={() => setSearchTerm("")}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                  >
+                    <X size={18} />
+                  </button>
+                )}
+              </div>
 
-            {/* Show Hidden Toggle */}
-            <div>
+              {/* Budget Item Filter */}
+              <div className="w-32 sm:w-48 md:w-64">
+                <select
+                  value={filterBudgetItem}
+                  onChange={(e) => {
+                    setFilterBudgetItem(e.target.value);
+                    setCurrentMonthIndex(0);
+                  }}
+                  className="w-full h-8 md:h-auto px-2 md:px-4 md:py-2.5 border dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-800 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-xs md:text-base"
+                >
+                  <option value="">All</option>
+                  <option value="uncategorized">Uncategorized</option>
+                  {budgetGroups.map((group) => (
+                    <optgroup key={group.id} label={group.name}>
+                      {group.budget_items?.map((item) => (
+                        <option key={item.id} value={item.id}>
+                          {item.name}
+                        </option>
+                      ))}
+                    </optgroup>
+                  ))}
+                </select>
+              </div>
+
+              {/* Show Hidden Toggle */}
               <button
                 onClick={async () => {
                   const newShowDeleted = !showDeleted;
@@ -580,7 +593,7 @@ const PurchasesList = () => {
                   }
                   setCurrentMonthIndex(0);
                 }}
-                className={`px-4 py-2.5 rounded-lg font-medium transition-all ${
+                className={`h-8 md:h-auto px-2.5 md:px-4 md:py-2.5 rounded-lg font-medium transition-all text-xs md:text-base flex-shrink-0 whitespace-nowrap ${
                   showDeleted
                     ? "bg-orange-500 dark:bg-orange-600 text-white shadow-md"
                     : "bg-white dark:bg-slate-700 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-slate-600"
@@ -589,45 +602,52 @@ const PurchasesList = () => {
                 {showDeleted ? "Show Active" : "Show Hidden"}
               </button>
             </div>
-          </div>
-
-          {/* Active Filters Display */}
-          {(searchTerm || filterBudgetItem) && (
-            <div className="mt-3 flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-              <span>Active filters:</span>
-              {searchTerm && (
-                <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-md">
-                  Search: "{searchTerm}"
-                </span>
-              )}
-              {filterBudgetItem && (
-                <span className="px-2 py-1 bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 rounded-md">
-                  Budget Item
-                </span>
-              )}
-              <button
-                onClick={() => {
-                  setSearchTerm("");
-                  setFilterBudgetItem("");
-                }}
-                className="ml-2 text-blue-600 dark:text-blue-400 hover:underline"
-              >
-                Clear all
-              </button>
+          ) : (
+            // Expanded search view - Mobile only
+            <div className="flex gap-2">
+              <div className="flex-1 relative">
+                <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500" size={16} />
+                <input
+                  type="text"
+                  placeholder="Search purchases..."
+                  value={searchTerm}
+                  onChange={(e) => {
+                    setSearchTerm(e.target.value);
+                    setCurrentMonthIndex(0);
+                  }}
+                  onBlur={() => {
+                    // On mobile, collapse search if empty
+                    if (!searchTerm) {
+                      setTimeout(() => setIsSearchExpanded(false), 100);
+                    }
+                  }}
+                  autoFocus
+                  className="w-full h-8 pl-8 pr-8 border dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-800 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-xs"
+                />
+                <button
+                  onClick={() => {
+                    setSearchTerm("");
+                    setIsSearchExpanded(false);
+                  }}
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                >
+                  <X size={14} />
+                </button>
+              </div>
             </div>
           )}
         </div>
 
         {/* Table */}
         {currentPurchases.length === 0 ? (
-          <div className="p-12 text-center">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 dark:bg-slate-700 mb-4">
-              <Search className="text-gray-400" size={32} />
+          <div className="p-8 md:p-12 text-center">
+            <div className="inline-flex items-center justify-center w-12 h-12 md:w-16 md:h-16 rounded-full bg-gray-100 dark:bg-slate-700 mb-3 md:mb-4">
+              <Search className="text-gray-400" size={24} />
             </div>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+            <h3 className="text-base md:text-lg font-semibold text-gray-900 dark:text-white mb-2">
               No purchases found
             </h3>
-            <p className="text-gray-500 dark:text-gray-400">
+            <p className="text-sm md:text-base text-gray-500 dark:text-gray-400">
               {searchTerm || filterBudgetItem
                 ? "Try adjusting your filters"
                 : "Start by adding your first purchase"}
@@ -705,7 +725,7 @@ const PurchasesList = () => {
                                 <div className="text-lg font-bold text-purple-900 dark:text-purple-100">
                                   {categoryData.name}
                                 </div>
-                                <div className="text-sm text-purple-700 dark:text-purple-300">
+                                <div className="hidden md:block text-sm text-purple-700 dark:text-purple-300">
                                   {categoryData.purchases.length} {categoryData.purchases.length === 1 ? 'purchase' : 'purchases'}
                                 </div>
                               </div>
@@ -763,17 +783,14 @@ const PurchasesList = () => {
                 Object.entries(purchasesByCategory).map(([categoryId, categoryData]) => (
                   <React.Fragment key={categoryId}>
                     {/* Category Header */}
-                    <div className="bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20 rounded-xl p-4 border-2 border-purple-200 dark:border-purple-700 mb-2">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-purple-100 dark:bg-purple-900/40 rounded-lg">
-                          <Tag className="text-purple-600 dark:text-purple-400" size={16} />
+                    <div className="bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20 rounded-lg p-1.5 border-2 border-purple-200 dark:border-purple-700 mb-2 ml-2">
+                      <div className="flex items-center gap-1.5">
+                        <div className="p-1 bg-purple-100 dark:bg-purple-900/40 rounded-lg">
+                          <Tag className="text-purple-600 dark:text-purple-400" size={12} />
                         </div>
                         <div className="flex-1">
-                          <div className="text-base font-bold text-purple-900 dark:text-purple-100">
+                          <div className="text-xs font-bold text-purple-900 dark:text-purple-100">
                             {categoryData.name}
-                          </div>
-                          <div className="text-xs text-purple-700 dark:text-purple-300">
-                            {categoryData.purchases.length} {categoryData.purchases.length === 1 ? 'purchase' : 'purchases'}
                           </div>
                         </div>
                       </div>
@@ -785,53 +802,101 @@ const PurchasesList = () => {
                         className="bg-white dark:bg-slate-800 rounded-xl shadow-md hover:shadow-lg border border-gray-200 dark:border-slate-700 p-4 transition-all duration-200 hover:scale-[1.01] ml-2"
                       >
                         {/* Purchase card content will follow */}
-                        {/* Header: Date and Delete */}
-                        <div className="flex items-center justify-between mb-3 pb-2.5 border-b border-gray-100 dark:border-slate-700">
-                          <div className="cursor-pointer flex-1">
-                            {editableField === "timestamp" && editingId === purchase.id ? (
-                              <input
-                                type="date"
-                                value={editingValue}
-                                onChange={(e) => setEditingValue(e.target.value)}
-                                onBlur={() => {
-                                  handleCellUpdate("timestamp", editingValue);
-                                  setEditableField(null);
-                                  setEditingId(null);
-                                }}
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Enter') {
-                                    e.target.blur();
-                                  }
-                                }}
-                                className="px-3 py-2 border dark:border-gray-600 rounded-md bg-white dark:bg-slate-600 text-gray-800 dark:text-white text-base focus:ring-2 focus:ring-blue-500"
-                                autoFocus
-                              />
-                            ) : (
-                              <div 
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleCellEditStart("timestamp", purchase);
-                                }}
-                                onTouchEnd={(e) => {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                  handleCellEditStart("timestamp", purchase);
-                                }}
-                                className="flex items-center gap-1.5 active:opacity-70 transition-opacity"
-                              >
-                                <div className="p-1 bg-blue-50 dark:bg-blue-900/20 rounded">
-                                  <Calendar size={12} className="text-blue-600 dark:text-blue-400" />
+                        {/* Header: Date, Category, and Delete */}
+                        <div className="flex items-center justify-between mb-3 pb-2.5 border-b border-gray-100 dark:border-slate-700 gap-2">
+                          <div className="flex items-center gap-2 flex-1 min-w-0">
+                            <div className="cursor-pointer flex-shrink-0">
+                              {editableField === "timestamp" && editingId === purchase.id ? (
+                                <input
+                                  type="date"
+                                  value={editingValue}
+                                  onChange={(e) => setEditingValue(e.target.value)}
+                                  onBlur={() => {
+                                    handleCellUpdate("timestamp", editingValue);
+                                    setEditableField(null);
+                                    setEditingId(null);
+                                  }}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                      e.target.blur();
+                                    }
+                                  }}
+                                  className="px-3 py-2 border dark:border-gray-600 rounded-md bg-white dark:bg-slate-600 text-gray-800 dark:text-white text-base focus:ring-2 focus:ring-blue-500"
+                                  autoFocus
+                                />
+                              ) : (
+                                <div 
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleCellEditStart("timestamp", purchase);
+                                  }}
+                                  onTouchEnd={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    handleCellEditStart("timestamp", purchase);
+                                  }}
+                                  className="flex items-center gap-1.5 active:opacity-70 transition-opacity"
+                                >
+                                  <div className="p-1 bg-blue-50 dark:bg-blue-900/20 rounded">
+                                    <Calendar size={12} className="text-blue-600 dark:text-blue-400" />
+                                  </div>
+                                  <span className="text-xs font-semibold text-gray-600 dark:text-gray-300 whitespace-nowrap">
+                                    {new Date(purchase.timestamp).toLocaleDateString(undefined, {
+                                      month: "short",
+                                      day: "numeric",
+                                    })}
+                                  </span>
                                 </div>
-                                <span className="text-xs font-semibold text-gray-600 dark:text-gray-300">
-                                  {new Date(purchase.timestamp).toLocaleDateString(undefined, {
-                                    month: "short",
-                                    day: "numeric",
-                                    year: "numeric",
-                                  })}
-                                </span>
-                              </div>
-                            )}
+                              )}
+                            </div>
+                            
+                            {/* Budget Item */}
+                            <div className="cursor-pointer flex-shrink-0 ml-auto">
+                              {editableField === "budgetItemId" && editingId === purchase.id ? (
+                                <select
+                                  value={editingValue || ""}
+                                  onChange={(e) => {
+                                    const newValue = e.target.value;
+                                    setEditingValue(newValue);
+                                    handleCellUpdate("budgetItemId", newValue);
+                                  }}
+                                  onBlur={() => {
+                                    setEditableField(null);
+                                    setEditingId(null);
+                                  }}
+                                  className="px-2 py-1.5 border dark:border-gray-600 rounded-lg bg-white dark:bg-slate-600 text-gray-800 dark:text-white text-xs focus:ring-2 focus:ring-blue-500"
+                                  autoFocus
+                                >
+                                  <option value="">Uncategorized</option>
+                                  {budgetGroups.map((group) => (
+                                    <optgroup key={group.id} label={group.name}>
+                                      {group.budget_items?.map((item) => (
+                                        <option key={item.id} value={item.id}>
+                                          {item.name}
+                                        </option>
+                                      ))}
+                                    </optgroup>
+                                  ))}
+                                </select>
+                              ) : (
+                                <div 
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleCellEditStart("budgetItemId", purchase);
+                                  }}
+                                  onTouchEnd={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    handleCellEditStart("budgetItemId", purchase);
+                                  }}
+                                  className="inline-flex items-center px-2 py-1 rounded-lg text-xs font-semibold bg-gradient-to-r from-purple-100 to-indigo-100 dark:from-purple-900/40 dark:to-indigo-900/40 text-purple-700 dark:text-purple-200 border border-purple-200 dark:border-purple-800 shadow-sm active:scale-95 transition-all whitespace-nowrap"
+                                >
+                                  {purchase.budget_items?.name || "Uncategorized"}
+                                </div>
+                              )}
+                            </div>
                           </div>
+                          
                           {showDeleted ? (
                             <button
                               onClick={() => {
@@ -843,7 +908,7 @@ const PurchasesList = () => {
                                   handleRestore(purchase.id);
                                 }
                               }}
-                              className="p-2 text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-all active:scale-95"
+                              className="p-2 text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-all active:scale-95 flex-shrink-0"
                               title="Restore purchase"
                             >
                               <RotateCcw size={16} />
@@ -859,7 +924,7 @@ const PurchasesList = () => {
                                   handleDelete(purchase.id);
                                 }
                               }}
-                              className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all active:scale-95"
+                              className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all active:scale-95 flex-shrink-0"
                               title="Delete purchase"
                             >
                               <Trash2 size={16} />
@@ -867,51 +932,51 @@ const PurchasesList = () => {
                           )}
                         </div>
 
-                        {/* Item Name */}
-                        <div className="mb-3 cursor-pointer group">
-                          {editableField === "itemName" && editingId === purchase.id ? (
-                            <input
-                              type="text"
-                              value={editingValue}
-                              onChange={(e) => setEditingValue(e.target.value)}
-                              onBlur={() => {
-                                handleCellUpdate("itemName", editingValue);
-                                setEditableField(null);
-                                setEditingId(null);
-                              }}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
-                                  e.target.blur();
-                                }
-                              }}
-                              className="w-full px-3 py-3 border dark:border-gray-600 rounded-lg bg-white dark:bg-slate-600 text-gray-800 dark:text-white text-base focus:ring-2 focus:ring-blue-500"
-                              autoFocus
-                            />
-                          ) : (
-                            <div 
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleCellEditStart("itemName", purchase);
-                              }}
-                              onTouchEnd={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                handleCellEditStart("itemName", purchase);
-                              }}
-                              className="flex items-start gap-2 active:opacity-70 transition-opacity"
-                            >
-                              <Tag size={16} className="text-gray-400 dark:text-gray-500 mt-0.5 flex-shrink-0" />
-                              <h3 className="text-base font-bold text-gray-900 dark:text-white leading-snug flex-1 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                                {purchase.item_name}
-                              </h3>
-                            </div>
-                          )}
-                        </div>
+                        {/* Item Name and Cost */}
+                        <div className="flex items-center gap-2">
+                          {/* Item Name */}
+                          <div className="flex-1 min-w-0 cursor-pointer group">
+                            {editableField === "itemName" && editingId === purchase.id ? (
+                              <input
+                                type="text"
+                                value={editingValue}
+                                onChange={(e) => setEditingValue(e.target.value)}
+                                onBlur={() => {
+                                  handleCellUpdate("itemName", editingValue);
+                                  setEditableField(null);
+                                  setEditingId(null);
+                                }}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    e.target.blur();
+                                  }
+                                }}
+                                className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg bg-white dark:bg-slate-600 text-gray-800 dark:text-white text-base focus:ring-2 focus:ring-blue-500"
+                                autoFocus
+                              />
+                            ) : (
+                              <div 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleCellEditStart("itemName", purchase);
+                                }}
+                                onTouchEnd={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  handleCellEditStart("itemName", purchase);
+                                }}
+                                className="flex items-center gap-2 active:opacity-70 transition-opacity"
+                              >
+                                <Tag size={14} className="text-gray-400 dark:text-gray-500 flex-shrink-0" />
+                                <h3 className="text-base font-bold text-gray-900 dark:text-white leading-snug truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                                  {purchase.item_name}
+                                </h3>
+                              </div>
+                            )}
+                          </div>
 
-                        {/* Cost and Budget Item */}
-                        <div className="grid grid-cols-2 gap-2.5">
                           {/* Cost */}
-                          <div className="cursor-pointer group">
+                          <div className="cursor-pointer group flex-shrink-0">
                             {editableField === "cost" && editingId === purchase.id ? (
                               <input
                                 type="number"
@@ -928,7 +993,7 @@ const PurchasesList = () => {
                                     e.target.blur();
                                   }
                                 }}
-                                className="w-full px-3 py-3 border dark:border-gray-600 rounded-lg bg-white dark:bg-slate-600 text-gray-800 dark:text-white text-base focus:ring-2 focus:ring-blue-500"
+                                className="w-24 px-2 py-2 border dark:border-gray-600 rounded-lg bg-white dark:bg-slate-600 text-gray-800 dark:text-white text-base focus:ring-2 focus:ring-blue-500"
                                 min="0"
                                 step="0.01"
                                 autoFocus
@@ -944,59 +1009,11 @@ const PurchasesList = () => {
                                   e.stopPropagation();
                                   handleCellEditStart("cost", purchase);
                                 }}
-                                className="flex items-center justify-center gap-1 px-3 py-2 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-lg border border-green-200 dark:border-green-800 group-hover:shadow-sm transition-all h-full active:scale-95"
+                                className="flex items-center gap-1 px-2 py-1.5 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-lg border border-green-200 dark:border-green-800 group-hover:shadow-sm transition-all active:scale-95 whitespace-nowrap"
                               >
-                                <DollarSign size={16} className="text-green-600 dark:text-green-400 flex-shrink-0" />
-                                <span className="text-base font-bold text-green-700 dark:text-green-400 truncate">
+                                <DollarSign size={14} className="text-green-600 dark:text-green-400 flex-shrink-0" />
+                                <span className="text-sm font-bold text-green-700 dark:text-green-400">
                                   {purchase.cost.toFixed(2)}
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                          
-                          {/* Budget Item */}
-                          <div className="cursor-pointer">
-                            {editableField === "budgetItemId" && editingId === purchase.id ? (
-                              <select
-                                value={editingValue || ""}
-                                onChange={(e) => {
-                                  const newValue = e.target.value;
-                                  setEditingValue(newValue);
-                                  handleCellUpdate("budgetItemId", newValue);
-                                }}
-                                onBlur={() => {
-                                  setEditableField(null);
-                                  setEditingId(null);
-                                }}
-                                className="w-full px-3 py-3 border dark:border-gray-600 rounded-lg bg-white dark:bg-slate-600 text-gray-800 dark:text-white text-base focus:ring-2 focus:ring-blue-500"
-                                autoFocus
-                              >
-                                <option value="">Uncategorized</option>
-                                {budgetGroups.map((group) => (
-                                  <optgroup key={group.id} label={group.name}>
-                                    {group.budget_items?.map((item) => (
-                                      <option key={item.id} value={item.id}>
-                                        {item.name}
-                                      </option>
-                                    ))}
-                                  </optgroup>
-                                ))}
-                              </select>
-                            ) : (
-                              <div 
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleCellEditStart("budgetItemId", purchase);
-                                }}
-                                onTouchEnd={(e) => {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                  handleCellEditStart("budgetItemId", purchase);
-                                }}
-                                className="flex items-center justify-center px-3 py-2 rounded-lg text-xs font-semibold bg-gradient-to-r from-purple-100 to-indigo-100 dark:from-purple-900/40 dark:to-indigo-900/40 text-purple-700 dark:text-purple-200 border border-purple-200 dark:border-purple-800 shadow-sm h-full active:scale-95 transition-all"
-                              >
-                                <span className="truncate">
-                                  {purchase.budget_items?.name || "Uncategorized"}
                                 </span>
                               </div>
                             )}
@@ -1239,17 +1256,17 @@ const PurchasesList = () => {
 
         {/* Pagination */}
         {totalMonths > 0 && (
-          <div className="px-6 py-4 bg-gray-50 dark:bg-slate-900/50 border-t dark:border-slate-700">
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="px-3 md:px-6 py-3 md:py-4 bg-gray-50 dark:bg-slate-900/50 border-t dark:border-slate-700">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 md:gap-4">
               <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-                <div className="text-sm text-gray-600 dark:text-gray-400">
+                <div className="text-xs md:text-sm text-gray-600 dark:text-gray-400">
                   <span className="font-semibold text-gray-900 dark:text-white">{currentPurchases.length}</span>{" "}
                   {currentPurchases.length === 1 ? 'purchase' : 'purchases'}{" "}
                   in{" "}
                   <span className="font-semibold text-gray-900 dark:text-white">{currentMonthName}</span>
                 </div>
                 {currentPurchases.length > 0 && (
-                  <div className="text-sm font-semibold">
+                  <div className="text-xs md:text-sm font-semibold">
                     <span className="text-gray-600 dark:text-gray-400">Total: </span>
                     <span className="text-green-600 dark:text-green-400">
                       ${currentMonthTotal.toFixed(2)}
@@ -1261,35 +1278,36 @@ const PurchasesList = () => {
               <button
                 onClick={handlePrevMonth}
                 disabled={currentMonthIndex === 0}
-                  className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all ${
+                  className={`inline-flex items-center gap-1 md:gap-2 px-3 md:px-4 py-1.5 md:py-2 text-xs md:text-sm font-medium rounded-lg transition-all ${
                   currentMonthIndex === 0
                       ? "text-gray-400 dark:text-gray-600 cursor-not-allowed bg-gray-100 dark:bg-slate-800"
                       : "text-gray-700 dark:text-gray-200 bg-white dark:bg-slate-700 hover:bg-gray-50 dark:hover:bg-slate-600 border border-gray-300 dark:border-slate-600"
                 }`}
               >
-                  <ChevronLeft size={18} />
+                  <ChevronLeft size={16} className="md:w-[18px] md:h-[18px]" />
                   <span className="hidden sm:inline">Previous</span>
               </button>
-                <span className="px-3 sm:px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-700 rounded-lg border border-gray-300 dark:border-slate-600 whitespace-nowrap">
+                <span className="px-2 sm:px-3 md:px-4 py-1.5 md:py-2 text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-700 rounded-lg border border-gray-300 dark:border-slate-600 whitespace-nowrap">
                   Month {currentMonthIndex + 1} of {totalMonths}
               </span>
               <button
                 onClick={handleNextMonth}
                 disabled={currentMonthIndex === totalMonths - 1}
-                  className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all ${
+                  className={`inline-flex items-center gap-1 md:gap-2 px-3 md:px-4 py-1.5 md:py-2 text-xs md:text-sm font-medium rounded-lg transition-all ${
                   currentMonthIndex === totalMonths - 1
                       ? "text-gray-400 dark:text-gray-600 cursor-not-allowed bg-gray-100 dark:bg-slate-800"
                       : "text-gray-700 dark:text-gray-200 bg-white dark:bg-slate-700 hover:bg-gray-50 dark:hover:bg-slate-600 border border-gray-300 dark:border-slate-600"
                 }`}
               >
                   <span className="hidden sm:inline">Next</span>
-                  <ChevronRight size={18} />
+                  <ChevronRight size={16} className="md:w-[18px] md:h-[18px]" />
               </button>
             </div>
           </div>
         </div>
         )}
-    </div>
+      </div>
+    </>
   );
 };
 

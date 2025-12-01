@@ -516,45 +516,33 @@ function Income() {
   );
 
   return (
-    <div className="space-y-2 md:space-y-0">
-      {/* Main Income Card */}
-      <div className="w-full mx-auto p-2 pb-2 md:p-8 bg-white dark:bg-slate-800 shadow-xl rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
-        <div className="flex items-center mb-3 md:mb-8">
-          <div className="p-1 md:p-3 bg-green-100 dark:bg-green-900/30 rounded-lg mr-1.5 md:mr-4">
-            <DollarSign className="w-4 h-4 md:w-8 md:h-8 text-green-600 dark:text-green-400" />
-          </div>
-        <h1 className="text-sm md:text-3xl font-bold text-gray-800 dark:text-white">
-          <span className="hidden sm:inline">Income & Taxes</span>
-          <span className="sm:hidden">Income Summary</span>
-        </h1>
-        </div>
-
-        {/* Summary Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 md:gap-4 mb-0 md:mb-8">
-          <div className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 p-2 md:p-6 rounded-lg border-2 border-green-200 dark:border-green-700 shadow-sm">
-            <div className="text-[10px] md:text-sm font-medium text-green-700 dark:text-green-300 mb-0.5 md:mb-1">
+    <div className="space-y-2 md:space-y-4">
+      {/* Summary Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 md:gap-4">
+          <div className="bg-green-50/50 dark:bg-green-900/10 p-2 md:p-4 rounded-lg">
+            <div className="text-[10px] md:text-xs font-medium text-green-600 dark:text-green-400 mb-0.5 md:mb-1 uppercase tracking-wide">
               Annual Take Home
             </div>
-            <div className="text-sm md:text-3xl font-bold text-green-600 dark:text-green-400">
+            <div className="text-sm md:text-2xl font-bold text-green-700 dark:text-green-300">
               ${formatCurrency(takeHomePay)}
             </div>
           </div>
           
-          <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 p-2 md:p-6 rounded-lg border-2 border-blue-200 dark:border-blue-700 shadow-sm">
-            <div className="text-[10px] md:text-sm font-medium text-blue-700 dark:text-blue-300 mb-0.5 md:mb-1">
+          <div className="bg-blue-50/50 dark:bg-blue-900/10 p-2 md:p-4 rounded-lg">
+            <div className="text-[10px] md:text-xs font-medium text-blue-600 dark:text-blue-400 mb-0.5 md:mb-1 uppercase tracking-wide">
               Monthly Take Home
             </div>
-            <div className="text-sm md:text-3xl font-bold text-blue-600 dark:text-blue-400">
+            <div className="text-sm md:text-2xl font-bold text-blue-700 dark:text-blue-300">
               ${formatCurrency(monthlyTakeHomePay)}
             </div>
           </div>
 
-          <div className="bg-gradient-to-br from-cyan-50 to-cyan-100 dark:from-cyan-900/20 dark:to-cyan-800/20 p-2 md:p-6 rounded-lg border-2 border-cyan-200 dark:border-cyan-700 shadow-sm">
-            <div className="text-[10px] md:text-sm font-medium text-cyan-700 dark:text-cyan-300 mb-0.5 md:mb-1">
+          <div className="bg-cyan-50/50 dark:bg-cyan-900/10 p-2 md:p-4 rounded-lg">
+            <div className="text-[10px] md:text-xs font-medium text-cyan-600 dark:text-cyan-400 mb-0.5 md:mb-1 uppercase tracking-wide">
               <span className="hidden sm:inline">Take Home ({incomeData.payFrequency})</span>
               <span className="sm:hidden">Pay Period</span>
             </div>
-            <div className="text-sm md:text-3xl font-bold text-cyan-600 dark:text-cyan-400">
+            <div className="text-sm md:text-2xl font-bold text-cyan-700 dark:text-cyan-300">
               ${formatCurrency((() => {
                 switch (incomeData.payFrequency) {
                   case "Weekly":
@@ -571,18 +559,29 @@ function Income() {
             </div>
           </div>
 
-          <div className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 p-2 md:p-6 rounded-lg border-2 border-purple-200 dark:border-purple-700 shadow-sm">
-            <div className="text-[10px] md:text-sm font-medium text-purple-700 dark:text-purple-300 mb-0.5 md:mb-1">
+          <div className="bg-purple-50/50 dark:bg-purple-900/10 p-2 md:p-4 rounded-lg">
+            <div className="text-[10px] md:text-xs font-medium text-purple-600 dark:text-purple-400 mb-0.5 md:mb-1 uppercase tracking-wide">
               Annual 401K
             </div>
-            <div className="text-sm md:text-3xl font-bold text-purple-600 dark:text-purple-400">
+            <div className="text-sm md:text-2xl font-bold text-purple-700 dark:text-purple-300">
               ${formatCurrency(totalAnnual401K)}
             </div>
           </div>
         </div>
 
+      {/* Main Income Card */}
+      <div className="hidden md:block w-full mx-auto md:p-8 bg-white dark:bg-slate-800 shadow-xl rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div className="flex items-center mb-8">
+          <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-lg mr-4">
+            <DollarSign className="w-8 h-8 text-green-600 dark:text-green-400" />
+          </div>
+          <h1 className="text-3xl font-bold text-gray-800 dark:text-white">
+            Income & Taxes
+          </h1>
+        </div>
+
         {/* Desktop Layout - All three sections in one grid */}
-        <div className="hidden md:grid md:grid-cols-12 gap-2 md:gap-6">
+        <div className="grid grid-cols-12 gap-6">
           {renderEarnings()}
           {renderRetirement()}
           {renderTaxes()}

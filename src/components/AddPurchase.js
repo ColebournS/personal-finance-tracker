@@ -1,16 +1,17 @@
 import React, { useState } from "react";
 import supabase from "../supabaseClient.js";
-import { Save, CheckCircle, ShoppingBag, DollarSign, Tag } from "lucide-react";
+import { Save, ShoppingBag, DollarSign, Tag, X } from "lucide-react";
 import { useData } from "../DataContext";
 
-const AddPurchase = () => {
+const AddPurchase = ({ isOpen, onClose }) => {
   const { budgetGroups, userId, refetchPurchases } = useData();
   const [formData, setFormData] = useState({
     itemName: "",
     cost: "",
     budgetItemId: "",
   });
-  const [showSuccess, setShowSuccess] = useState(false);
+  
+  if (!isOpen) return null;
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -37,20 +38,15 @@ const AddPurchase = () => {
       // Refetch purchases to update the context
       await refetchPurchases();
 
-      // Show success animation
-      setShowSuccess(true);
-
-      // Hide animation after 3 seconds
-      setTimeout(() => {
-        setShowSuccess(false);
-      }, 3000);
-
       // Reset form after successful submission
       setFormData({
         itemName: "",
         cost: "",
         budgetItemId: "",
       });
+
+      // Close modal immediately
+      onClose();
     } catch (error) {
       console.error("Error saving purchase:", error);
       alert("Failed to save purchase. Please try again.");
@@ -58,114 +54,15 @@ const AddPurchase = () => {
   };
 
   return (
-    <div className="w-full mx-auto p-8 bg-white dark:bg-slate-800 shadow-xl rounded-xl border border-gray-200 dark:border-gray-700 relative">
-      {showSuccess && (
-        <div className="success-animation fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-50">
-          <div className="bg-white dark:bg-slate-800 p-8 rounded-lg shadow-2xl transform transition-all duration-500 animate-bounce-in">
-            <div className="text-center">
-              <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-green-100 dark:bg-green-900 mb-6">
-                <CheckCircle className="w-16 h-16 text-green-500 dark:text-green-400 animate-pulse" />
-              </div>
-              <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-2">
-                Success!
-              </h2>
-              <p className="text-gray-600 dark:text-gray-300 mb-4">Your purchase has been added</p>
-              <div className="sparkles">
-                <div className="sparkle" style={{ "--delay": "0s" }}></div>
-                <div className="sparkle" style={{ "--delay": "0.3s" }}></div>
-                <div className="sparkle" style={{ "--delay": "0.6s" }}></div>
-                <div className="sparkle" style={{ "--delay": "0.9s" }}></div>
-                <div className="sparkle" style={{ "--delay": "1.2s" }}></div>
-                <div className="sparkle" style={{ "--delay": "1.5s" }}></div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <style>{`
-        @keyframes bounceIn {
-          0% {
-            transform: scale(0.3);
-            opacity: 0;
-          }
-          50% {
-            transform: scale(1.05);
-            opacity: 1;
-          }
-          70% {
-            transform: scale(0.9);
-          }
-          100% {
-            transform: scale(1);
-          }
-        }
-
-        @keyframes float {
-          0% {
-            transform: translateY(0) rotate(0deg);
-            opacity: 1;
-          }
-          100% {
-            transform: translateY(-100px) rotate(360deg);
-            opacity: 0;
-          }
-        }
-
-        .animate-bounce-in {
-          animation: bounceIn 0.7s cubic-bezier(0.215, 0.61, 0.355, 1) forwards;
-        }
-
-        .sparkles {
-          position: absolute;
-          top: 0;
-          left: 0;
-          width: 100%;
-          height: 100%;
-          pointer-events: none;
-        }
-
-        .sparkle {
-          position: absolute;
-          width: 10px;
-          height: 10px;
-          border-radius: 50%;
-          background: radial-gradient(
-            circle,
-            #fff 0%,
-            rgba(255, 215, 0, 0.8) 60%,
-            rgba(255, 215, 0, 0) 100%
-          );
-          animation: float 2s ease-in-out forwards;
-          animation-delay: var(--delay);
-          opacity: 0;
-        }
-
-        .sparkle:nth-child(1) {
-          top: 20%;
-          left: 20%;
-        }
-        .sparkle:nth-child(2) {
-          top: 30%;
-          left: 70%;
-        }
-        .sparkle:nth-child(3) {
-          top: 70%;
-          left: 30%;
-        }
-        .sparkle:nth-child(4) {
-          top: 60%;
-          left: 80%;
-        }
-        .sparkle:nth-child(5) {
-          top: 80%;
-          left: 40%;
-        }
-        .sparkle:nth-child(6) {
-          top: 40%;
-          left: 60%;
-        }
-      `}</style>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50 backdrop-blur-sm" onClick={onClose}>
+      <div className="w-full max-w-2xl mx-auto p-8 bg-white dark:bg-slate-800 shadow-2xl rounded-xl border border-gray-200 dark:border-gray-700 relative max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        {/* Close Button */}
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-all z-10"
+        >
+          <X size={24} />
+        </button>
 
       <div className="text-center mb-4">
         <div className="inline-flex items-center justify-center p-3 bg-blue-100 dark:bg-blue-900/30 rounded-full mb-4">
@@ -262,6 +159,7 @@ const AddPurchase = () => {
           Add Purchase
         </button>
       </form>
+      </div>
     </div>
   );
 };

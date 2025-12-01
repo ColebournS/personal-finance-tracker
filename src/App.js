@@ -1,12 +1,12 @@
 import React, { useState, useEffect, lazy, Suspense } from "react";
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import {
   Loader2,
   DollarSign,
-  PlusCircle,
   CreditCard,
   List,
   Settings,
+  BarChart3,
 } from "lucide-react";
 import { AuthProvider } from "./AuthContext";
 import { DataProvider, useData } from "./DataContext";
@@ -16,7 +16,6 @@ import { Link } from "react-router-dom";
 // Lazy load components for code splitting
 const Income = lazy(() => import("./components/Income"));
 const Budget = lazy(() => import("./components/Budget"));
-const AddPurchase = lazy(() => import("./components/AddPurchase"));
 const PurchasesList = lazy(() => import("./components/Purchases"));
 const RecomendedBudget = lazy(() => import("./components/Charts/RecomendedBudget"));
 const CurrentBudget = lazy(() => import("./components/Charts/CurrentBudget"));
@@ -28,15 +27,15 @@ const Accounts = lazy(() => import("./components/Accounts"));
 const NotFound = lazy(() => import("./components/NotFound"));
 
 const BottomNav = () => {
-  const location = window.location;
+  const location = useLocation();
   const isActive = (path) => location.pathname === path;
   
   return (
     <div className="fixed bottom-0 left-0 w-full bg-white dark:bg-slate-800 shadow-md border-t dark:border-gray-600 flex justify-around py-3">
       <Link
-        to="/Income"
+        to="/income"
         className={`flex flex-col items-center ${
-          isActive("/Income")
+          isActive("/income")
             ? "text-blue-500 dark:text-blue-400"
             : "text-gray-600 dark:text-gray-300 hover:text-blue-500 dark:hover:text-blue-400"
         }`}
@@ -45,9 +44,9 @@ const BottomNav = () => {
         <span className="text-xs">Income</span>
       </Link>
       <Link
-        to="/Budget"
+        to="/budget"
         className={`flex flex-col items-center ${
-          isActive("/Budget")
+          isActive("/budget")
             ? "text-blue-500 dark:text-blue-400"
             : "text-gray-600 dark:text-gray-300 hover:text-blue-500 dark:hover:text-blue-400"
         }`}
@@ -56,20 +55,9 @@ const BottomNav = () => {
         <span className="text-xs">Budget</span>
       </Link>
       <Link
-        to="/"
+        to="/purchases"
         className={`flex flex-col items-center ${
-          isActive("/")
-            ? "text-blue-500 dark:text-blue-400"
-            : "text-blue-500 dark:text-blue-400"
-        }`}
-      >
-        <PlusCircle size={32} className="text-blue-500 dark:text-blue-400" />
-        <span className="text-xs">Add Purchase</span>
-      </Link>
-      <Link
-        to="/Purchases"
-        className={`flex flex-col items-center ${
-          isActive("/Purchases")
+          isActive("/purchases")
             ? "text-blue-500 dark:text-blue-400"
             : "text-gray-600 dark:text-gray-300 hover:text-blue-500 dark:hover:text-blue-400"
         }`}
@@ -78,9 +66,20 @@ const BottomNav = () => {
         <span className="text-xs">Purchases</span>
       </Link>
       <Link
-        to="/Settings"
+        to="/analytics"
         className={`flex flex-col items-center ${
-          isActive("/Settings")
+          isActive("/analytics")
+            ? "text-blue-500 dark:text-blue-400"
+            : "text-gray-600 dark:text-gray-300 hover:text-blue-500 dark:hover:text-blue-400"
+        }`}
+      >
+        <BarChart3 size={24} />
+        <span className="text-xs">Analytics</span>
+      </Link>
+      <Link
+        to="/settings"
+        className={`flex flex-col items-center ${
+          isActive("/settings")
             ? "text-blue-500 dark:text-blue-400"
             : "text-gray-600 dark:text-gray-300 hover:text-blue-500 dark:hover:text-blue-400"
         }`}
@@ -142,15 +141,7 @@ function AppContent({ isMobile, takeHomePay, setTakeHomePay }) {
                 <Routes>
                   <Route
                     path="/"
-                    element={
-                      <div className="bg-white dark:bg-black pb-20">
-                        <div className="flex flex-col gap-4 my-5 mx-4">
-                          <Suspense fallback={<LoadingSpinner />}>
-                            <AddPurchase />
-                          </Suspense>
-                        </div>
-                      </div>
-                    }
+                    element={<Navigate to="/Purchases" replace />}
                   />
                   {/* Capitalized routes (primary for mobile) */}
                   <Route
@@ -185,8 +176,19 @@ function AppContent({ isMobile, takeHomePay, setTakeHomePay }) {
                       <div className="bg-white dark:bg-black pb-20">
                         <div className="flex flex-col gap-4 my-5 mx-4">
                           <Suspense fallback={<LoadingSpinner />}>
-                            <BudgetVsSpent />
                             <PurchasesList />
+                          </Suspense>
+                        </div>
+                      </div>
+                    }
+                  />
+                  <Route
+                    path="/Analytics"
+                    element={
+                      <div className="bg-white dark:bg-black pb-20">
+                        <div className="flex flex-col gap-4 my-5 mx-4">
+                          <Suspense fallback={<LoadingSpinner />}>
+                            <BudgetVsSpent />
                           </Suspense>
                         </div>
                       </div>
@@ -216,6 +218,10 @@ function AppContent({ isMobile, takeHomePay, setTakeHomePay }) {
                   <Route
                     path="/purchases"
                     element={<Navigate to="/Purchases" replace />}
+                  />
+                  <Route
+                    path="/analytics"
+                    element={<Navigate to="/Analytics" replace />}
                   />
                   <Route
                     path="/accounts"
@@ -282,8 +288,18 @@ function AppContent({ isMobile, takeHomePay, setTakeHomePay }) {
                         <div className="max-w-4xl mx-auto px-6">
                           <div className="flex flex-col gap-4 my-5">
                             <Suspense fallback={<LoadingSpinner />}>
-                              <AddPurchase />
                               <PurchasesList />
+                            </Suspense>
+                          </div>
+                        </div>
+                      }
+                    />
+                    <Route
+                      path="/analytics"
+                      element={
+                        <div className="max-w-6xl mx-auto px-6">
+                          <div className="flex flex-col gap-4 my-5">
+                            <Suspense fallback={<LoadingSpinner />}>
                               <BudgetVsSpent />
                             </Suspense>
                           </div>
@@ -314,6 +330,10 @@ function AppContent({ isMobile, takeHomePay, setTakeHomePay }) {
                     <Route
                       path="/Purchases"
                       element={<Navigate to="/purchases" replace />}
+                    />
+                    <Route
+                      path="/Analytics"
+                      element={<Navigate to="/analytics" replace />}
                     />
                     <Route
                       path="/Settings"

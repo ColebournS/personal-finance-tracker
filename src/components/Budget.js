@@ -270,27 +270,25 @@ function Budget() {
       <div className={`bg-transparent md:bg-white md:dark:bg-slate-700 p-2 md:p-6 mb-0 md:mb-6 last:mb-0 rounded-none md:rounded-xl shadow-none md:shadow-xl border-0 md:border border-gray-200 dark:border-gray-700 transition-all duration-500 ${
         isNewlyAdded ? 'animate-pulse ring-4 ring-blue-400 dark:ring-blue-500 scale-[1.02]' : ''
       }`}>
-        <div className="flex justify-between items-start gap-2 mb-4">
-            <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0">
-              <input
-                type="text"
-                value={tempGroupNames[group.id] ?? group.name}
-                onChange={(e) => handleGroupInputChange(group.id, e.target.value)}
-                className="text-base sm:text-lg md:text-xl font-bold text-gray-800 dark:text-white bg-transparent border-b-2 border-transparent hover:border-blue-500 dark:hover:border-blue-400 focus:border-blue-500 dark:focus:border-blue-400 focus:outline-none transition-colors px-1 sm:px-2 py-1 rounded"
-              />
-              <div className="px-3 py-1.5 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/30 border border-blue-200 dark:border-blue-700 rounded-lg">
-                <span className="text-sm font-medium text-blue-700 dark:text-blue-300 whitespace-nowrap">
-                  ${formatCurrency(groupTotal)} <span className="text-xs">({groupPercentage}%)</span>
+        <div className="flex justify-between items-center gap-2 mb-4">
+            <input
+              type="text"
+              value={tempGroupNames[group.id] ?? group.name}
+              onChange={(e) => handleGroupInputChange(group.id, e.target.value)}
+              className="text-sm md:text-lg lg:text-xl font-bold text-gray-800 dark:text-white bg-transparent border-b-2 border-transparent hover:border-blue-500 dark:hover:border-blue-400 focus:border-blue-500 dark:focus:border-blue-400 focus:outline-none transition-colors px-1 py-1 flex-shrink min-w-0"
+            />
+            <div className="flex gap-1 md:gap-2 flex-shrink-0 items-center">
+              <div className="px-2 py-1 md:px-3 md:py-1.5 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/30 border border-blue-200 dark:border-blue-700 rounded-lg">
+                <span className="text-xs md:text-sm font-medium text-blue-700 dark:text-blue-300 whitespace-nowrap">
+                  ${formatCurrency(groupTotal)} ({groupPercentage}%)
                 </span>
               </div>
-            </div>
-            <div className="flex gap-1 sm:gap-2 flex-shrink-0">
               <button
                 onClick={() => handleAddItem(group.id)}
-                className="flex items-center gap-1 bg-blue-500 dark:bg-blue-600 text-white p-2 sm:px-3 sm:py-2 rounded-lg hover:bg-blue-600 dark:hover:bg-blue-700 transition-all shadow-md hover:shadow-lg"
+                className="flex items-center gap-1 bg-gradient-to-r from-blue-500 to-blue-600 dark:from-blue-600 dark:to-blue-700 hover:from-blue-600 hover:to-blue-700 dark:hover:from-blue-700 dark:hover:to-blue-800 text-white p-2 sm:px-3 sm:py-2 rounded-lg transition-all shadow-md hover:shadow-lg hover:scale-105 active:scale-95"
               >
-                <PlusCircle size={16} className="sm:w-5 sm:h-5" />
-                {!isSmallScreen && <span className="text-sm font-medium">Add Item</span>}
+                <PlusCircle size={16} className="sm:w-5 sm:h-5 stroke-[2.5]" />
+                {!isSmallScreen && <span className="text-sm font-semibold">Add Item</span>}
               </button>
               <button
                 onClick={() => {
@@ -302,11 +300,11 @@ function Budget() {
                     handleDeleteGroup(group.id);
                   }
                 }}
-                className="flex items-center gap-1 bg-red-500 dark:bg-red-600 text-white p-2 sm:px-3 sm:py-2 rounded-lg hover:bg-red-600 dark:hover:bg-red-700 transition-all shadow-md hover:shadow-lg"
+                className="flex items-center gap-1 bg-gradient-to-r from-red-500 to-red-600 dark:from-red-600 dark:to-red-700 hover:from-red-600 hover:to-red-700 dark:hover:from-red-700 dark:hover:to-red-800 text-white p-2 sm:px-3 sm:py-2 rounded-lg transition-all shadow-md hover:shadow-lg hover:scale-105 active:scale-95"
               >
-                <Trash2 size={16} className="sm:w-5 sm:h-5" />
+                <Trash2 size={16} className="sm:w-5 sm:h-5 stroke-[2.5]" />
                 {!isSmallScreen && (
-                  <span className="text-sm font-medium">Delete Group</span>
+                  <span className="text-sm font-semibold">Delete Group</span>
                 )}
               </button>
             </div>
@@ -459,80 +457,86 @@ function Budget() {
   };
 
   return (
-    <div className="space-y-2 md:space-y-0">
+    <div className="space-y-2 md:space-y-4">
+      {/* Summary Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-2 gap-2 md:gap-4">
+        {/* Monthly Income Card */}
+        <div className="bg-blue-50/50 dark:bg-blue-900/10 p-2 md:p-4 rounded-lg">
+          <div className="text-[10px] md:text-xs font-medium text-blue-600 dark:text-blue-400 mb-0.5 md:mb-1 uppercase tracking-wide">
+            Monthly Income
+          </div>
+          <div className="text-sm md:text-2xl font-bold text-blue-700 dark:text-blue-300">
+            ${formatCurrency(income)}
+          </div>
+        </div>
+
+        {/* Total Budgeted Card */}
+        <div className="bg-purple-50/50 dark:bg-purple-900/10 p-2 md:p-4 rounded-lg">
+          <div className="text-[10px] md:text-xs font-medium text-purple-600 dark:text-purple-400 mb-0.5 md:mb-1 uppercase tracking-wide">
+            Total Budgeted
+          </div>
+          <div className="text-sm md:text-2xl font-bold text-purple-700 dark:text-purple-300">
+            ${formatCurrency(totals.totalBudget)}
+          </div>
+        </div>
+      </div>
+
       {/* Main Budget Card */}
-      <div className="w-full mx-auto p-2 md:p-6 bg-white dark:bg-slate-800 shadow-xl md:shadow-lg rounded-xl md:rounded-lg border border-gray-200 dark:border-gray-700">
+      <div className="hidden md:block w-full mx-auto md:p-6 bg-white dark:bg-slate-800 shadow-xl rounded-xl border border-gray-200 dark:border-gray-700">
         {/* Header */}
-        <div className="flex justify-between items-center mb-3 md:mb-8">
-          <h1 className="text-sm md:text-3xl font-bold text-gray-800 dark:text-white">
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-3xl font-bold text-gray-800 dark:text-white">
             Budget
           </h1>
           <button
             onClick={handleAddGroup}
-            className="flex items-center gap-1 md:gap-2 bg-blue-500 dark:bg-blue-600 hover:bg-blue-600 dark:hover:bg-blue-700 hover:shadow-lg text-white px-3 py-2 md:px-5 md:py-2.5 rounded-lg transition-all font-medium text-xs md:text-base"
+            className="flex items-center gap-2 bg-gradient-to-r from-blue-500 to-blue-600 dark:from-blue-600 dark:to-blue-700 hover:from-blue-600 hover:to-blue-700 dark:hover:from-blue-700 dark:hover:to-blue-800 text-white px-5 py-2.5 rounded-lg transition-all font-semibold shadow-md hover:shadow-xl hover:scale-105 active:scale-95"
           >
-            <PlusCircle size={16} className="md:w-5 md:h-5" />
-            <span className="hidden sm:inline">Add Group</span>
+            <PlusCircle size={20} className="stroke-[2.5]" />
+            <span>Add Group</span>
           </button>
         </div>
 
-        {/* Summary Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-2 gap-2 md:gap-4 mb-0 md:mb-8">
-          {/* Monthly Income Card */}
-          <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 p-2 md:p-6 rounded-lg border-2 border-blue-200 dark:border-blue-700 shadow-sm">
-            <div className="flex items-center mb-0.5 md:mb-2">
-              <DollarSign className="w-3 h-3 md:w-5 md:h-5 text-blue-600 dark:text-blue-400 mr-1 md:mr-2" />
-              <div className="text-[10px] md:text-sm font-medium text-blue-700 dark:text-blue-300">
-                Monthly Income
-              </div>
-            </div>
-            <div className="text-sm md:text-3xl font-bold text-blue-600 dark:text-blue-400">
-              ${formatCurrency(income)}
-            </div>
+        {/* Desktop Budget Groups */}
+        {groups.map((group) => (
+          <React.Fragment key={group.id}>
+            {renderBudgetGroup(group)}
+          </React.Fragment>
+        ))}
+
+        {/* Empty State */}
+        {groups.length === 0 && (
+          <div className="text-center py-12 bg-gray-50 dark:bg-slate-700 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-600">
+            <Wallet className="w-16 h-16 mx-auto text-gray-400 dark:text-gray-500 mb-4" />
+            <h3 className="text-xl font-semibold text-gray-700 dark:text-gray-300 mb-2">
+              No Budget Groups Yet
+            </h3>
+            <p className="text-gray-500 dark:text-gray-400 mb-6">
+              Get started by creating your first budget group
+            </p>
+            <button
+              onClick={handleAddGroup}
+              className="inline-flex items-center gap-2 bg-blue-500 dark:bg-blue-600 hover:bg-blue-600 dark:hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition-all font-medium shadow-md hover:shadow-lg"
+            >
+              <PlusCircle size={20} />
+              Create Budget Group
+            </button>
           </div>
+        )}
+      </div>
 
-          {/* Total Budgeted Card */}
-          <div className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 p-2 md:p-6 rounded-lg border-2 border-purple-200 dark:border-purple-700 shadow-sm">
-            <div className="flex items-center mb-0.5 md:mb-2">
-              <Wallet className="w-3 h-3 md:w-5 md:h-5 text-purple-600 dark:text-purple-400 mr-1 md:mr-2" />
-              <div className="text-[10px] md:text-sm font-medium text-purple-700 dark:text-purple-300">
-                Total Budgeted
-              </div>
-            </div>
-            <div className="text-sm md:text-3xl font-bold text-purple-600 dark:text-purple-400">
-              ${formatCurrency(totals.totalBudget)}
-            </div>
-          </div>
-        </div>
-
-        {/* Desktop Budget Groups - Hidden on Mobile */}
-        <div className="hidden md:block">
-          {groups.map((group) => (
-            <React.Fragment key={group.id}>
-              {renderBudgetGroup(group)}
-            </React.Fragment>
-          ))}
-
-          {/* Empty State */}
-          {groups.length === 0 && (
-            <div className="text-center py-12 bg-gray-50 dark:bg-slate-700 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-600">
-              <Wallet className="w-16 h-16 mx-auto text-gray-400 dark:text-gray-500 mb-4" />
-              <h3 className="text-xl font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                No Budget Groups Yet
-              </h3>
-              <p className="text-gray-500 dark:text-gray-400 mb-6">
-                Get started by creating your first budget group
-              </p>
-              <button
-                onClick={handleAddGroup}
-                className="inline-flex items-center gap-2 bg-blue-500 dark:bg-blue-600 hover:bg-blue-600 dark:hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition-all font-medium shadow-md hover:shadow-lg"
-              >
-                <PlusCircle size={20} />
-                Create Budget Group
-              </button>
-            </div>
-          )}
-        </div>
+      {/* Mobile Header */}
+      <div className="md:hidden flex justify-between items-center px-2">
+        <h1 className="text-lg font-bold text-gray-800 dark:text-white">
+          Budget
+        </h1>
+        <button
+          onClick={handleAddGroup}
+          className="flex items-center gap-1 bg-gradient-to-r from-blue-500 to-blue-600 dark:from-blue-600 dark:to-blue-700 hover:from-blue-600 hover:to-blue-700 dark:hover:from-blue-700 dark:hover:to-blue-800 text-white px-3 py-2 rounded-lg transition-all font-semibold text-xs shadow-md hover:shadow-lg active:scale-95"
+        >
+          <PlusCircle size={16} className="stroke-[2.5]" />
+          <span>Add Group</span>
+        </button>
       </div>
 
       {/* Mobile Budget Groups - Separate Cards */}
@@ -550,9 +554,9 @@ function Budget() {
         );
       })}
 
-      {/* Empty State */}
+      {/* Mobile Empty State */}
       {groups.length === 0 && (
-        <div className="md:hidden text-center py-12 bg-white dark:bg-slate-800 shadow-xl rounded-xl border border-gray-200 dark:border-gray-700">
+        <div className="md:hidden text-center py-12 bg-white dark:bg-slate-800 shadow-xl rounded-xl border border-gray-200 dark:border-gray-700 mx-2">
           <Wallet className="w-16 h-16 mx-auto text-gray-400 dark:text-gray-500 mb-4" />
           <h3 className="text-xl font-semibold text-gray-700 dark:text-gray-300 mb-2">
             No Budget Groups Yet
@@ -562,9 +566,9 @@ function Budget() {
           </p>
           <button
             onClick={handleAddGroup}
-            className="inline-flex items-center gap-2 bg-blue-500 dark:bg-blue-600 hover:bg-blue-600 dark:hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition-all font-medium shadow-md hover:shadow-lg"
+            className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-500 to-blue-600 dark:from-blue-600 dark:to-blue-700 hover:from-blue-600 hover:to-blue-700 dark:hover:from-blue-700 dark:hover:to-blue-800 text-white px-6 py-3 rounded-lg transition-all font-semibold shadow-md hover:shadow-xl hover:scale-105 active:scale-95"
           >
-            <PlusCircle size={20} />
+            <PlusCircle size={20} className="stroke-[2.5]" />
             Create Budget Group
           </button>
         </div>

@@ -1,6 +1,6 @@
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
-import { DollarSign, CreditCard, ShoppingCart, Wallet } from "lucide-react";
+import { DollarSign, CreditCard, ShoppingCart, Wallet, BarChart3 } from "lucide-react";
 
 const TopNav = () => {
   const location = useLocation();
@@ -24,6 +24,11 @@ const TopNav = () => {
       path: "/purchases",
       label: "Purchases",
       icon: ShoppingCart,
+    },
+    {
+      path: "/analytics",
+      label: "Analytics",
+      icon: BarChart3,
     },
     {
       path: "/accounts",

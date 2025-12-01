@@ -18,9 +18,7 @@ import {
   EyeOff,
   Eye,
   BarChart3,
-  RefreshCw,
-  ChevronUp,
-  ChevronDown,
+  X,
 } from "lucide-react";
 
 ChartJS.register(
@@ -36,7 +34,8 @@ ChartJS.register(
 
 function BudgetVsSpentChart() {
   const { userId } = useData();
-  const [isOpen, setIsOpen] = useState(false);
+  const [isCategoryVisibilityOpen, setIsCategoryVisibilityOpen] = useState(false);
+  const [isDateRangeOpen, setIsDateRangeOpen] = useState(false);
   const [chartData, setChartData] = useState({
     labels: [],
     datasets: [],
@@ -196,10 +195,6 @@ function BudgetVsSpentChart() {
       ...prev,
       [name]: value,
     }));
-  };
-
-  const handleRefresh = () => {
-    fetchBudgetData();
   };
 
   // Quick date preset functions
@@ -392,105 +387,104 @@ function BudgetVsSpentChart() {
     : 0;
 
   return (
-    <div className="w-full mx-auto p-6 bg-white dark:bg-slate-800 shadow-xl rounded-xl border border-gray-200 dark:border-gray-700">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center gap-3">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg">
-            <BarChart3 className="text-white" size={24} />
-          </div>
-          <h1 className="text-3xl font-bold text-gray-800 dark:text-white">
-            Budget vs Spent
-          </h1>
-        </div>
-        <button
-          onClick={handleRefresh}
-          className="flex items-center gap-2 bg-blue-500 dark:bg-blue-600 hover:bg-blue-600 dark:hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg transition-all shadow-md hover:shadow-lg font-medium"
-          title="Refresh data"
-        >
-          <RefreshCw size={18} className={isLoading ? "animate-spin" : ""} />
-          <span className="hidden sm:inline">Refresh</span>
-        </button>
-      </div>
-      {/* Date Range Selector */}
-      <div className="bg-white dark:bg-slate-700 rounded-xl p-6 mb-8 shadow-xl border border-gray-200 dark:border-gray-700">
-        <div className="flex items-center gap-3 mb-5">
-          <div className="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400 shadow-sm">
-            <Calendar size={20} />
-          </div>
-          <h2 className="text-xl font-bold text-gray-800 dark:text-white">Date Range</h2>
-        </div>
+    <div className="w-full mx-auto space-y-3 md:space-y-4">
 
-        <div className="space-y-5">
-          {/* Date inputs */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label
-                htmlFor="fromDate"
-                className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2"
+      {/* Date Range Popup Modal */}
+      {isDateRangeOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50 backdrop-blur-sm" onClick={() => setIsDateRangeOpen(false)}>
+          <div className="w-full max-w-lg bg-white dark:bg-slate-800 rounded-xl p-4 md:p-6 shadow-2xl border border-gray-200 dark:border-gray-700" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4 md:mb-5">
+              <div className="flex items-center gap-2 md:gap-3">
+                <div className="inline-flex items-center justify-center w-8 h-8 md:w-10 md:h-10 rounded-lg bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400 shadow-sm">
+                  <Calendar size={16} className="md:w-5 md:h-5" />
+                </div>
+                <h2 className="text-base md:text-xl font-bold text-gray-800 dark:text-white">Date Range</h2>
+              </div>
+              <button
+                onClick={() => setIsDateRangeOpen(false)}
+                className="p-2 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-all"
               >
-                From Date
-              </label>
-              <input
-                type="date"
-                id="fromDate"
-                name="fromDate"
-                value={dateRange.fromDate}
-                onChange={handleDateChange}
-                className="w-full rounded-lg border-2 border-gray-300 dark:border-gray-600 px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-white dark:bg-slate-600 text-gray-800 dark:text-white shadow-sm"
-              />
+                <X size={20} />
+              </button>
             </div>
-            <div>
-              <label
-                htmlFor="toDate"
-                className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2"
-              >
-                To Date
-              </label>
-              <input
-                type="date"
-                id="toDate"
-                name="toDate"
-                value={dateRange.toDate}
-                onChange={handleDateChange}
-                className="w-full rounded-lg border-2 border-gray-300 dark:border-gray-600 px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-white dark:bg-slate-600 text-gray-800 dark:text-white shadow-sm"
-              />
-            </div>
-          </div>
+            <div className="space-y-3 md:space-y-4">
+              {/* Date inputs */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
+                <div>
+                  <label
+                    htmlFor="fromDate"
+                    className="block text-xs md:text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2"
+                  >
+                    From Date
+                  </label>
+                  <input
+                    type="date"
+                    id="fromDate"
+                    name="fromDate"
+                    value={dateRange.fromDate}
+                    onChange={handleDateChange}
+                    className="w-full rounded-lg border-2 border-gray-300 dark:border-gray-600 px-3 py-2 md:px-4 md:py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-white dark:bg-slate-700 text-gray-800 dark:text-white shadow-sm"
+                  />
+                </div>
+                <div>
+                  <label
+                    htmlFor="toDate"
+                    className="block text-xs md:text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2"
+                  >
+                    To Date
+                  </label>
+                  <input
+                    type="date"
+                    id="toDate"
+                    name="toDate"
+                    value={dateRange.toDate}
+                    onChange={handleDateChange}
+                    className="w-full rounded-lg border-2 border-gray-300 dark:border-gray-600 px-3 py-2 md:px-4 md:py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-white dark:bg-slate-700 text-gray-800 dark:text-white shadow-sm"
+                  />
+                </div>
+              </div>
 
-          {/* Quick selection buttons */}
-          <div className="grid grid-cols-3 gap-3">
-            <button
-              onClick={setCurrentMonth}
-              className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/30 text-blue-700 dark:text-blue-300 px-4 py-3 rounded-lg hover:from-blue-500 hover:to-blue-600 hover:text-white dark:hover:from-blue-600 dark:hover:to-blue-700 transition-all font-semibold shadow-sm hover:shadow-md border border-blue-200 dark:border-blue-700"
-            >
-              <span className="hidden sm:inline">Current Month</span>
-              <span className="sm:hidden">This Month</span>
-            </button>
-            <button
-              onClick={setPreviousMonth}
-              className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/30 text-blue-700 dark:text-blue-300 px-4 py-3 rounded-lg hover:from-blue-500 hover:to-blue-600 hover:text-white dark:hover:from-blue-600 dark:hover:to-blue-700 transition-all font-semibold shadow-sm hover:shadow-md border border-blue-200 dark:border-blue-700"
-            >
-              <span className="hidden sm:inline">Previous Month</span>
-              <span className="sm:hidden">Last Month</span>
-            </button>
-            <button
-              onClick={setCurrentYear}
-              className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/30 text-blue-700 dark:text-blue-300 px-4 py-3 rounded-lg hover:from-blue-500 hover:to-blue-600 hover:text-white dark:hover:from-blue-600 dark:hover:to-blue-700 transition-all font-semibold shadow-sm hover:shadow-md border border-blue-200 dark:border-blue-700"
-            >
-              <span className="hidden sm:inline">Current Year</span>
-              <span className="sm:hidden">This Year</span>
-            </button>
+              {/* Quick selection buttons */}
+              <div className="grid grid-cols-3 gap-2 md:gap-3">
+                <button
+                  onClick={() => {
+                    setCurrentMonth();
+                    setIsDateRangeOpen(false);
+                  }}
+                  className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/30 text-blue-700 dark:text-blue-300 px-3 py-2.5 md:px-4 md:py-3 rounded-lg hover:from-blue-500 hover:to-blue-600 hover:text-white dark:hover:from-blue-600 dark:hover:to-blue-700 transition-all font-semibold shadow-sm hover:shadow-md border border-blue-200 dark:border-blue-700 text-xs md:text-base"
+                >
+                  Current Month
+                </button>
+                <button
+                  onClick={() => {
+                    setPreviousMonth();
+                    setIsDateRangeOpen(false);
+                  }}
+                  className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/30 text-blue-700 dark:text-blue-300 px-3 py-2.5 md:px-4 md:py-3 rounded-lg hover:from-blue-500 hover:to-blue-600 hover:text-white dark:hover:from-blue-600 dark:hover:to-blue-700 transition-all font-semibold shadow-sm hover:shadow-md border border-blue-200 dark:border-blue-700 text-xs md:text-base"
+                >
+                  Previous Month
+                </button>
+                <button
+                  onClick={() => {
+                    setCurrentYear();
+                    setIsDateRangeOpen(false);
+                  }}
+                  className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/30 text-blue-700 dark:text-blue-300 px-3 py-2.5 md:px-4 md:py-3 rounded-lg hover:from-blue-500 hover:to-blue-600 hover:text-white dark:hover:from-blue-600 dark:hover:to-blue-700 transition-all font-semibold shadow-sm hover:shadow-md border border-blue-200 dark:border-blue-700 text-xs md:text-base"
+                >
+                  Current Year
+                </button>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-        <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 p-6 rounded-xl border-2 border-blue-200 dark:border-blue-700 shadow-sm">
-          <div className="text-sm font-medium text-blue-700 dark:text-blue-300 mb-2">
-            Total Budgeted
+      )}
+      {/* Summary Stats */}
+      <div className="grid grid-cols-3 gap-2 md:gap-4 mb-3 md:mb-4">
+        <div className="bg-blue-50/50 dark:bg-blue-900/10 p-2 md:p-4 rounded-lg">
+          <div className="text-[10px] md:text-xs font-medium text-blue-600 dark:text-blue-400 mb-0.5 md:mb-1 uppercase tracking-wide">
+            Budgeted
           </div>
-          <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">
+          <div className="text-sm md:text-2xl font-bold text-blue-700 dark:text-blue-300">
             ${new Intl.NumberFormat('en-US', {
               minimumFractionDigits: 2,
               maximumFractionDigits: 2,
@@ -498,11 +492,11 @@ function BudgetVsSpentChart() {
           </div>
         </div>
         
-        <div className="bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20 p-6 rounded-xl border-2 border-orange-200 dark:border-orange-700 shadow-sm">
-          <div className="text-sm font-medium text-orange-700 dark:text-orange-300 mb-2">
-            Total Spent
+        <div className="bg-orange-50/50 dark:bg-orange-900/10 p-2 md:p-4 rounded-lg">
+          <div className="text-[10px] md:text-xs font-medium text-orange-600 dark:text-orange-400 mb-0.5 md:mb-1 uppercase tracking-wide">
+            Spent
           </div>
-          <div className="text-3xl font-bold text-orange-600 dark:text-orange-400">
+          <div className="text-sm md:text-2xl font-bold text-orange-700 dark:text-orange-300">
             ${new Intl.NumberFormat('en-US', {
               minimumFractionDigits: 2,
               maximumFractionDigits: 2,
@@ -510,29 +504,29 @@ function BudgetVsSpentChart() {
           </div>
         </div>
         
-        <div className={`bg-gradient-to-br ${
+        <div className={`p-2 md:p-4 rounded-lg ${
           percentOfBudgetUsed > 100 
-            ? 'from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 border-red-200 dark:border-red-700' 
-            : 'from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 border-green-200 dark:border-green-700'
-        } p-6 rounded-xl border-2 shadow-sm`}>
-          <div className={`text-sm font-medium mb-2 ${
-            percentOfBudgetUsed > 100 
-              ? 'text-red-700 dark:text-red-300' 
-              : 'text-green-700 dark:text-green-300'
-          }`}>
-            Budget Usage
-          </div>
-          <div className={`text-3xl font-bold ${
+            ? 'bg-red-50/50 dark:bg-red-900/10' 
+            : 'bg-green-50/50 dark:bg-green-900/10'
+        }`}>
+          <div className={`text-[10px] md:text-xs font-medium mb-0.5 md:mb-1 uppercase tracking-wide ${
             percentOfBudgetUsed > 100 
               ? 'text-red-600 dark:text-red-400' 
               : 'text-green-600 dark:text-green-400'
           }`}>
+            Usage
+          </div>
+          <div className={`text-sm md:text-2xl font-bold ${
+            percentOfBudgetUsed > 100 
+              ? 'text-red-700 dark:text-red-300' 
+              : 'text-green-700 dark:text-green-300'
+          }`}>
             {percentOfBudgetUsed.toFixed(1)}%
           </div>
-          <div className="mt-2">
-            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5 overflow-hidden">
+          <div className="mt-1 md:mt-2">
+            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1 md:h-1.5 overflow-hidden">
               <div 
-                className={`h-2.5 rounded-full transition-all duration-500 ${
+                className={`h-1 md:h-1.5 rounded-full transition-all duration-500 ${
                   percentOfBudgetUsed > 100 
                     ? 'bg-red-600 dark:bg-red-500' 
                     : 'bg-green-600 dark:bg-green-500'
@@ -544,97 +538,117 @@ function BudgetVsSpentChart() {
         </div>
       </div>
 
-      {/* Chart */}
-      <div className="w-full bg-white dark:bg-slate-700 rounded-xl shadow-xl p-6 mb-8 border border-gray-200 dark:border-gray-700">
-        <div className="flex items-center gap-3 mb-5">
-          <div className="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-purple-100 dark:bg-purple-900 text-purple-600 dark:text-purple-400 shadow-sm">
-            <BarChart3 size={20} />
+      {/* Budget vs. Spending Comparison Chart Card */}
+      <div className="w-full bg-white dark:bg-slate-800 rounded-xl shadow-xl p-3 md:p-6 border border-gray-200 dark:border-gray-700">
+        <div className="flex items-center justify-between mb-3 md:mb-5">
+          <div className="flex items-center gap-1.5 md:gap-3">
+            <div className="inline-flex items-center justify-center w-8 h-8 md:w-10 md:h-10 rounded-lg bg-purple-100 dark:bg-purple-900 text-purple-600 dark:text-purple-400 shadow-sm">
+              <BarChart3 size={16} className="md:w-5 md:h-5" />
+            </div>
+            <h3 className="text-sm md:text-xl font-bold text-gray-800 dark:text-white">
+              Budget vs. Spending
+            </h3>
           </div>
-          <h3 className="text-xl font-bold text-gray-800 dark:text-white">
-            Budget vs. Spending Comparison
-          </h3>
-        </div>
-        <div className="h-80 md:h-96 w-full">
-          {isLoading ? (
-            <div className="h-full w-full flex flex-col items-center justify-center gap-4">
-              <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-200 border-t-blue-600 dark:border-blue-800 dark:border-t-blue-400"></div>
-              <p className="text-gray-500 dark:text-gray-400 font-medium">Loading chart data...</p>
-            </div>
-          ) : chartData.labels.length === 0 ? (
-            <div className="h-full w-full flex flex-col items-center justify-center gap-4">
-              <BarChart3 className="w-16 h-16 text-gray-300 dark:text-gray-600" />
-              <p className="text-gray-500 dark:text-gray-400 font-medium">No budget data to display</p>
-              <p className="text-gray-400 dark:text-gray-500 text-sm">Add budget items to see the comparison</p>
-            </div>
-          ) : (
-            <Bar
-              data={chartData}
-              options={chartOptions}
-              plugins={[ChartDataLabels]}
-            />
-          )}
-        </div>
-      </div>
-
-      {/* Category Visibility Controls */}
-      <div className="bg-white dark:bg-slate-700 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
-        <button
-          className="w-full flex items-center justify-between p-6 cursor-pointer hover:bg-gray-50 dark:hover:bg-slate-600 transition-colors"
-          onClick={() => setIsOpen(!isOpen)}
-        >
-          <div className="flex items-center gap-3">
-            <div className="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-indigo-100 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-400 shadow-sm">
-              <Eye size={20} />
-            </div>
-            <h2 className="text-xl font-bold text-gray-800 dark:text-white">
-              Category Visibility
-            </h2>
-            <span className="text-sm text-gray-500 dark:text-gray-400 font-medium">
-              ({budgetItems.filter(item => !item.hidden).length} of {budgetItems.length} visible)
-            </span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setIsDateRangeOpen(true)}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 md:px-3 md:py-2 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/50 rounded-lg transition-all border border-blue-200 dark:border-blue-700 shadow-sm hover:shadow-md"
+              title="Change date range"
+            >
+              <Calendar size={14} className="md:w-4 md:h-4" />
+              <span className="text-xs md:text-sm font-medium">Date</span>
+            </button>
+            <button
+              onClick={() => setIsCategoryVisibilityOpen(true)}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 md:px-3 md:py-2 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 rounded-lg transition-all border border-indigo-200 dark:border-indigo-700 shadow-sm hover:shadow-md"
+              title="Toggle category visibility"
+            >
+              <Eye size={14} className="md:w-4 md:h-4" />
+              <span className="text-xs md:text-sm font-medium">Categories</span>
+            </button>
           </div>
-          <div className="p-2 rounded-lg bg-gray-100 dark:bg-slate-600">
-            {isOpen ? (
-              <ChevronUp size={20} className="text-gray-600 dark:text-gray-300" />
+        </div>
+        <div className="bg-white dark:bg-slate-800 rounded-xl p-3 md:p-4">
+          <div className="h-80 md:h-96 w-full">
+            {isLoading ? (
+              <div className="h-full w-full flex flex-col items-center justify-center gap-4">
+                <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-200 border-t-blue-600 dark:border-blue-800 dark:border-t-blue-400"></div>
+                <p className="text-gray-500 dark:text-gray-400 font-medium">Loading chart data...</p>
+              </div>
+            ) : chartData.labels.length === 0 ? (
+              <div className="h-full w-full flex flex-col items-center justify-center gap-4">
+                <BarChart3 className="w-16 h-16 text-gray-300 dark:text-gray-600" />
+                <p className="text-gray-500 dark:text-gray-400 font-medium">No budget data to display</p>
+                <p className="text-gray-400 dark:text-gray-500 text-sm">Add budget items to see the comparison</p>
+              </div>
             ) : (
-              <ChevronDown size={20} className="text-gray-600 dark:text-gray-300" />
+              <Bar
+                data={chartData}
+                options={chartOptions}
+                plugins={[ChartDataLabels]}
+              />
             )}
           </div>
-        </button>
-
-        {isOpen && (
-          <div className="px-6 pb-6 border-t border-gray-200 dark:border-gray-600 pt-5">
+        </div>
+      </div>
+      
+      {/* Category Visibility Popup Modal */}
+      {isCategoryVisibilityOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50 backdrop-blur-sm" onClick={() => setIsCategoryVisibilityOpen(false)}>
+          <div className="w-full max-w-2xl bg-white dark:bg-slate-800 rounded-xl p-4 md:p-6 shadow-2xl border border-gray-200 dark:border-gray-700 max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4 md:mb-5">
+              <div className="flex items-center gap-2 md:gap-3">
+                <div className="inline-flex items-center justify-center w-8 h-8 md:w-10 md:h-10 rounded-lg bg-indigo-100 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-400 shadow-sm">
+                  <Eye size={16} className="md:w-5 md:h-5" />
+                </div>
+                <div>
+                  <h2 className="text-base md:text-xl font-bold text-gray-800 dark:text-white">
+                    Category Visibility
+                  </h2>
+                  <span className="text-xs md:text-sm text-gray-500 dark:text-gray-400 font-medium">
+                    {budgetItems.filter(item => !item.hidden).length} of {budgetItems.length} visible
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsCategoryVisibilityOpen(false)}
+                className="p-2 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-all"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            
             {budgetItems.length > 0 ? (
-              <div className="flex flex-wrap gap-3">
-                {budgetItems.map((item) => (
-                  <button
-                    key={item.id}
-                    onClick={() => toggleItemVisibility(item.id)}
-                    className={`px-4 py-2.5 rounded-xl flex items-center gap-2 text-sm font-semibold transition-all shadow-sm hover:shadow-md ${
-                      item.hidden
-                        ? "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 border-2 border-gray-300 dark:border-gray-600"
-                        : "bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/30 text-blue-700 dark:text-blue-300 hover:from-blue-100 hover:to-blue-200 dark:hover:from-blue-800/40 dark:hover:to-blue-700/40 border-2 border-blue-300 dark:border-blue-600"
-                    }`}
-                  >
-                    {item.hidden ? (
-                      <EyeOff size={16} className="text-gray-500 dark:text-gray-400" />
-                    ) : (
-                      <Eye size={16} className="text-blue-600 dark:text-blue-400" />
-                    )}
-                    <span>{item.name}</span>
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-8 bg-gray-50 dark:bg-slate-600 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-500">
-                <BarChart3 className="w-12 h-12 mx-auto text-gray-400 dark:text-gray-500 mb-3" />
-                <p className="text-gray-500 dark:text-gray-400 font-medium">No budget items found</p>
-                <p className="text-gray-400 dark:text-gray-500 text-sm mt-1">Create budget items to track spending</p>
-              </div>
-            )}
+                <div className="flex flex-wrap gap-2 md:gap-3">
+                  {budgetItems.map((item) => (
+                    <button
+                      key={item.id}
+                      onClick={() => toggleItemVisibility(item.id)}
+                      className={`px-3 py-2 md:px-4 md:py-2.5 rounded-lg flex items-center gap-1.5 md:gap-2 text-xs md:text-sm font-semibold transition-all shadow-sm hover:shadow-md ${
+                        item.hidden
+                          ? "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 border-2 border-gray-300 dark:border-gray-600"
+                          : "bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/30 text-blue-700 dark:text-blue-300 hover:from-blue-100 hover:to-blue-200 dark:hover:from-blue-800/40 dark:hover:to-blue-700/40 border-2 border-blue-300 dark:border-blue-600"
+                      }`}
+                    >
+                      {item.hidden ? (
+                        <EyeOff size={14} className="md:w-4 md:h-4 text-gray-500 dark:text-gray-400" />
+                      ) : (
+                        <Eye size={14} className="md:w-4 md:h-4 text-blue-600 dark:text-blue-400" />
+                      )}
+                      <span>{item.name}</span>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-6 md:py-8 bg-gray-50 dark:bg-slate-700 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-500">
+                  <BarChart3 className="w-10 h-10 md:w-12 md:h-12 mx-auto text-gray-400 dark:text-gray-500 mb-2 md:mb-3" />
+                  <p className="text-sm md:text-base text-gray-500 dark:text-gray-400 font-medium">No budget items found</p>
+                  <p className="text-xs md:text-sm text-gray-400 dark:text-gray-500 mt-1">Create budget items to track spending</p>
+                </div>
+              )}
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
