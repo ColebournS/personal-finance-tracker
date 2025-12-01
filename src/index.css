@@ -17,3 +17,38 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+
+/* Hide scrollbar on mobile devices */
+@media (max-width: 768px) {
+  /* Webkit browsers (Chrome, Safari, Edge) */
+  ::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
+  }
+  
+  /* All scrollable elements */
+  * {
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none; /* Firefox */
+  }
+  
+  /* Prevent rubber band scrolling and overscroll on mobile */
+  html, body {
+    overscroll-behavior-y: none; /* Prevent bounce/overscroll on iOS */
+    overscroll-behavior-x: none;
+    -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+    height: 100%;
+    position: relative;
+  }
+  
+  body {
+    overscroll-behavior: none;
+  }
+  
+  /* Prevent pull-to-refresh on mobile browsers */
+  #root {
+    overscroll-behavior-y: none;
+    height: 100%;
+  }
+}

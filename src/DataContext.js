@@ -341,7 +341,10 @@ export const DataProvider = ({ children }) => {
           table: "budget_groups",
           filter: `user_id=eq.${userId}`,
         },
-        fetchBudgetGroups
+        () => {
+          fetchBudgetGroups();
+          fetchPurchases(); // Also refetch purchases since they contain nested budget group data
+        }
       )
       .subscribe();
 
@@ -356,7 +359,10 @@ export const DataProvider = ({ children }) => {
           table: "budget_items",
           filter: `user_id=eq.${userId}`,
         },
-        fetchBudgetGroups
+        () => {
+          fetchBudgetGroups();
+          fetchPurchases(); // Also refetch purchases since they contain nested budget item data
+        }
       )
       .subscribe();
 
