@@ -356,37 +356,43 @@ function Income() {
       <div className="space-y-2 md:space-y-5">
         <div>
           <label className="block text-xs md:text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1 md:mb-2">
-            401K Contribution (%)
+            401K Contribution
           </label>
-          <input
-            type="number"
-            value={
-              editableField === "retirementContribution"
-                ? tempValue
-                : incomeData.retirementContribution
-            }
-            onChange={(e) => setTempValue(e.target.value)}
-            onBlur={() => handleInputChange("retirementContribution")}
-            onClick={() => handleCellClick("retirementContribution")}
-            className="w-full px-3 py-2 md:px-4 md:py-3 bg-white dark:bg-slate-600 border border-gray-300 dark:border-gray-600 rounded-lg text-sm md:text-base text-gray-800 dark:text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition-all cursor-pointer"
-          />
+          <div className="relative">
+            <input
+              type="number"
+              value={
+                editableField === "retirementContribution"
+                  ? tempValue
+                  : incomeData.retirementContribution
+              }
+              onChange={(e) => setTempValue(e.target.value)}
+              onBlur={() => handleInputChange("retirementContribution")}
+              onClick={() => handleCellClick("retirementContribution")}
+              className="w-full pl-3 pr-8 py-2 md:pl-4 md:pr-10 md:py-3 bg-white dark:bg-slate-600 border border-gray-300 dark:border-gray-600 rounded-lg text-sm md:text-base text-gray-800 dark:text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition-all cursor-pointer"
+            />
+            <span className="absolute right-3 md:right-4 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 text-sm md:text-base">%</span>
+          </div>
         </div>
         <div>
           <label className="block text-xs md:text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1 md:mb-2">
-            Employer Match (%)
+            Employer Match
           </label>
-          <input
-            type="number"
-            value={
-              editableField === "employerMatch"
-                ? tempValue
-                : incomeData.employerMatch
-            }
-            onChange={(e) => setTempValue(e.target.value)}
-            onBlur={() => handleInputChange("employerMatch")}
-            onClick={() => handleCellClick("employerMatch")}
-            className="w-full px-3 py-2 md:px-4 md:py-3 bg-white dark:bg-slate-600 border border-gray-300 dark:border-gray-600 rounded-lg text-sm md:text-base text-gray-800 dark:text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition-all cursor-pointer"
-          />
+          <div className="relative">
+            <input
+              type="number"
+              value={
+                editableField === "employerMatch"
+                  ? tempValue
+                  : incomeData.employerMatch
+              }
+              onChange={(e) => setTempValue(e.target.value)}
+              onBlur={() => handleInputChange("employerMatch")}
+              onClick={() => handleCellClick("employerMatch")}
+              className="w-full pl-3 pr-8 py-2 md:pl-4 md:pr-10 md:py-3 bg-white dark:bg-slate-600 border border-gray-300 dark:border-gray-600 rounded-lg text-sm md:text-base text-gray-800 dark:text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition-all cursor-pointer"
+            />
+            <span className="absolute right-3 md:right-4 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 text-sm md:text-base">%</span>
+          </div>
         </div>
       </div>
     </div>
@@ -433,13 +439,13 @@ function Income() {
                       className="flex-1 min-w-0 px-2 py-1 bg-white dark:bg-slate-600 border border-gray-300 dark:border-gray-600 rounded text-gray-800 dark:text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 focus:outline-none text-[10px]"
                       placeholder="Tax"
                     />
-                    <div className="relative w-10 flex-shrink-0">
+                    <div className="relative w-16 flex-shrink-0">
                       <input
                         type="number"
                         step="0.01"
                         value={tax.percent}
                         onChange={(e) => handleTaxChange(tax.id, e.target.value)}
-                        className="w-full px-2 py-1 pr-4 bg-white dark:bg-slate-600 border border-gray-300 dark:border-gray-600 rounded text-gray-800 dark:text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 focus:outline-none text-[10px]"
+                        className="w-full px-2 py-1 pr-5 bg-white dark:bg-slate-600 border border-gray-300 dark:border-gray-600 rounded text-gray-800 dark:text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 focus:outline-none text-[10px]"
                         placeholder="0"
                       />
                       <span className="absolute right-1 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 text-[9px] pointer-events-none">
