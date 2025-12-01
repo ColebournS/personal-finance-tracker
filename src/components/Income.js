@@ -321,18 +321,24 @@ function Income() {
         </div>
         <div>
           <label className="block text-xs md:text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1 md:mb-2">Yearly Salary</label>
-          <input
-            type="number"
-            value={
-              editableField === "yearlySalary"
-                ? tempValue
-                : incomeData.yearlySalary
-            }
-            onChange={(e) => setTempValue(e.target.value)}
-            onBlur={() => handleInputChange("yearlySalary")}
-            onClick={() => handleCellClick("yearlySalary")}
-            className="w-full px-3 py-2 md:px-4 md:py-3 bg-white dark:bg-slate-600 border border-gray-300 dark:border-gray-600 rounded-lg text-sm md:text-base text-gray-800 dark:text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition-all cursor-pointer"
-          />
+          <div className="relative">
+            <span className="absolute left-3 md:left-4 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 text-sm md:text-base">$</span>
+            <input
+              type={editableField === "yearlySalary" ? "number" : "text"}
+              value={
+                editableField === "yearlySalary"
+                  ? tempValue
+                  : new Intl.NumberFormat('en-US', {
+                      minimumFractionDigits: 0,
+                      maximumFractionDigits: 0,
+                    }).format(incomeData.yearlySalary || 0)
+              }
+              onChange={(e) => setTempValue(e.target.value)}
+              onBlur={() => handleInputChange("yearlySalary")}
+              onClick={() => handleCellClick("yearlySalary")}
+              className="w-full pl-7 md:pl-9 pr-3 py-2 md:pr-4 md:py-3 bg-white dark:bg-slate-600 border border-gray-300 dark:border-gray-600 rounded-lg text-sm md:text-base text-gray-800 dark:text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition-all cursor-pointer"
+            />
+          </div>
         </div>
       </div>
     </div>
@@ -589,10 +595,8 @@ function Income() {
       </div>
 
       {/* Mobile Layout - Separate cards for each section */}
-      <div className="md:hidden">
+      <div className="md:hidden grid grid-cols-2 gap-2">
         {renderEarnings()}
-      </div>
-      <div className="md:hidden">
         {renderRetirement()}
       </div>
       <div className="md:hidden">
