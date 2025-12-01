@@ -7,6 +7,7 @@ import {
   List,
   Settings,
   BarChart3,
+  Wallet,
 } from "lucide-react";
 import { AuthProvider } from "./AuthContext";
 import { DataProvider, useData } from "./DataContext";
@@ -75,6 +76,17 @@ const BottomNav = () => {
       >
         <BarChart3 size={24} />
         <span className="text-xs">Analytics</span>
+      </Link>
+      <Link
+        to="/accounts"
+        className={`flex flex-col items-center ${
+          isActive("/accounts")
+            ? "text-blue-500 dark:text-blue-400"
+            : "text-gray-600 dark:text-gray-300 hover:text-blue-500 dark:hover:text-blue-400"
+        }`}
+      >
+        <Wallet size={24} />
+        <span className="text-xs">Accounts</span>
       </Link>
       <Link
         to="/settings"
@@ -225,7 +237,15 @@ function AppContent({ isMobile, takeHomePay, setTakeHomePay }) {
                   />
                   <Route
                     path="/accounts"
-                    element={<Navigate to="/" replace />}
+                    element={
+                      <div className="bg-white dark:bg-black min-h-[calc(100vh-56px)] pb-24">
+                        <div className="flex flex-col gap-4 pt-5 px-4">
+                          <Suspense fallback={<LoadingSpinner />}>
+                            <Accounts />
+                          </Suspense>
+                        </div>
+                      </div>
+                    }
                   />
                   {/* Catch all */}
                   <Route

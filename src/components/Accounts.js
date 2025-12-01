@@ -731,98 +731,102 @@ function Accounts() {
   }
 
   return (
-    <div className="w-full mx-auto p-6 bg-white dark:bg-slate-800 shadow-lg rounded-lg">
-      <div className="flex flex-col gap-4 mb-8">
-        <div className="flex justify-between items-center">
-          <h1 className="text-3xl font-bold text-gray-800 dark:text-white">
-            Accounts
-          </h1>
-          <div className="flex items-center gap-3">
-            {!simpleFinAccessUrl && (
-              <button
-                onClick={() => setShowSimpleFinSetup(true)}
-                className="flex items-center gap-2 bg-purple-500 dark:bg-purple-600 hover:bg-purple-600 dark:hover:bg-purple-700 hover:shadow-lg text-white px-4 py-2.5 rounded-lg transition-all font-medium"
-              >
-                <LinkIcon size={20} />
-                Connect SimpleFin
-              </button>
-            )}
-            <button
-              onClick={handleAddAccount}
-              className="flex items-center gap-2 bg-blue-500 dark:bg-blue-600 hover:bg-blue-600 dark:hover:bg-blue-700 hover:shadow-lg text-white px-5 py-2.5 rounded-lg transition-all font-medium"
-            >
-              <PlusCircle size={20} />
-              Add Manually
-            </button>
-          </div>
-        </div>
-        
-        {/* SimpleFin Status */}
-        {syncError && (
-          <div className="flex items-center gap-2 text-sm">
-            <div className="flex items-center gap-2 text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 px-3 py-2 rounded-lg">
-              <AlertCircle size={16} />
-              <span>{syncError}</span>
-            </div>
-          </div>
-        )}
-        
-        {/* Transaction Sync Status */}
-        {transactionSyncStatus && (
-          <div className="flex items-center gap-2 text-sm">
-            <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-3 py-2 rounded-lg">
-              {syncingTransactions ? (
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 dark:border-blue-400"></div>
-              ) : (
-                <AlertCircle size={16} />
-              )}
-              <span>{transactionSyncStatus}</span>
-            </div>
-          </div>
-        )}
-      </div>
-
+    <div className="space-y-2 md:space-y-4">
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4 mb-8">
-        <div className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 p-3 md:p-6 rounded-lg border-2 border-green-200 dark:border-green-700 shadow-sm">
-          <div className="text-xs md:text-sm font-medium text-green-700 dark:text-green-300 mb-1">
+      <div className="grid grid-cols-3 gap-2 md:gap-4">
+        <div className="bg-green-50/50 dark:bg-green-900/10 p-2 md:p-4 rounded-lg">
+          <div className="text-[10px] md:text-xs font-medium text-green-600 dark:text-green-400 mb-0.5 md:mb-1 uppercase tracking-wide">
             Total Investments
           </div>
-          <div className="text-lg md:text-3xl font-bold text-green-600 dark:text-green-400">
+          <div className="text-sm md:text-2xl font-bold text-green-700 dark:text-green-300">
             ${formatCurrency(totals.totalInvestments)}
           </div>
         </div>
         
-        <div className="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 p-3 md:p-6 rounded-lg border-2 border-red-200 dark:border-red-700 shadow-sm">
-          <div className="text-xs md:text-sm font-medium text-red-700 dark:text-red-300 mb-1">
+        <div className="bg-red-50/50 dark:bg-red-900/10 p-2 md:p-4 rounded-lg">
+          <div className="text-[10px] md:text-xs font-medium text-red-600 dark:text-red-400 mb-0.5 md:mb-1 uppercase tracking-wide">
             Total Loans
           </div>
-          <div className="text-lg md:text-3xl font-bold text-red-600 dark:text-red-400">
+          <div className="text-sm md:text-2xl font-bold text-red-700 dark:text-red-300">
             ${formatCurrency(totals.totalLoans)}
           </div>
         </div>
         
-        <div className={`bg-gradient-to-br ${
+        <div className={`${
           netWorth >= 0 
-            ? 'from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 border-blue-200 dark:border-blue-700' 
-            : 'from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20 border-orange-200 dark:border-orange-700'
-        } p-3 md:p-6 rounded-lg border-2 shadow-sm col-span-2 md:col-span-1`}>
-          <div className={`text-xs md:text-sm font-medium mb-1 ${
-            netWorth >= 0 
-              ? 'text-blue-700 dark:text-blue-300' 
-              : 'text-orange-700 dark:text-orange-300'
-          }`}>
-            Net Worth
-          </div>
-          <div className={`text-lg md:text-3xl font-bold ${
+            ? 'bg-blue-50/50 dark:bg-blue-900/10' 
+            : 'bg-orange-50/50 dark:bg-orange-900/10'
+        } p-2 md:p-4 rounded-lg`}>
+          <div className={`text-[10px] md:text-xs font-medium mb-0.5 md:mb-1 uppercase tracking-wide ${
             netWorth >= 0 
               ? 'text-blue-600 dark:text-blue-400' 
               : 'text-orange-600 dark:text-orange-400'
+          }`}>
+            Net Worth
+          </div>
+          <div className={`text-sm md:text-2xl font-bold ${
+            netWorth >= 0 
+              ? 'text-blue-700 dark:text-blue-300' 
+              : 'text-orange-700 dark:text-orange-300'
           }`}>
             ${formatCurrency(netWorth)}
           </div>
         </div>
       </div>
+
+      {/* Main Accounts Card */}
+      <div className="w-full mx-auto p-4 md:p-6 bg-white dark:bg-slate-800 shadow-xl rounded-lg border border-gray-200 dark:border-gray-700">
+        <div className="flex flex-col gap-4 mb-8">
+          <div className="flex justify-between items-center">
+            <h1 className="text-2xl md:text-3xl font-bold text-gray-800 dark:text-white">
+              Accounts
+            </h1>
+            <div className="flex items-center gap-2 md:gap-3">
+              {!simpleFinAccessUrl && (
+                <button
+                  onClick={() => setShowSimpleFinSetup(true)}
+                  className="flex items-center gap-1 md:gap-2 bg-purple-500 dark:bg-purple-600 hover:bg-purple-600 dark:hover:bg-purple-700 hover:shadow-lg text-white px-3 md:px-4 py-2 md:py-2.5 rounded-lg transition-all font-medium text-sm md:text-base"
+                >
+                  <LinkIcon size={18} className="md:w-5 md:h-5" />
+                  <span className="hidden sm:inline">Connect SimpleFin</span>
+                  <span className="sm:hidden">Connect</span>
+                </button>
+              )}
+              <button
+                onClick={handleAddAccount}
+                className="flex items-center gap-1 md:gap-2 bg-blue-500 dark:bg-blue-600 hover:bg-blue-600 dark:hover:bg-blue-700 hover:shadow-lg text-white px-3 md:px-5 py-2 md:py-2.5 rounded-lg transition-all font-medium text-sm md:text-base"
+              >
+                <PlusCircle size={18} className="md:w-5 md:h-5" />
+                <span className="hidden sm:inline">Add Manually</span>
+                <span className="sm:hidden">Add</span>
+              </button>
+            </div>
+          </div>
+          
+          {/* SimpleFin Status */}
+          {syncError && (
+            <div className="flex items-center gap-2 text-sm">
+              <div className="flex items-center gap-2 text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 px-3 py-2 rounded-lg">
+                <AlertCircle size={16} />
+                <span>{syncError}</span>
+              </div>
+            </div>
+          )}
+          
+          {/* Transaction Sync Status */}
+          {transactionSyncStatus && (
+            <div className="flex items-center gap-2 text-sm">
+              <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-3 py-2 rounded-lg">
+                {syncingTransactions ? (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 dark:border-blue-400"></div>
+                ) : (
+                  <AlertCircle size={16} />
+                )}
+                <span>{transactionSyncStatus}</span>
+              </div>
+            </div>
+          )}
+        </div>
 
       {/* Filter and Search Controls */}
       <div className="flex flex-col sm:flex-row gap-4 mb-6">
@@ -1260,6 +1264,8 @@ function Accounts() {
           </div>
         </div>
       )}
+
+      </div>
 
       {/* Add Account Modal */}
       {showModal && (

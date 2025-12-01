@@ -530,7 +530,7 @@ function Income() {
   return (
     <div className="space-y-2 md:space-y-4">
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 md:gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4">
           <div className="bg-green-50/50 dark:bg-green-900/10 p-2 md:p-4 rounded-lg">
             <div className="text-[10px] md:text-xs font-medium text-green-600 dark:text-green-400 mb-0.5 md:mb-1 uppercase tracking-wide">
               Annual Take Home
