@@ -153,30 +153,28 @@ function CurrentBudget() {
   };
 
   return (
-    <div className="w-full mx-auto p-6 bg-white dark:bg-slate-800 shadow-xl rounded-xl border border-gray-200 dark:border-gray-700">
+    <div className="w-full mx-auto p-2 md:p-6 bg-white dark:bg-slate-800 shadow-xl rounded-xl border border-gray-200 dark:border-gray-700">
       {/* Header */}
-      <div className="flex items-center gap-3 mb-6">
-        <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 shadow-lg">
-          <PieChart className="text-white" size={24} />
+      <div className="flex items-center gap-1.5 md:gap-3 mb-3 md:mb-6">
+        <div className="inline-flex items-center justify-center w-6 h-6 md:w-12 md:h-12 rounded-lg md:rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 shadow-lg">
+          <PieChart className="text-white w-3 h-3 md:w-6 md:h-6" />
         </div>
-        <h1 className="text-3xl font-bold text-gray-800 dark:text-white">
+        <h1 className="text-sm md:text-3xl font-bold text-gray-800 dark:text-white">
           Current Budget
         </h1>
       </div>
 
       {/* Chart */}
-      <div className="w-full bg-gray-50 dark:bg-slate-700 rounded-xl shadow-inner p-6 border border-gray-200 dark:border-gray-600">
+      <div className="w-full">
         {groups.length > 0 ? (
-          <>
-            <div className="h-80 md:h-96 w-full flex items-center justify-center relative">
-              <Doughnut data={data} options={options} plugins={[ChartDataLabels]} />
-            </div>
-          </>
+          <div className="h-64 md:h-96 w-full flex items-center justify-center">
+            <Doughnut data={data} options={options} plugins={[ChartDataLabels]} />
+          </div>
         ) : (
-          <div className="h-80 flex flex-col items-center justify-center gap-4">
-            <PieChart className="w-16 h-16 text-gray-300 dark:text-gray-600" />
-            <p className="text-gray-500 dark:text-gray-400 font-medium">No budget groups to display</p>
-            <p className="text-gray-400 dark:text-gray-500 text-sm">Create budget groups to see the breakdown</p>
+          <div className="h-64 md:h-80 flex flex-col items-center justify-center gap-2 md:gap-4">
+            <PieChart className="w-12 h-12 md:w-16 md:h-16 text-gray-300 dark:text-gray-600" />
+            <p className="text-gray-500 dark:text-gray-400 font-medium text-sm md:text-base">No budget groups to display</p>
+            <p className="text-gray-400 dark:text-gray-500 text-xs md:text-sm">Create budget groups to see the breakdown</p>
           </div>
         )}
       </div>
