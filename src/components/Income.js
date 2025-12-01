@@ -270,334 +270,334 @@ function Income() {
     taxAmounts,
   } = calculateTaxes();
 
-  return (
-    <div className="w-full mx-auto p-8 bg-white dark:bg-slate-800 shadow-xl rounded-xl border border-gray-200 dark:border-gray-700">
-      <div className="flex items-center justify-center mb-8">
-        <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-full mr-4">
-          <DollarSign className="w-8 h-8 text-green-600 dark:text-green-400" />
-        </div>
-        <h1 className="text-3xl font-bold text-gray-800 dark:text-white">
-          Income & Taxes
-        </h1>
+  // Render the earnings section
+  const renderEarnings = () => (
+    <div className="md:col-span-3 bg-white dark:bg-slate-800 md:bg-gray-50 md:dark:bg-slate-700/50 p-2 md:p-6 rounded-lg border border-gray-200 dark:border-gray-700 md:dark:border-gray-600 shadow-xl md:shadow-none">
+      <div className="flex items-center gap-1.5 md:gap-2 mb-2 md:mb-6">
+        <TrendingUp className="w-4 h-4 md:w-5 md:h-5 text-gray-600 dark:text-gray-400" />
+        <h2 className="text-sm md:text-xl font-semibold text-gray-700 dark:text-gray-200">Earnings</h2>
       </div>
-
-      {/* Summary Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-8">
-        <div className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 p-3 md:p-6 rounded-lg border-2 border-green-200 dark:border-green-700 shadow-sm">
-          <div className="text-xs md:text-sm font-medium text-green-700 dark:text-green-300 mb-1">
-            Annual Take Home
-          </div>
-          <div className="text-lg md:text-3xl font-bold text-green-600 dark:text-green-400">
-            ${formatCurrency(takeHomePay)}
-          </div>
-        </div>
-        
-        <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 p-3 md:p-6 rounded-lg border-2 border-blue-200 dark:border-blue-700 shadow-sm">
-          <div className="text-xs md:text-sm font-medium text-blue-700 dark:text-blue-300 mb-1">
-            Monthly Take Home
-          </div>
-          <div className="text-lg md:text-3xl font-bold text-blue-600 dark:text-blue-400">
-            ${formatCurrency(monthlyTakeHomePay)}
-          </div>
-        </div>
-
-        <div className="bg-gradient-to-br from-cyan-50 to-cyan-100 dark:from-cyan-900/20 dark:to-cyan-800/20 p-3 md:p-6 rounded-lg border-2 border-cyan-200 dark:border-cyan-700 shadow-sm">
-          <div className="text-xs md:text-sm font-medium text-cyan-700 dark:text-cyan-300 mb-1">
-            <span className="hidden sm:inline">Take Home ({incomeData.payFrequency})</span>
-            <span className="sm:hidden">Pay Period</span>
-          </div>
-          <div className="text-lg md:text-3xl font-bold text-cyan-600 dark:text-cyan-400">
-            ${formatCurrency((() => {
-              switch (incomeData.payFrequency) {
-                case "Weekly":
-                  return (takeHomePay / 52);
-                case "Bi-Weekly":
-                  return (takeHomePay / 26);
-                case "Semi-Monthly":
-                  return (takeHomePay / 24);
-                case "Monthly":
-                default:
-                  return (takeHomePay / 12);
+      <div className="space-y-2 md:space-y-5">
+        <div>
+          <label className="block text-xs md:text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1 md:mb-2">Pay Frequency</label>
+          <select
+            value={
+              editableField === "payFrequency"
+                ? tempValue
+                : incomeData.payFrequency
+            }
+            onChange={async (e) => {
+              const value = e.target.value;
+              setEditableField("payFrequency");
+              setTempValue(value);
+              // Immediate update for select dropdown (no debounce)
+              try {
+                const updatedIncomeData = { ...incomeData, payFrequency: value };
+                const { monthlyTakeHomePay } = calculateTaxes(updatedIncomeData);
+                const { error } = await supabase
+                  .from("income")
+                  .update({ payFrequency: value, monthlyTakeHome: monthlyTakeHomePay })
+                  .eq("id", incomeData.id)
+                  .eq("user_id", userId);
+                if (!error) {
+                  setEditableField(null);
+                  // Update incomeData directly without refetch to avoid race condition
+                  incomeData.payFrequency = value;
+                }
+              } catch (err) {
+                console.error("Error updating payFrequency:", err);
               }
-            })())}
-          </div>
+            }}
+            className="w-full px-3 py-2 md:px-4 md:py-3 bg-white dark:bg-slate-600 border border-gray-300 dark:border-gray-600 rounded-lg text-sm md:text-base text-gray-800 dark:text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition-all cursor-pointer"
+          >
+            {["Weekly", "Bi-Weekly", "Monthly", "Semi-Monthly"].map(
+              (freq) => (
+                <option key={freq} value={freq}>
+                  {freq}
+                </option>
+              )
+            )}
+          </select>
         </div>
-
-        <div className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 p-3 md:p-6 rounded-lg border-2 border-purple-200 dark:border-purple-700 shadow-sm">
-          <div className="text-xs md:text-sm font-medium text-purple-700 dark:text-purple-300 mb-1">
-            Annual 401K
-          </div>
-          <div className="text-lg md:text-3xl font-bold text-purple-600 dark:text-purple-400">
-            ${formatCurrency(totalAnnual401K)}
-          </div>
-        </div>
-      </div>
-
-      <div className="grid md:grid-cols-2 gap-6">
-        <div className="bg-gray-50 dark:bg-slate-700/50 p-6 rounded-lg border border-gray-200 dark:border-gray-600">
-          <div className="flex items-center gap-2 mb-6">
-            <TrendingUp className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-            <h2 className="text-xl font-semibold text-gray-700 dark:text-gray-200">Earnings</h2>
-          </div>
-          <div className="space-y-5">
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Pay Frequency</label>
-              <select
-                value={
-                  editableField === "payFrequency"
-                    ? tempValue
-                    : incomeData.payFrequency
-                }
-                onChange={async (e) => {
-                  const value = e.target.value;
-                  setEditableField("payFrequency");
-                  setTempValue(value);
-                  // Immediate update for select dropdown (no debounce)
-                  try {
-                    const updatedIncomeData = { ...incomeData, payFrequency: value };
-                    const { monthlyTakeHomePay } = calculateTaxes(updatedIncomeData);
-                    const { error } = await supabase
-                      .from("income")
-                      .update({ payFrequency: value, monthlyTakeHome: monthlyTakeHomePay })
-                      .eq("id", incomeData.id)
-                      .eq("user_id", userId);
-                    if (!error) {
-                      setEditableField(null);
-                      // Update incomeData directly without refetch to avoid race condition
-                      incomeData.payFrequency = value;
-                    }
-                  } catch (err) {
-                    console.error("Error updating payFrequency:", err);
-                  }
-                }}
-                className="w-full px-4 py-3 bg-white dark:bg-slate-600 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-800 dark:text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition-all cursor-pointer"
-              >
-                {["Weekly", "Bi-Weekly", "Monthly", "Semi-Monthly"].map(
-                  (freq) => (
-                    <option key={freq} value={freq}>
-                      {freq}
-                    </option>
-                  )
-                )}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Yearly Salary</label>
-              <input
-                type="number"
-                value={
-                  editableField === "yearlySalary"
-                    ? tempValue
-                    : incomeData.yearlySalary
-                }
-                onChange={(e) => setTempValue(e.target.value)}
-                onBlur={() => handleInputChange("yearlySalary")}
-                onClick={() => handleCellClick("yearlySalary")}
-                className="w-full px-4 py-3 bg-white dark:bg-slate-600 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-800 dark:text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition-all cursor-pointer"
-              />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-gray-50 dark:bg-slate-700/50 p-6 rounded-lg border border-gray-200 dark:border-gray-600">
-          <div className="flex items-center gap-2 mb-6">
-            <PiggyBank className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-            <h2 className="text-xl font-semibold text-gray-700 dark:text-gray-200">
-              Retirement
-            </h2>
-          </div>
-          <div className="space-y-5">
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                401K Contribution (%)
-              </label>
-              <input
-                type="number"
-                value={
-                  editableField === "retirementContribution"
-                    ? tempValue
-                    : incomeData.retirementContribution
-                }
-                onChange={(e) => setTempValue(e.target.value)}
-                onBlur={() => handleInputChange("retirementContribution")}
-                onClick={() => handleCellClick("retirementContribution")}
-                className="w-full px-4 py-3 bg-white dark:bg-slate-600 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-800 dark:text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition-all cursor-pointer"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                Employer Match (%)
-              </label>
-              <input
-                type="number"
-                value={
-                  editableField === "employerMatch"
-                    ? tempValue
-                    : incomeData.employerMatch
-                }
-                onChange={(e) => setTempValue(e.target.value)}
-                onBlur={() => handleInputChange("employerMatch")}
-                onClick={() => handleCellClick("employerMatch")}
-                className="w-full px-4 py-3 bg-white dark:bg-slate-600 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-800 dark:text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition-all cursor-pointer"
-              />
-            </div>
-          </div>
+        <div>
+          <label className="block text-xs md:text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1 md:mb-2">Yearly Salary</label>
+          <input
+            type="number"
+            value={
+              editableField === "yearlySalary"
+                ? tempValue
+                : incomeData.yearlySalary
+            }
+            onChange={(e) => setTempValue(e.target.value)}
+            onBlur={() => handleInputChange("yearlySalary")}
+            onClick={() => handleCellClick("yearlySalary")}
+            className="w-full px-3 py-2 md:px-4 md:py-3 bg-white dark:bg-slate-600 border border-gray-300 dark:border-gray-600 rounded-lg text-sm md:text-base text-gray-800 dark:text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition-all cursor-pointer"
+          />
         </div>
       </div>
+    </div>
+  );
 
-      <div className="mt-8">
-        <div className="bg-gray-50 dark:bg-slate-700/50 p-6 rounded-lg border border-gray-200 dark:border-gray-600">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
-            <div className="flex items-center gap-2">
-              <Receipt className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-              <h2 className="text-lg sm:text-xl font-semibold text-gray-700 dark:text-gray-200">Taxes</h2>
-            </div>
-            <button
-              onClick={handleAddTax}
-              className="flex items-center justify-center gap-2 bg-blue-500 dark:bg-blue-600 hover:bg-blue-600 dark:hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-all font-medium w-full sm:w-auto"
-            >
-              <PlusCircle size={18} />
-              Add Tax
-            </button>
-          </div>
-          
-          {loadingTaxes ? (
-            <div className="text-center py-4 text-gray-500 dark:text-gray-400">
-              Loading taxes...
-            </div>
-          ) : (
-            <>
-              <div className="space-y-3">
-                {taxes.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                    <p className="mb-2">No taxes configured yet.</p>
-                    <p className="text-sm">Click "Add Tax" to add tax rates.</p>
-                  </div>
-                ) : (
-                  taxes.map((tax) => (
-                    <div key={tax.id} className="bg-gray-50 dark:bg-slate-700/50 p-3 sm:p-4 rounded-lg border border-gray-200 dark:border-gray-600">
-                      {/* Mobile Layout */}
-                      <div className="flex flex-col sm:hidden gap-3">
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="text"
-                            value={tax.tax_name}
-                            onChange={(e) => handleTaxNameChange(tax.id, e.target.value)}
-                            className="flex-1 min-w-0 px-3 py-2 bg-white dark:bg-slate-600 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-800 dark:text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition-all text-sm"
-                            placeholder="Tax name"
-                          />
-                          <button
-                            onClick={() => {
-                              if (window.confirm(`Are you sure you want to delete "${tax.tax_name}"?`)) {
-                                handleDeleteTax(tax.id);
-                              }
-                            }}
-                            className="p-2 text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all flex-shrink-0"
-                            title="Delete tax"
-                          >
-                            <Trash2 size={18} />
-                          </button>
-                        </div>
-                        <div className="grid grid-cols-2 gap-3">
-                          <div>
-                            <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Rate</label>
-                            <div className="relative">
-                              <input
-                                type="number"
-                                step="0.01"
-                                value={tax.percent}
-                                onChange={(e) => handleTaxChange(tax.id, e.target.value)}
-                                className="w-full px-3 py-2 pr-7 bg-white dark:bg-slate-600 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-800 dark:text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition-all text-sm"
-                                placeholder="0.00"
-                              />
-                              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 text-sm font-medium">
-                                %
-                              </span>
-                            </div>
-                          </div>
-                          <div>
-                            <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Annual Amount</label>
-                            <input
-                              type="text"
-                              value={`$${formatCurrency(taxAmounts[tax.id] || 0)}`}
-                              readOnly
-                              className="w-full px-3 py-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg text-gray-800 dark:text-white font-semibold text-sm"
-                            />
-                          </div>
-                        </div>
-                      </div>
+  // Render the retirement section
+  const renderRetirement = () => (
+    <div className="md:col-span-3 bg-white dark:bg-slate-800 md:bg-gray-50 md:dark:bg-slate-700/50 p-2 md:p-6 rounded-lg border border-gray-200 dark:border-gray-700 md:dark:border-gray-600 shadow-xl md:shadow-none">
+      <div className="flex items-center gap-1.5 md:gap-2 mb-2 md:mb-6">
+        <PiggyBank className="w-4 h-4 md:w-5 md:h-5 text-gray-600 dark:text-gray-400" />
+        <h2 className="text-sm md:text-xl font-semibold text-gray-700 dark:text-gray-200">
+          Retirement
+        </h2>
+      </div>
+      <div className="space-y-2 md:space-y-5">
+        <div>
+          <label className="block text-xs md:text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1 md:mb-2">
+            401K Contribution (%)
+          </label>
+          <input
+            type="number"
+            value={
+              editableField === "retirementContribution"
+                ? tempValue
+                : incomeData.retirementContribution
+            }
+            onChange={(e) => setTempValue(e.target.value)}
+            onBlur={() => handleInputChange("retirementContribution")}
+            onClick={() => handleCellClick("retirementContribution")}
+            className="w-full px-3 py-2 md:px-4 md:py-3 bg-white dark:bg-slate-600 border border-gray-300 dark:border-gray-600 rounded-lg text-sm md:text-base text-gray-800 dark:text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition-all cursor-pointer"
+          />
+        </div>
+        <div>
+          <label className="block text-xs md:text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1 md:mb-2">
+            Employer Match (%)
+          </label>
+          <input
+            type="number"
+            value={
+              editableField === "employerMatch"
+                ? tempValue
+                : incomeData.employerMatch
+            }
+            onChange={(e) => setTempValue(e.target.value)}
+            onBlur={() => handleInputChange("employerMatch")}
+            onClick={() => handleCellClick("employerMatch")}
+            className="w-full px-3 py-2 md:px-4 md:py-3 bg-white dark:bg-slate-600 border border-gray-300 dark:border-gray-600 rounded-lg text-sm md:text-base text-gray-800 dark:text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition-all cursor-pointer"
+          />
+        </div>
+      </div>
+    </div>
+  );
 
-                      {/* Desktop Layout */}
-                      <div className="hidden sm:flex items-center gap-2">
-                        <div className="flex-grow">
-                          <input
-                            type="text"
-                            value={tax.tax_name}
-                            onChange={(e) => handleTaxNameChange(tax.id, e.target.value)}
-                            className="w-full px-4 py-3 bg-white dark:bg-slate-600 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-800 dark:text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition-all"
-                            placeholder="Tax name"
-                          />
-                        </div>
-                        <div className="w-32">
-                          <div className="relative">
-                            <input
-                              type="number"
-                              step="0.01"
-                              value={tax.percent}
-                              onChange={(e) => handleTaxChange(tax.id, e.target.value)}
-                              className="w-full px-3 py-3 pr-8 bg-white dark:bg-slate-600 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-800 dark:text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition-all"
-                              placeholder="0.00"
-                            />
-                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 font-medium">
-                              %
-                            </span>
-                          </div>
-                        </div>
-                        <div className="w-40">
-                          <input
-                            type="text"
-                            value={`$${formatCurrency(taxAmounts[tax.id] || 0)}`}
-                            readOnly
-                            className="w-full px-4 py-3 bg-gray-100 dark:bg-slate-600/50 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-800 dark:text-white font-semibold text-center"
-                          />
-                        </div>
-                        <button
-                          onClick={() => {
-                            if (window.confirm(`Are you sure you want to delete "${tax.tax_name}"?`)) {
-                              handleDeleteTax(tax.id);
-                            }
-                          }}
-                          className="p-2 text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all"
-                          title="Delete tax"
-                        >
-                          <Trash2 size={20} />
-                        </button>
-                      </div>
-                    </div>
-                  ))
-                )}
+  // Render the taxes section
+  const renderTaxes = () => (
+    <div className="md:col-span-6 bg-white dark:bg-slate-800 md:bg-gray-50 md:dark:bg-slate-700/50 p-2 md:p-6 rounded-lg border border-gray-200 dark:border-gray-700 md:dark:border-gray-600 shadow-xl md:shadow-none">
+      <div className="flex items-center justify-between gap-2 mb-2 md:mb-6">
+        <div className="flex items-center gap-1.5 md:gap-2">
+          <Receipt className="w-4 h-4 md:w-5 md:h-5 text-gray-600 dark:text-gray-400" />
+          <h2 className="text-sm md:text-xl font-semibold text-gray-700 dark:text-gray-200">Taxes</h2>
+        </div>
+        <button
+          onClick={handleAddTax}
+          className="p-2 bg-blue-500 dark:bg-blue-600 hover:bg-blue-600 dark:hover:bg-blue-700 text-white rounded-lg transition-all"
+          title="Add Tax"
+        >
+          <PlusCircle size={18} />
+        </button>
+      </div>
+      
+      {loadingTaxes ? (
+        <div className="text-center py-4 text-gray-500 dark:text-gray-400 text-sm">
+          Loading...
+        </div>
+      ) : (
+        <>
+          <div className="space-y-2 md:space-y-1 mb-3">
+            {taxes.length === 0 ? (
+              <div className="text-center py-4 text-gray-500 dark:text-gray-400 text-sm">
+                <p className="mb-1">No taxes yet</p>
+                <p className="text-xs">Click + to add</p>
               </div>
-              
-              {taxes.length > 0 && (
-                <div className="mt-6 pt-5 border-t-2 border-gray-300 dark:border-gray-600">
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                    <label className="text-sm sm:text-base font-bold text-gray-800 dark:text-gray-200 flex-grow">
-                      Total Annual Taxes
-                    </label>
-                    <div className="w-full sm:w-48">
+            ) : (
+              taxes.map((tax) => (
+                <div key={tax.id} className="rounded hover:bg-white/50 dark:hover:bg-slate-600/30 transition-colors">
+                  {/* Mobile Layout */}
+                  <div className="md:hidden flex items-center gap-1.5 px-2 hover:bg-white/50 dark:hover:bg-slate-600/30 rounded transition-colors">
+                    <input
+                      type="text"
+                      value={tax.tax_name}
+                      onChange={(e) => handleTaxNameChange(tax.id, e.target.value)}
+                      className="flex-1 min-w-0 px-2 py-1 bg-white dark:bg-slate-600 border border-gray-300 dark:border-gray-600 rounded text-gray-800 dark:text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 focus:outline-none text-[10px]"
+                      placeholder="Tax"
+                    />
+                    <div className="relative w-10 flex-shrink-0">
                       <input
-                        type="text"
-                        value={`$${formatCurrency(totalTaxes)}`}
-                        readOnly
-                        className="w-full px-4 py-3 bg-blue-100 dark:bg-blue-900/30 border-2 border-blue-300 dark:border-blue-700 rounded-lg text-gray-800 dark:text-white font-bold text-center"
+                        type="number"
+                        step="0.01"
+                        value={tax.percent}
+                        onChange={(e) => handleTaxChange(tax.id, e.target.value)}
+                        className="w-full px-2 py-1 pr-4 bg-white dark:bg-slate-600 border border-gray-300 dark:border-gray-600 rounded text-gray-800 dark:text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 focus:outline-none text-[10px]"
+                        placeholder="0"
                       />
+                      <span className="absolute right-1 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 text-[9px] pointer-events-none">
+                        %
+                      </span>
                     </div>
+                    <div className="w-14 flex-shrink-0 px-2 py-1 bg-white dark:bg-slate-600 border border-gray-300 dark:border-gray-600 rounded text-[10px] font-semibold text-gray-700 dark:text-gray-300 text-right truncate">
+                      ${(taxAmounts[tax.id] || 0) >= 1000 ? `${((taxAmounts[tax.id] || 0) / 1000).toFixed(1)}k` : formatCurrency(taxAmounts[tax.id] || 0)}
+                    </div>
+                    <button
+                      onClick={() => {
+                        if (window.confirm(`Delete "${tax.tax_name}"?`)) {
+                          handleDeleteTax(tax.id);
+                        }
+                      }}
+                      className="p-1 text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-all flex-shrink-0"
+                      title="Delete tax"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+                  
+                  {/* Desktop Layout */}
+                  <div className="hidden md:flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={tax.tax_name}
+                      onChange={(e) => handleTaxNameChange(tax.id, e.target.value)}
+                      className="flex-1 max-w-[200px] px-3 py-1.5 bg-white dark:bg-slate-600 border border-gray-300 dark:border-gray-600 rounded text-gray-800 dark:text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 focus:outline-none text-sm"
+                      placeholder="Tax name"
+                    />
+                    <div className="relative w-20">
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={tax.percent}
+                        onChange={(e) => handleTaxChange(tax.id, e.target.value)}
+                        className="w-full px-2 py-1.5 pr-6 bg-white dark:bg-slate-600 border border-gray-300 dark:border-gray-600 rounded text-gray-800 dark:text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 focus:outline-none text-sm"
+                        placeholder="0.00"
+                      />
+                      <span className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 text-xs">
+                        %
+                      </span>
+                    </div>
+                    <div className="w-24 px-3 py-1.5 bg-white dark:bg-slate-600 border border-gray-300 dark:border-gray-600 rounded text-sm font-semibold text-gray-700 dark:text-gray-300 text-right">
+                      ${formatCurrency(taxAmounts[tax.id] || 0)}
+                    </div>
+                    <button
+                      onClick={() => {
+                        if (window.confirm(`Delete "${tax.tax_name}"?`)) {
+                          handleDeleteTax(tax.id);
+                        }
+                      }}
+                      className="p-1.5 text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-all flex-shrink-0"
+                      title="Delete tax"
+                    >
+                      <Trash2 size={16} />
+                    </button>
                   </div>
                 </div>
-              )}
-            </>
+              ))
+            )}
+          </div>
+          
+          {taxes.length > 0 && (
+            <div className="pt-3 mt-2 border-t border-gray-300 dark:border-gray-600">
+              <div className="flex justify-between items-center">
+                <span className="text-sm md:text-base font-bold text-gray-800 dark:text-gray-200">
+                  Total Annual
+                </span>
+                <span className="text-base md:text-lg font-bold text-blue-600 dark:text-blue-400">
+                  ${formatCurrency(totalTaxes)}
+                </span>
+              </div>
+            </div>
           )}
+        </>
+      )}
+    </div>
+  );
+
+  return (
+    <div className="space-y-2 md:space-y-0">
+      {/* Main Income Card */}
+      <div className="w-full mx-auto p-2 pb-2 md:p-8 bg-white dark:bg-slate-800 shadow-xl rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div className="flex items-center mb-3 md:mb-8">
+          <div className="p-1 md:p-3 bg-green-100 dark:bg-green-900/30 rounded-lg mr-1.5 md:mr-4">
+            <DollarSign className="w-4 h-4 md:w-8 md:h-8 text-green-600 dark:text-green-400" />
+          </div>
+        <h1 className="text-sm md:text-3xl font-bold text-gray-800 dark:text-white">
+          <span className="hidden sm:inline">Income & Taxes</span>
+          <span className="sm:hidden">Income Summary</span>
+        </h1>
         </div>
+
+        {/* Summary Cards */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 md:gap-4 mb-0 md:mb-8">
+          <div className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 p-2 md:p-6 rounded-lg border-2 border-green-200 dark:border-green-700 shadow-sm">
+            <div className="text-[10px] md:text-sm font-medium text-green-700 dark:text-green-300 mb-0.5 md:mb-1">
+              Annual Take Home
+            </div>
+            <div className="text-sm md:text-3xl font-bold text-green-600 dark:text-green-400">
+              ${formatCurrency(takeHomePay)}
+            </div>
+          </div>
+          
+          <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 p-2 md:p-6 rounded-lg border-2 border-blue-200 dark:border-blue-700 shadow-sm">
+            <div className="text-[10px] md:text-sm font-medium text-blue-700 dark:text-blue-300 mb-0.5 md:mb-1">
+              Monthly Take Home
+            </div>
+            <div className="text-sm md:text-3xl font-bold text-blue-600 dark:text-blue-400">
+              ${formatCurrency(monthlyTakeHomePay)}
+            </div>
+          </div>
+
+          <div className="bg-gradient-to-br from-cyan-50 to-cyan-100 dark:from-cyan-900/20 dark:to-cyan-800/20 p-2 md:p-6 rounded-lg border-2 border-cyan-200 dark:border-cyan-700 shadow-sm">
+            <div className="text-[10px] md:text-sm font-medium text-cyan-700 dark:text-cyan-300 mb-0.5 md:mb-1">
+              <span className="hidden sm:inline">Take Home ({incomeData.payFrequency})</span>
+              <span className="sm:hidden">Pay Period</span>
+            </div>
+            <div className="text-sm md:text-3xl font-bold text-cyan-600 dark:text-cyan-400">
+              ${formatCurrency((() => {
+                switch (incomeData.payFrequency) {
+                  case "Weekly":
+                    return (takeHomePay / 52);
+                  case "Bi-Weekly":
+                    return (takeHomePay / 26);
+                  case "Semi-Monthly":
+                    return (takeHomePay / 24);
+                  case "Monthly":
+                  default:
+                    return (takeHomePay / 12);
+                }
+              })())}
+            </div>
+          </div>
+
+          <div className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 p-2 md:p-6 rounded-lg border-2 border-purple-200 dark:border-purple-700 shadow-sm">
+            <div className="text-[10px] md:text-sm font-medium text-purple-700 dark:text-purple-300 mb-0.5 md:mb-1">
+              Annual 401K
+            </div>
+            <div className="text-sm md:text-3xl font-bold text-purple-600 dark:text-purple-400">
+              ${formatCurrency(totalAnnual401K)}
+            </div>
+          </div>
+        </div>
+
+        {/* Desktop Layout - All three sections in one grid */}
+        <div className="hidden md:grid md:grid-cols-12 gap-2 md:gap-6">
+          {renderEarnings()}
+          {renderRetirement()}
+          {renderTaxes()}
+        </div>
+      </div>
+
+      {/* Mobile Layout - Separate cards for each section */}
+      <div className="md:hidden">
+        {renderEarnings()}
+      </div>
+      <div className="md:hidden">
+        {renderRetirement()}
+      </div>
+      <div className="md:hidden">
+        {renderTaxes()}
       </div>
     </div>
   );

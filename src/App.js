@@ -157,7 +157,7 @@ function AppContent({ isMobile, takeHomePay, setTakeHomePay }) {
                     path="/Income"
                     element={
                       <div className="bg-white dark:bg-black pb-20">
-                        <div className="flex flex-col gap-4 my-5 mx-4">
+                        <div className="flex flex-col gap-2 my-5 mx-4">
                           <Suspense fallback={<LoadingSpinner />}>
                             <Income onTakeHomePayUpdate={setTakeHomePay} />
                             <RecomendedBudget />
@@ -254,7 +254,7 @@ function AppContent({ isMobile, takeHomePay, setTakeHomePay }) {
                       path="/income"
                       element={
                         <div className="max-w-6xl mx-auto px-6">
-                          <div className="flex flex-col gap-4 my-5">
+                          <div className="flex flex-col gap-6 my-5">
                             <Suspense fallback={<LoadingSpinner />}>
                               <Income onTakeHomePayUpdate={setTakeHomePay} />
                               <RecomendedBudget />
