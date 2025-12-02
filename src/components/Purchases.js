@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import supabase from "../supabaseClient.js";
 import { Trash2, ChevronLeft, ChevronRight, Edit2, Search, X, Calendar, DollarSign, Tag, ArrowUpDown, RotateCcw, Plus } from "lucide-react";
 import { useData } from "../DataContext";
@@ -18,6 +18,8 @@ const PurchasesList = () => {
   const [deletedPurchases, setDeletedPurchases] = useState([]);
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   const groupBy = "budget"; // Always show by budget category
+  const hasAutoSetCurrentMonth = useRef(false);
+  const lastFiltersRef = useRef({ searchTerm: "", filterBudgetItem: "", showDeleted: false });
 
   // Fetch deleted purchases when showing hidden view
   const fetchDeletedPurchases = async () => {
@@ -206,7 +208,7 @@ const PurchasesList = () => {
       return 0;
     });
 
-    // Group purchases by month
+    // Group purchases by month (using local time to match user's timezone)
     const groupedByMonth = {};
     filtered.forEach((purchase) => {
       const date = new Date(purchase.timestamp);
@@ -232,7 +234,7 @@ const PurchasesList = () => {
       monthTotal = currentMonthPurchases.reduce((sum, p) => sum + p.cost, 0);
       // Parse year and month from key (format: "YYYY-MM")
       const [year, month] = currentMonthKey.split('-').map(Number);
-      const date = new Date(year, month - 1, 1); // month is 0-indexed
+      const date = new Date(year, month - 1, 1); // month is 0-indexed, use local time
       monthName = date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
     }
     
@@ -273,6 +275,40 @@ const PurchasesList = () => {
       purchasesByCategory: categorizedPurchases,
     };
   }, [purchases, deletedPurchases, showDeleted, searchTerm, filterBudgetItem, sortConfig, groupBy, currentMonthIndex]);
+
+  // Check if filters have changed
+  useEffect(() => {
+    const filtersChanged = 
+      lastFiltersRef.current.searchTerm !== searchTerm ||
+      lastFiltersRef.current.filterBudgetItem !== filterBudgetItem ||
+      lastFiltersRef.current.showDeleted !== showDeleted;
+    
+    if (filtersChanged) {
+      lastFiltersRef.current = { searchTerm, filterBudgetItem, showDeleted };
+      hasAutoSetCurrentMonth.current = false; // Reset flag when filters change
+    }
+  }, [searchTerm, filterBudgetItem, showDeleted]);
+
+  // Auto-set to current month when available months change (on initial load or filter changes)
+  useEffect(() => {
+    if (availableMonths.length === 0) return;
+    
+    // Get current month key (format: "YYYY-MM") using local time to match user's timezone
+    const now = new Date();
+    const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    
+    // Find current month in available months
+    const currentMonthIndexInList = availableMonths.indexOf(currentMonthKey);
+    
+    // If current month exists in the list and we should auto-set (initial load or filters changed)
+    if (currentMonthIndexInList !== -1 && !hasAutoSetCurrentMonth.current) {
+      setCurrentMonthIndex(currentMonthIndexInList);
+      hasAutoSetCurrentMonth.current = true;
+    } else if (currentMonthIndexInList === -1 && hasAutoSetCurrentMonth.current === false) {
+      // If current month doesn't exist, just mark as set so we don't keep trying
+      hasAutoSetCurrentMonth.current = true;
+    }
+  }, [availableMonths, purchases.length]);
 
   // Calculate pagination info (always by month)
   const totalMonths = availableMonths.length;
