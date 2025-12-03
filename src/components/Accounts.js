@@ -33,6 +33,7 @@ function Accounts() {
   const [tempTypes, setTempTypes] = useState({});
   const [tempMonthlyContributions, setTempMonthlyContributions] = useState({});
   const [projectionMonths, setProjectionMonths] = useState(12);
+  const [showMobileSearch, setShowMobileSearch] = useState(false);
   const debounceTimers = useRef({});
   
   // SimpleFin state
@@ -803,7 +804,7 @@ function Accounts() {
             </div>
           </div>
           
-          {/* SimpleFin Status */}
+          {/* SimpleFin errors (shown), transaction sync happens silently in background */}
           {syncError && (
             <div className="flex items-center gap-2 text-sm">
               <div className="flex items-center gap-2 text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 px-3 py-2 rounded-lg">
@@ -812,73 +813,79 @@ function Accounts() {
               </div>
             </div>
           )}
-          
-          {/* Transaction Sync Status */}
-          {transactionSyncStatus && (
-            <div className="flex items-center gap-2 text-sm">
-              <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-3 py-2 rounded-lg">
-                {syncingTransactions ? (
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 dark:border-blue-400"></div>
-                ) : (
-                  <AlertCircle size={16} />
-                )}
-                <span>{transactionSyncStatus}</span>
-              </div>
-            </div>
-          )}
         </div>
 
       {/* Filter and Search Controls */}
-      <div className="flex flex-col sm:flex-row gap-4 mb-6">
-        {/* Search Bar */}
-        <div className="flex-1 relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500" size={20} />
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search accounts..."
-            className="w-full pl-10 pr-4 py-3 bg-white dark:bg-slate-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-800 dark:text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition-all"
-          />
-        </div>
+      <div className="mb-6 space-y-3">
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Mobile search icon (left) */}
+          <button
+            onClick={() => setShowMobileSearch((prev) => !prev)}
+            className="sm:hidden p-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-slate-700 text-gray-600 dark:text-gray-200"
+            aria-label="Toggle search"
+          >
+            <Search size={16} />
+          </button>
 
-        {/* Type Filter */}
-        <div className="flex gap-2">
-          <button
-            onClick={() => setFilterType("All")}
-            className={`px-4 py-3 rounded-lg font-medium transition-all ${
-              filterType === "All"
-                ? "bg-blue-500 dark:bg-blue-600 text-white shadow-md"
-                : "bg-white dark:bg-slate-700 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-slate-600"
-            }`}
-          >
-            All ({accounts.length})
-          </button>
-          <button
-            onClick={() => setFilterType("Investment")}
-            className={`px-4 py-3 rounded-lg font-medium transition-all ${
-              filterType === "Investment"
-                ? "bg-green-500 dark:bg-green-600 text-white shadow-md"
-                : "bg-white dark:bg-slate-700 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-slate-600"
-            }`}
-          >
-            Investments ({accounts.filter(a => ['checking', 'savings', 'investment', 'other'].includes(a.account_type)).length})
-          </button>
-          <button
-            onClick={() => setFilterType("Loan")}
-            className={`px-4 py-3 rounded-lg font-medium transition-all ${
-              filterType === "Loan"
-                ? "bg-red-500 dark:bg-red-600 text-white shadow-md"
-                : "bg-white dark:bg-slate-700 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-slate-600"
-            }`}
-          >
-            Loans ({accounts.filter(a => ['credit', 'loan'].includes(a.account_type)).length})
-          </button>
+          <div className="flex flex-1 gap-2 min-w-0">
+            <button
+              onClick={() => setFilterType("All")}
+              className={`flex-1 sm:flex-none px-2.5 sm:px-1 py-2 sm:py-1 rounded-lg font-medium text-[11px] sm:text-base transition-all ${
+                filterType === "All"
+                  ? "bg-blue-500 dark:bg-blue-600 text-white shadow-md"
+                  : "bg-white dark:bg-slate-700 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-slate-600"
+              }`}
+            >
+              All ({accounts.length})
+            </button>
+            <button
+              onClick={() => setFilterType("Investment")}
+              className={`flex-1 sm:flex-none px-2.5 sm:px-4 py-2 sm:py-3 rounded-lg font-medium text-[11px] sm:text-base transition-all ${
+                filterType === "Investment"
+                  ? "bg-green-500 dark:bg-green-600 text-white shadow-md"
+                  : "bg-white dark:bg-slate-700 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-slate-600"
+              }`}
+            >
+              Investments ({accounts.filter(a => ['checking', 'savings', 'investment', 'other'].includes(a.account_type)).length})
+            </button>
+            <button
+              onClick={() => setFilterType("Loan")}
+              className={`flex-1 sm:flex-none px-2.5 sm:px-4 py-2 sm:py-3 rounded-lg font-medium text-[11px] sm:text-base transition-all ${
+                filterType === "Loan"
+                  ? "bg-red-500 dark:bg-red-600 text-white shadow-md"
+                  : "bg-white dark:bg-slate-700 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-slate-600"
+              }`}
+            >
+              Loans ({accounts.filter(a => ['credit', 'loan'].includes(a.account_type)).length})
+            </button>
+          </div>
+          <div className="hidden sm:flex flex-1 relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500" size={20} />
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search accounts..."
+              className="w-full pl-10 pr-4 py-3 bg-white dark:bg-slate-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-800 dark:text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition-all"
+            />
+          </div>
         </div>
+        {showMobileSearch && (
+          <div className="sm:hidden relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500" size={18} />
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search accounts..."
+              className="w-full pl-9 pr-3 py-2.5 bg-white dark:bg-slate-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-800 dark:text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none text-sm transition-all"
+            />
+          </div>
+        )}
       </div>
 
-      {/* Accounts Table */}
-      <div className="bg-gray-50 dark:bg-slate-700/50 rounded-lg border border-gray-200 dark:border-gray-600 overflow-hidden">
+      {/* Accounts Table - Desktop */}
+      <div className="hidden md:block bg-gray-50 dark:bg-slate-700/50 rounded-lg border border-gray-200 dark:border-gray-600 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full table-auto">
             <thead>
@@ -1066,6 +1073,144 @@ function Accounts() {
             </tbody>
           </table>
         </div>
+      </div>
+
+      {/* Accounts List - Mobile */}
+      <div className="md:hidden space-y-2">
+        {filteredAndSortedAccounts.length === 0 ? (
+          <div className="text-center py-8 bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-gray-700">
+            <div className="flex flex-col items-center gap-3">
+              <div className="text-gray-400 dark:text-gray-500">
+                {accounts.length === 0 ? (
+                  <PlusCircle size={40} />
+                ) : (
+                  <Search size={40} />
+                )}
+              </div>
+              <p className="text-gray-500 dark:text-gray-400 text-base">
+                {accounts.length === 0 
+                  ? "No accounts yet" 
+                  : "No accounts found"}
+              </p>
+              <p className="text-gray-400 dark:text-gray-500 text-xs px-4">
+                {accounts.length === 0 
+                  ? "Tap \"Add\" above to start tracking your loans and investments."
+                  : "Try adjusting your search or filter."}
+              </p>
+            </div>
+          </div>
+        ) : (
+          filteredAndSortedAccounts.map((account) => (
+            <div
+              key={account.id}
+              className="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-gray-700 p-3 shadow-sm"
+            >
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  {account.is_simplefin_synced && (
+                    <div
+                      className="flex-shrink-0 w-2 h-2 bg-green-500 rounded-full"
+                      title="Synced from SimpleFin"
+                    ></div>
+                  )}
+                  <input
+                    type="text"
+                    value={tempNames[account.id] ?? account.name}
+                    onChange={(e) => handleNameChange(account.id, e.target.value)}
+                    className="w-full min-w-0 px-2 py-1.5 bg-gray-50 dark:bg-slate-700 rounded text-gray-800 dark:text-white border border-gray-300 dark:border-gray-500 focus:border-blue-500 dark:focus:border-blue-400 focus:outline-none text-sm"
+                    placeholder="Account name"
+                  />
+                </div>
+                <button
+                  onClick={() => {
+                    if (window.confirm(`Are you sure you want to delete "${account.name}"?`)) {
+                      handleDeleteAccount(account.id);
+                    }
+                  }}
+                  className="p-1.5 text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors flex-shrink-0"
+                  aria-label="Delete account"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
+
+              <div className="flex items-center gap-2 mb-2">
+                <select
+                  value={tempTypes[account.id] ?? account.account_type ?? "investment"}
+                  onChange={(e) => handleTypeChange(account.id, e.target.value)}
+                  className="flex-1 min-w-0 px-2 py-1.5 bg-gray-50 dark:bg-slate-700 rounded text-gray-800 dark:text-white border border-gray-300 dark:border-gray-500 focus:border-blue-500 dark:focus:border-blue-400 focus:outline-none text-xs"
+                >
+                  <option value="checking">Checking</option>
+                  <option value="savings">Savings</option>
+                  <option value="credit">Credit Card</option>
+                  <option value="investment">Investment</option>
+                  <option value="loan">Loan</option>
+                  <option value="other">Other</option>
+                </select>
+                <div className="relative w-28">
+                  <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 text-xs">
+                    $
+                  </span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={tempValues[account.id] ?? account.value ?? 0}
+                    onChange={(e) => handleValueChange(account.id, e.target.value)}
+                    disabled={account.is_simplefin_synced}
+                    readOnly={account.is_simplefin_synced}
+                    className={`w-full pl-4 pr-2 py-1.5 rounded text-gray-800 dark:text-white border text-xs ${
+                      account.is_simplefin_synced
+                        ? "bg-gray-100 dark:bg-slate-700 border-gray-200 dark:border-gray-600 cursor-not-allowed"
+                        : "bg-gray-50 dark:bg-slate-700 border-gray-300 dark:border-gray-500 focus:border-blue-500 dark:focus:border-blue-400 focus:outline-none"
+                    }`}
+                    placeholder="0.00"
+                    title={account.is_simplefin_synced ? "Value is synced from SimpleFin" : ""}
+                  />
+                </div>
+              </div>
+
+              {(account.account_type === "investment" ||
+                account.account_type === "loan") && (
+                <div className="grid grid-cols-2 gap-2 mt-1">
+                  <div className="relative">
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={tempInterestRates[account.id] ?? account.interest_rate ?? 0}
+                      onChange={(e) =>
+                        handleInterestRateChange(account.id, e.target.value)
+                      }
+                      className="w-full px-2 py-1.5 pr-6 bg-gray-50 dark:bg-slate-700 rounded text-gray-800 dark:text-white border border-gray-300 dark:border-gray-500 focus:border-blue-500 dark:focus:border-blue-400 focus:outline-none text-xs"
+                      placeholder="Rate"
+                    />
+                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 text-xs">
+                      %
+                    </span>
+                  </div>
+                  <div className="relative">
+                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 text-xs">
+                      $
+                    </span>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={
+                        tempMonthlyContributions[account.id] ??
+                        account.montly_contribution ??
+                        0
+                      }
+                      onChange={(e) =>
+                        handleMonthlyContributionChange(account.id, e.target.value)
+                      }
+                      className="w-full pl-4 pr-2 py-1.5 bg-gray-50 dark:bg-slate-700 rounded text-gray-800 dark:text-white border border-gray-300 dark:border-gray-500 focus:border-blue-500 dark:focus:border-blue-400 focus:outline-none text-xs"
+                      placeholder="Monthly"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          ))
+        )}
       </div>
 
       {/* Future Value Projections */}
