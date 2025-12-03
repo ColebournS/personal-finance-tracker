@@ -421,7 +421,7 @@ function Income() {
         </div>
       ) : (
         <>
-          <div className="space-y-2 md:space-y-1 mb-3">
+          <div className="space-y-1 md:space-y-1 mb-1">
             {taxes.length === 0 ? (
               <div className="text-center py-4 text-gray-500 dark:text-gray-400 text-sm">
                 <p className="mb-1">No taxes yet</p>
@@ -429,9 +429,9 @@ function Income() {
               </div>
             ) : (
               taxes.map((tax) => (
-                <div key={tax.id} className="rounded hover:bg-white/50 dark:hover:bg-slate-600/30 transition-colors">
+                <div key={tax.id} className="rounded">
                   {/* Mobile Layout */}
-                  <div className="md:hidden flex items-center gap-1.5 px-2 hover:bg-white/50 dark:hover:bg-slate-600/30 rounded transition-colors">
+                  <div className="md:hidden flex items-center gap-1.5 rounded">
                     <input
                       type="text"
                       value={tax.tax_name}
@@ -452,7 +452,7 @@ function Income() {
                         %
                       </span>
                     </div>
-                    <div className="w-14 flex-shrink-0 px-2 py-1 bg-white dark:bg-slate-600 border border-gray-300 dark:border-gray-600 rounded text-[10px] font-semibold text-gray-700 dark:text-gray-300 text-right truncate">
+                    <div className="w-14 flex-shrink-0 p-1 bg-white dark:bg-slate-600 border border-gray-300 dark:border-gray-600 rounded text-[10px] font-semibold text-gray-700 dark:text-gray-300 text-right truncate">
                       ${(taxAmounts[tax.id] || 0) >= 1000 ? `${((taxAmounts[tax.id] || 0) / 1000).toFixed(1)}k` : formatCurrency(taxAmounts[tax.id] || 0)}
                     </div>
                     <button

@@ -52,18 +52,6 @@ function RecommendedBudget() {
         </label>
       </div>
 
-      {/* Total Income Display */}
-      <div className="bg-gradient-to-br from-indigo-50 to-indigo-100 dark:from-indigo-900/20 dark:to-indigo-800/20 p-2 sm:p-4 rounded-lg border-2 border-indigo-200 dark:border-indigo-700 mb-3 sm:mb-6">
-        <div className="text-center">
-          <div className="text-[10px] sm:text-sm font-medium text-indigo-700 dark:text-indigo-300 mb-0.5 sm:mb-1">
-            {budgetView === "monthly" ? "Monthly" : "Annual"} Take Home
-          </div>
-          <div className="text-sm sm:text-2xl font-bold text-indigo-600 dark:text-indigo-400">
-            ${formatCurrency(displayIncome)}
-          </div>
-        </div>
-      </div>
-
       {/* Budget Breakdown Cards */}
       <div className="grid grid-cols-3 gap-2 sm:gap-4">
         {/* Needs */}
@@ -73,13 +61,14 @@ function RecommendedBudget() {
               <Home className="w-3 h-3 sm:w-5 sm:h-5 md:w-6 md:h-6 text-red-600 dark:text-red-400" />
               <span className="font-semibold text-[10px] sm:text-base md:text-lg text-red-700 dark:text-red-300">Needs</span>
             </div>
-            <span className="hidden sm:inline text-[9px] sm:text-sm font-medium text-red-600 dark:text-red-400 bg-red-200 dark:bg-red-800/30 px-1.5 py-0.5 sm:px-3 sm:py-1 rounded-full flex-shrink-0">50%</span>
+            <span className="text-[9px] sm:text-sm font-medium text-red-600 dark:text-red-400 bg-red-200 dark:bg-red-800/30 px-1.5 py-0.5 sm:px-3 sm:py-1 rounded-full flex-shrink-0">
+              50%
+            </span>
           </div>
-          <div className="flex items-baseline justify-between gap-1 mb-0.5 sm:mb-2">
+          <div className="mb-0.5 sm:mb-2 text-center">
             <div className="text-xs sm:text-2xl md:text-3xl font-bold text-red-600 dark:text-red-400">
               ${formatCurrency(needs)}
             </div>
-            <span className="sm:hidden text-[9px] font-medium text-red-600 dark:text-red-400 bg-red-200 dark:bg-red-800/30 px-1.5 py-0.5 rounded-full flex-shrink-0">50%</span>
           </div>
           <p className="text-xs sm:text-sm text-red-700 dark:text-red-300 hidden sm:block">
             Housing, utilities, groceries, insurance
@@ -93,13 +82,14 @@ function RecommendedBudget() {
               <PartyPopper className="w-3 h-3 sm:w-5 sm:h-5 md:w-6 md:h-6 text-blue-600 dark:text-blue-400" />
               <span className="font-semibold text-[10px] sm:text-base md:text-lg text-blue-700 dark:text-blue-300">Wants</span>
             </div>
-            <span className="hidden sm:inline text-[9px] sm:text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-200 dark:bg-blue-800/30 px-1.5 py-0.5 sm:px-3 sm:py-1 rounded-full flex-shrink-0">30%</span>
+            <span className="text-[9px] sm:text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-200 dark:bg-blue-800/30 px-1.5 py-0.5 sm:px-3 sm:py-1 rounded-full flex-shrink-0">
+              30%
+            </span>
           </div>
-          <div className="flex items-baseline justify-between gap-1 mb-0.5 sm:mb-2">
+          <div className="mb-0.5 sm:mb-2 text-center">
             <div className="text-xs sm:text-2xl md:text-3xl font-bold text-blue-600 dark:text-blue-400">
               ${formatCurrency(wants)}
             </div>
-            <span className="sm:hidden text-[9px] font-medium text-blue-600 dark:text-blue-400 bg-blue-200 dark:bg-blue-800/30 px-1.5 py-0.5 rounded-full flex-shrink-0">30%</span>
           </div>
           <p className="text-xs sm:text-sm text-blue-700 dark:text-blue-300 hidden sm:block">
             Entertainment, dining, hobbies, subscriptions
@@ -113,13 +103,14 @@ function RecommendedBudget() {
               <TrendingUp className="w-3 h-3 sm:w-5 sm:h-5 md:w-6 md:h-6 text-green-600 dark:text-green-400" />
               <span className="font-semibold text-[10px] sm:text-base md:text-lg text-green-700 dark:text-green-300">Savings</span>
             </div>
-            <span className="hidden sm:inline text-[9px] sm:text-sm font-medium text-green-600 dark:text-green-400 bg-green-200 dark:bg-green-800/30 px-1.5 py-0.5 sm:px-3 sm:py-1 rounded-full flex-shrink-0">20%</span>
+            <span className="text-[9px] sm:text-sm font-medium text-green-600 dark:text-green-400 bg-green-200 dark:bg-green-800/30 px-1.5 py-0.5 sm:px-3 sm:py-1 rounded-full flex-shrink-0">
+              20%
+            </span>
           </div>
-          <div className="flex items-baseline justify-between gap-1 mb-0.5 sm:mb-2">
+          <div className="mb-0.5 sm:mb-2 text-center">
             <div className="text-xs sm:text-2xl md:text-3xl font-bold text-green-600 dark:text-green-400">
               ${formatCurrency(savings)}
             </div>
-            <span className="sm:hidden text-[9px] font-medium text-green-600 dark:text-green-400 bg-green-200 dark:bg-green-800/30 px-1.5 py-0.5 rounded-full flex-shrink-0">20%</span>
           </div>
           <p className="text-xs sm:text-sm text-green-700 dark:text-green-300 hidden sm:block">
             Emergency fund, investments, debt payoff
