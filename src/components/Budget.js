@@ -242,7 +242,7 @@ function Budget() {
     await supabase.from("budget_groups").delete().eq("id", groupId);
     refetchBudgetGroups();
   };
-
+ 
   // Memoize totals calculation
   const totals = useMemo(() => {
     let totalBudget = 0;
@@ -259,6 +259,8 @@ function Budget() {
       totalBudget,
     };
   }, [groups]);
+
+  const budgetRemaining = income - totals.totalBudget;
 
   // Render a budget group (used for both mobile and desktop)
   const renderBudgetGroup = (group) => {
@@ -459,7 +461,7 @@ function Budget() {
   return (
     <div className="space-y-2 md:space-y-4">
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-2 gap-2 md:gap-4">
+      <div className="grid grid-cols-3 md:grid-cols-3 gap-2 md:gap-4">
         {/* Monthly Income Card */}
         <div className="bg-blue-50/50 dark:bg-blue-900/10 p-2 md:p-4 rounded-lg">
           <div className="text-[10px] md:text-xs font-medium text-blue-600 dark:text-blue-400 mb-0.5 md:mb-1 uppercase tracking-wide">
@@ -477,6 +479,22 @@ function Budget() {
           </div>
           <div className="text-sm md:text-2xl font-bold text-purple-700 dark:text-purple-300">
             ${formatCurrency(totals.totalBudget)}
+          </div>
+        </div>
+
+        {/* Budget Remaining Card */}
+        <div className="bg-green-50/50 dark:bg-green-900/10 p-2 md:p-4 rounded-lg">
+          <div className="text-[10px] md:text-xs font-medium text-green-600 dark:text-green-400 mb-0.5 md:mb-1 uppercase tracking-wide">
+            Budget Remaining
+          </div>
+          <div
+            className={`text-sm md:text-2xl font-bold ${
+              budgetRemaining < 0
+                ? "text-red-700 dark:text-red-300"
+                : "text-green-700 dark:text-green-300"
+            }`}
+          >
+            ${formatCurrency(budgetRemaining)}
           </div>
         </div>
       </div>
