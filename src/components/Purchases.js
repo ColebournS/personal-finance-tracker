@@ -218,6 +218,13 @@ const PurchasesList = () => {
       }
       groupedByMonth[monthKey].push(purchase);
     });
+
+    // Ensure the current calendar month is always present, even if it has no purchases
+    const now = new Date();
+    const currentCalendarMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    if (!groupedByMonth[currentCalendarMonthKey]) {
+      groupedByMonth[currentCalendarMonthKey] = [];
+    }
     
     // Sort months newest first
     const months = Object.keys(groupedByMonth).sort((a, b) => b.localeCompare(a));
@@ -230,12 +237,15 @@ const PurchasesList = () => {
     let monthName = '';
     let monthTotal = 0;
     
-    if (currentMonthPurchases.length > 0) {
-      monthTotal = currentMonthPurchases.reduce((sum, p) => sum + p.cost, 0);
+    if (currentMonthKey) {
       // Parse year and month from key (format: "YYYY-MM")
       const [year, month] = currentMonthKey.split('-').map(Number);
       const date = new Date(year, month - 1, 1); // month is 0-indexed, use local time
       monthName = date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    }
+
+    if (currentMonthPurchases.length > 0) {
+      monthTotal = currentMonthPurchases.reduce((sum, p) => sum + p.cost, 0);
     }
     
     // If in budget mode, also group current month's purchases by category
@@ -681,12 +691,14 @@ const PurchasesList = () => {
               <Search className="text-gray-400" size={24} />
             </div>
             <h3 className="text-base md:text-lg font-semibold text-gray-900 dark:text-white mb-2">
-              No purchases found
+              {currentMonthName ? `No purchases in ${currentMonthName}` : "No purchases found"}
             </h3>
             <p className="text-sm md:text-base text-gray-500 dark:text-gray-400">
               {searchTerm || filterBudgetItem
                 ? "Try adjusting your filters"
-                : "Start by adding your first purchase"}
+                : currentMonthName
+                  ? ""
+                  : "Start by adding your first purchase"}
             </p>
           </div>
         ) : (
