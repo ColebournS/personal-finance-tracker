@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import supabase from "../supabaseClient";
-import { Trash2, PlusCircle, Wallet, DollarSign, ChevronDown, ChevronRight } from "lucide-react";
+import { Trash2, PlusCircle, Wallet, DollarSign } from "lucide-react";
 import { useData } from "../DataContext";
 import { encryptValue } from "../utils/encryption";
 
@@ -16,7 +16,6 @@ function Budget() {
   const [isSmallScreen, setIsSmallScreen] = useState(false);
   const [tempGroupNames, setTempGroupNames] = useState({});
   const [tempItemNames, setTempItemNames] = useState({});
-  const [expandedItems, setExpandedItems] = useState({});
   const [newlyAddedGroupId, setNewlyAddedGroupId] = useState(null);
   const debounceTimers = useRef({});
 
@@ -88,14 +87,6 @@ function Budget() {
       0
     );
   }, [purchases]);
-
-  // Toggle expanded state for mobile items
-  const toggleItemExpanded = (itemId) => {
-    setExpandedItems((prev) => ({
-      ...prev,
-      [itemId]: !prev[itemId],
-    }));
-  };
 
   // Debounced update function
   const debounceUpdate = useCallback((key, callback, delay = 500) => {
@@ -203,6 +194,10 @@ function Budget() {
   };
 
   const handleDeleteItem = async (itemId) => {
+    if (!window.confirm("Are you sure you want to delete this budget item?")) {
+      return;
+    }
+
     try {
       // Check if there are any purchases associated with this budget item
       const { data: associatedPurchases, error: purchaseError } = await supabase
@@ -314,7 +309,7 @@ function Budget() {
 
           {/* Desktop Table View - Hidden on Mobile */}
           <div className="hidden md:block overflow-x-auto">
-            <table className="w-full bg-gray-50 dark:bg-slate-600 rounded-lg overflow-hidden">
+            <table className="w-full overflow-hidden">
               <thead>
                 <tr className="bg-gradient-to-r from-gray-100 to-gray-200 dark:from-slate-700 dark:to-slate-600">
                   <th className="p-4 font-semibold text-left text-gray-700 dark:text-gray-200 border-b-2 border-gray-300 dark:border-gray-600">
@@ -332,9 +327,7 @@ function Budget() {
                   return (
                     <tr 
                       key={item.id} 
-                      className={`transition-colors hover:bg-gray-100 dark:hover:bg-slate-500 ${
-                        index !== group.budget_items.length - 1 ? 'border-b border-gray-200 dark:border-gray-600' : ''
-                      }`}
+                      className={`transition-colors hover:bg-gray-100 dark:hover:bg-slate-500`}
                     >
                       <td className="p-1">
                         <input
@@ -347,15 +340,17 @@ function Budget() {
                         />
                       </td>
                       <td className="p-1">
-                        <div className="flex items-center">
-                          <span className="text-gray-500 dark:text-gray-400 mr-1">$</span>
+                        <div className="relative inline-flex items-center">
+                          <span className="absolute left-2 text-gray-500 dark:text-gray-400">
+                            $
+                          </span>
                           <input
                             type="number"
                             defaultValue={item.budget}
                             onBlur={(e) =>
                               handleItemBudgetChange(item.id, e.target.value)
                             }
-                            className="w-24 px-3 py-2 bg-white dark:bg-slate-700 hover:bg-gray-50 dark:hover:bg-slate-600 rounded-lg text-gray-800 dark:text-white border border-transparent hover:border-gray-300 dark:hover:border-gray-500 focus:border-blue-500 dark:focus:border-blue-400 focus:outline-none transition-colors"
+                            className="w-24 pl-5 pr-3 py-2 bg-white dark:bg-slate-700 hover:bg-gray-50 dark:hover:bg-slate-600 rounded-lg text-gray-800 dark:text-white border border-transparent hover:border-gray-300 dark:hover:border-gray-500 focus:border-blue-500 dark:focus:border-blue-400 focus:outline-none transition-colors"
                           />
                         </div>
                       </td>
@@ -377,31 +372,16 @@ function Budget() {
 
           {/* Mobile Collapsible Table View - Hidden on Desktop */}
           <div className="md:hidden">
-            <div className="bg-gray-50 dark:bg-slate-600 rounded-lg overflow-hidden">
-              {/* Table Header */}
-              <div className="bg-gradient-to-r from-gray-100 to-gray-200 dark:from-slate-700 dark:to-slate-600 px-3 py-2 grid grid-cols-[1fr,auto,auto] gap-2 items-center border-b-2 border-gray-300 dark:border-gray-600">
-                <div className="text-xs font-semibold text-gray-700 dark:text-gray-200">
-                  NAME
-                </div>
-                <div className="text-xs font-semibold text-gray-700 dark:text-gray-200">
-                  BUDGET
-                </div>
-                <div className="w-8"></div>
-              </div>
+            <div className="rounded-lg overflow-hidden">
 
               {/* Table Rows */}
               {group.budget_items?.map((item, index) => {
-                const isExpanded = expandedItems[item.id];
-                
                 return (
                   <div 
                     key={item.id}
-                    className={`${
-                      index !== group.budget_items.length - 1 ? 'border-b border-gray-200 dark:border-gray-600' : ''
-                    }`}
                   >
                     {/* Collapsed Row */}
-                    <div className="px-3 py-2 grid grid-cols-[1fr,auto,auto] gap-2 items-center bg-white dark:bg-slate-600">
+                    <div className="px-1 py-1 grid grid-cols-[1fr,auto,auto] gap-2 items-center">
                       <input
                         type="text"
                         value={tempItemNames[item.id] ?? item.name}
@@ -410,45 +390,27 @@ function Budget() {
                         }
                         className="w-full px-2 py-1.5 bg-gray-50 dark:bg-slate-700 rounded text-gray-800 dark:text-white border border-gray-300 dark:border-gray-500 focus:border-blue-500 dark:focus:border-blue-400 focus:outline-none transition-colors text-sm"
                       />
-                      <div className="flex items-center gap-1">
-                        <span className="text-gray-500 dark:text-gray-400 text-sm">$</span>
+                      <div className="relative inline-flex items-center">
+                        <span className="absolute left-2 text-gray-500 dark:text-gray-400 text-sm">
+                          $
+                        </span>
                         <input
                           type="number"
                           defaultValue={item.budget}
                           onBlur={(e) =>
                             handleItemBudgetChange(item.id, e.target.value)
                           }
-                          className="w-20 px-2 py-1.5 bg-gray-50 dark:bg-slate-700 rounded text-gray-800 dark:text-white border border-gray-300 dark:border-gray-500 focus:border-blue-500 dark:focus:border-blue-400 focus:outline-none transition-colors text-sm"
+                          className="w-20 pl-4 pr-2 py-1.5 bg-gray-50 dark:bg-slate-700 rounded text-gray-800 dark:text-white border border-gray-300 dark:border-gray-500 focus:border-blue-500 dark:focus:border-blue-400 focus:outline-none transition-colors text-sm"
                         />
                       </div>
                       <button
-                        onClick={() => toggleItemExpanded(item.id)}
-                        className="p-1.5 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 rounded transition-colors"
-                        aria-label={isExpanded ? "Collapse" : "Expand"}
+                        onClick={() => handleDeleteItem(item.id)}
+                        className="p-1.5 text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition-colors"
+                        aria-label="Delete item"
                       >
-                        {isExpanded ? (
-                          <ChevronDown size={20} />
-                        ) : (
-                          <ChevronRight size={20} />
-                        )}
+                        <Trash2 size={18} />
                       </button>
                     </div>
-
-                    {/* Expanded Details */}
-                    {isExpanded && (
-                      <div className="px-3 pb-3 bg-white dark:bg-slate-600">
-                        <div className="mt-2">
-                          {/* Delete Button */}
-                          <button
-                            onClick={() => handleDeleteItem(item.id)}
-                            className="w-full flex items-center justify-center gap-2 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/50 py-2 rounded-lg transition-colors font-medium text-sm"
-                          >
-                            <Trash2 size={16} />
-                            <span>Delete Item</span>
-                          </button>
-                        </div>
-                      </div>
-                    )}
                   </div>
                 );
               })}

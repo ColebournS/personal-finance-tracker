@@ -270,6 +270,8 @@ function Income() {
     taxAmounts,
   } = calculateTaxes();
 
+  const totalTaxPercent = taxes.reduce((sum, tax) => sum + (tax.percent || 0), 0);
+
   // Render the earnings section
   const renderEarnings = () => (
     <div className="md:col-span-3 bg-white dark:bg-slate-800 md:bg-gray-50 md:dark:bg-slate-700/50 p-2 md:p-6 rounded-lg border border-gray-200 dark:border-gray-700 md:dark:border-gray-600 shadow-xl md:shadow-none">
@@ -511,14 +513,47 @@ function Income() {
           </div>
           
           {taxes.length > 0 && (
-            <div className="pt-3 mt-2 border-t border-gray-300 dark:border-gray-600">
-              <div className="flex justify-between items-center">
-                <span className="text-sm md:text-base font-bold text-gray-800 dark:text-gray-200">
-                  Total Annual
-                </span>
-                <span className="text-base md:text-lg font-bold text-blue-600 dark:text-blue-400">
+            <div className="pt-3 mt-2 border-t border-gray-300 dark:border-gray-600 space-y-2">
+              {/* Mobile layout */}
+              <div className="md:hidden flex items-center gap-1.5 rounded">
+                <div className="flex-1 min-w-0 px-2 py-1 bg-white dark:bg-slate-600 border border-gray-300 dark:border-gray-600 rounded text-gray-800 dark:text-white text-[10px] font-semibold uppercase tracking-wide">
+                  Total Taxes
+                </div>
+                <div className="w-16 flex-shrink-0 p-1 bg-white dark:bg-slate-600 border border-gray-300 dark:border-gray-600 rounded text-[10px] font-semibold text-gray-700 dark:text-gray-300 text-right">
+                  {totalTaxPercent.toFixed(2)}%
+                </div>
+                <div className="w-14 flex-shrink-0 p-1 bg-white dark:bg-slate-600 border border-gray-300 dark:border-gray-600 rounded text-[10px] font-semibold text-gray-700 dark:text-gray-300 text-right truncate">
+                  ${totalTaxes >= 1000 ? `${(totalTaxes / 1000).toFixed(1)}k` : formatCurrency(totalTaxes)}
+                </div>
+                <button
+                  type="button"
+                  className="p-1 text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-all flex-shrink-0 opacity-0 pointer-events-none"
+                  aria-hidden="true"
+                  tabIndex={-1}
+                >
+                  <Trash2 size={13} />
+                </button>
+              </div>
+
+              {/* Desktop layout */}
+              <div className="hidden md:flex items-center gap-2">
+                <div className="flex-1 max-w-[200px] px-3 py-1.5 bg-white dark:bg-slate-600 border border-gray-300 dark:border-gray-600 rounded text-gray-800 dark:text-white text-sm font-semibold uppercase tracking-wide">
+                  Total Taxes
+                </div>
+                <div className="w-20 px-3 py-1.5 bg-white dark:bg-slate-600 border border-gray-300 dark:border-gray-600 rounded text-sm font-semibold text-gray-700 dark:text-gray-300 text-right">
+                  {totalTaxPercent.toFixed(2)}%
+                </div>
+                <div className="w-24 px-3 py-1.5 bg-white dark:bg-slate-600 border border-gray-300 dark:border-gray-600 rounded text-sm font-semibold text-gray-700 dark:text-gray-300 text-right">
                   ${formatCurrency(totalTaxes)}
-                </span>
+                </div>
+                <button
+                  type="button"
+                  className="p-1.5 text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-all flex-shrink-0 opacity-0 pointer-events-none"
+                  aria-hidden="true"
+                  tabIndex={-1}
+                >
+                  <Trash2 size={16} />
+                </button>
               </div>
             </div>
           )}
