@@ -323,15 +323,28 @@ const PurchasesList = () => {
   // Calculate pagination info (always by month)
   const totalMonths = availableMonths.length;
 
+  const scrollToTop = () => {
+    try {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } catch {
+      // Fallback for environments where window is not available
+      if (typeof window !== "undefined") {
+        window.scrollTo(0, 0);
+      }
+    }
+  };
+
   const handleNextMonth = () => {
     if (currentMonthIndex < totalMonths - 1) {
-      setCurrentMonthIndex(currentMonthIndex + 1);
+      setCurrentMonthIndex((prev) => prev + 1);
+      scrollToTop();
     }
   };
 
   const handlePrevMonth = () => {
     if (currentMonthIndex > 0) {
-      setCurrentMonthIndex(currentMonthIndex - 1);
+      setCurrentMonthIndex((prev) => prev - 1);
+      scrollToTop();
     }
   };
 
