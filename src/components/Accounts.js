@@ -777,7 +777,7 @@ function Accounts() {
 
       {/* Main Accounts Card */}
       <div className="w-full mx-auto p-4 md:p-6 bg-white dark:bg-slate-800 shadow-xl rounded-lg border border-gray-200 dark:border-gray-700">
-        <div className="flex flex-col gap-4 mb-8">
+        <div className="flex flex-col gap-4 mb-2">
           <div className="flex justify-between items-center">
             <h1 className="text-2xl md:text-3xl font-bold text-gray-800 dark:text-white">
               Accounts
@@ -803,20 +803,10 @@ function Accounts() {
               </button>
             </div>
           </div>
-          
-          {/* SimpleFin errors (shown), transaction sync happens silently in background */}
-          {syncError && (
-            <div className="flex items-center gap-2 text-sm">
-              <div className="flex items-center gap-2 text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 px-3 py-2 rounded-lg">
-                <AlertCircle size={16} />
-                <span>{syncError}</span>
-              </div>
-            </div>
-          )}
         </div>
 
       {/* Filter and Search Controls */}
-      <div className="mb-6 space-y-3">
+      <div className="mb-4 space-y-3">
         <div className="flex flex-wrap items-center gap-2">
           {/* Mobile search icon (left) */}
           <button
@@ -827,10 +817,22 @@ function Accounts() {
             <Search size={16} />
           </button>
 
-          <div className="flex flex-1 gap-2 min-w-0">
+          {/* Desktop search bar (left) */}
+          <div className="hidden sm:flex flex-1 relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500" size={20} />
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search accounts..."
+              className="w-full pl-10 pr-4 p-2 bg-white dark:bg-slate-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-800 dark:text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition-all"
+            />
+          </div>
+
+          <div className="flex flex-1 gap-1 min-w-0">
             <button
               onClick={() => setFilterType("All")}
-              className={`flex-1 sm:flex-none px-2.5 sm:px-1 py-2 sm:py-1 rounded-lg font-medium text-[11px] sm:text-base transition-all ${
+              className={`flex-shrink-0 sm:flex-none px-2 p-2 rounded-lg font-medium text-[11px] sm:text-base transition-all ${
                 filterType === "All"
                   ? "bg-blue-500 dark:bg-blue-600 text-white shadow-md"
                   : "bg-white dark:bg-slate-700 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-slate-600"
@@ -840,7 +842,7 @@ function Accounts() {
             </button>
             <button
               onClick={() => setFilterType("Investment")}
-              className={`flex-1 sm:flex-none px-2.5 sm:px-4 py-2 sm:py-3 rounded-lg font-medium text-[11px] sm:text-base transition-all ${
+              className={`flex-shrink-0 sm:flex-none px-3 p-2 rounded-lg font-medium text-[11px] sm:text-base transition-all ${
                 filterType === "Investment"
                   ? "bg-green-500 dark:bg-green-600 text-white shadow-md"
                   : "bg-white dark:bg-slate-700 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-slate-600"
@@ -850,7 +852,7 @@ function Accounts() {
             </button>
             <button
               onClick={() => setFilterType("Loan")}
-              className={`flex-1 sm:flex-none px-2.5 sm:px-4 py-2 sm:py-3 rounded-lg font-medium text-[11px] sm:text-base transition-all ${
+              className={`flex-shrink-0 sm:flex-none px-2 p-2 rounded-lg font-medium text-[11px] sm:text-base transition-all ${
                 filterType === "Loan"
                   ? "bg-red-500 dark:bg-red-600 text-white shadow-md"
                   : "bg-white dark:bg-slate-700 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-slate-600"
@@ -858,16 +860,6 @@ function Accounts() {
             >
               Loans ({accounts.filter(a => ['credit', 'loan'].includes(a.account_type)).length})
             </button>
-          </div>
-          <div className="hidden sm:flex flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500" size={20} />
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search accounts..."
-              className="w-full pl-10 pr-4 py-3 bg-white dark:bg-slate-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-800 dark:text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition-all"
-            />
           </div>
         </div>
         {showMobileSearch && (
