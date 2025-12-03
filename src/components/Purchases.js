@@ -560,9 +560,9 @@ const PurchasesList = () => {
     return (
       <div
         key={purchase.id}
-        className={`bg-white dark:bg-slate-800 rounded-xl shadow-md hover:shadow-lg border border-gray-200 dark:border-slate-700 p-4 transition-all duration-200 hover:scale-[1.01]`}
+        className={`bg-white dark:bg-slate-800 rounded-xl shadow-md hover:shadow-lg border border-gray-200 dark:border-slate-700 p-1.5 transition-all duration-200 hover:scale-[1.01]`}
       >
-        {/* Header: Date, Category, and Delete/Restore */}
+        {/* Header: Date, Category, Cost, and Delete/Restore */}
         <div className="flex items-center justify-between mb-3 pb-2.5 border-b border-gray-100 dark:border-slate-700 gap-2">
           <div className="flex items-center gap-2 flex-1 min-w-0">
             {/* Date */}
@@ -596,12 +596,10 @@ const PurchasesList = () => {
                     e.stopPropagation();
                     handleCellEditStart("timestamp", purchase);
                   }}
-                  className="flex items-center gap-1.5 active:opacity-70 transition-opacity"
+                  className="flex items-center gap-1 px-2 py-1 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800 active:scale-95 transition-all whitespace-nowrap cursor-pointer"
                 >
-                  <div className="p-1 bg-blue-50 dark:bg-blue-900/20 rounded">
-                    <Calendar size={12} className="text-blue-600 dark:text-blue-400" />
-                  </div>
-                  <span className="text-xs font-semibold text-gray-600 dark:text-gray-300 whitespace-nowrap">
+                  <Calendar size={12} className="text-blue-600 dark:text-blue-400 flex-shrink-0" />
+                  <span className="text-xs font-bold text-blue-700 dark:text-blue-200">
                     {new Date(purchase.timestamp).toLocaleDateString(undefined, {
                       month: "short",
                       day: "numeric",
@@ -611,50 +609,99 @@ const PurchasesList = () => {
               )}
             </div>
 
-            {/* Budget Item Pill */}
-            <div className="cursor-pointer flex-shrink-0 ml-auto">
-              {editableField === "budgetItemId" && editingId === purchase.id ? (
-                <select
-                  value={editingValue || ""}
-                  onChange={(e) => {
-                    const newValue = e.target.value;
-                    setEditingValue(newValue);
-                    handleCellUpdate("budgetItemId", newValue);
-                  }}
-                  onBlur={() => {
-                    setEditableField(null);
-                    setEditingId(null);
-                  }}
-                  className="px-2 py-1.5 border dark:border-gray-600 rounded-lg bg-white dark:bg-slate-600 text-gray-800 dark:text-white text-xs focus:ring-2 focus:ring-blue-500"
-                  autoFocus
-                >
-                  <option value="">Uncategorized</option>
-                  {budgetGroups.map((group) => (
-                    <optgroup key={group.id} label={group.name}>
-                      {group.budget_items?.map((item) => (
-                        <option key={item.id} value={item.id}>
-                          {item.name}
-                        </option>
-                      ))}
-                    </optgroup>
-                  ))}
-                </select>
-              ) : (
-                <div
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleCellEditStart("budgetItemId", purchase);
-                  }}
-                  onTouchEnd={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    handleCellEditStart("budgetItemId", purchase);
-                  }}
-                  className="inline-flex items-center px-2 py-1 rounded-lg text-xs font-semibold bg-gradient-to-r from-purple-100 to-indigo-100 dark:from-purple-900/40 dark:to-indigo-900/40 text-purple-700 dark:text-purple-200 border border-purple-200 dark:border-purple-800 shadow-sm active:scale-95 transition-all max-w-[80px] sm:max-w-[100px]"
-                >
-                  <span className="truncate">
-                    {purchase.budget_items?.name || "Uncategorized"}
-                  </span>
+            {/* Budget Item Pill and Cost - Right aligned */}
+            <div className="flex items-center gap-2 ml-auto">
+              {/* Budget Item Pill */}
+              <div className="cursor-pointer flex-shrink-0">
+                {editableField === "budgetItemId" && editingId === purchase.id ? (
+                  <select
+                    value={editingValue || ""}
+                    onChange={(e) => {
+                      const newValue = e.target.value;
+                      setEditingValue(newValue);
+                      handleCellUpdate("budgetItemId", newValue);
+                    }}
+                    onBlur={() => {
+                      setEditableField(null);
+                      setEditingId(null);
+                    }}
+                    className="px-2 py-1.5 border dark:border-gray-600 rounded-lg bg-white dark:bg-slate-600 text-gray-800 dark:text-white text-xs focus:ring-2 focus:ring-blue-500"
+                    autoFocus
+                  >
+                    <option value="">Uncategorized</option>
+                    {budgetGroups.map((group) => (
+                      <optgroup key={group.id} label={group.name}>
+                        {group.budget_items?.map((item) => (
+                          <option key={item.id} value={item.id}>
+                            {item.name}
+                          </option>
+                        ))}
+                      </optgroup>
+                    ))}
+                  </select>
+                ) : (
+                  <div
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleCellEditStart("budgetItemId", purchase);
+                    }}
+                    onTouchEnd={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleCellEditStart("budgetItemId", purchase);
+                    }}
+                    className="inline-flex items-center px-2 py-1 rounded-lg text-xs font-semibold bg-gradient-to-r from-purple-100 to-indigo-100 dark:from-purple-900/40 dark:to-indigo-900/40 text-purple-700 dark:text-purple-200 border border-purple-200 dark:border-purple-800 shadow-sm active:scale-95 transition-all max-w-[80px] sm:max-w-[100px]"
+                  >
+                    <span className="truncate">
+                      {purchase.budget_items?.name || "Uncategorized"}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* Cost - Moved to header */}
+              {!(editableField === "budgetItemId" && editingId === purchase.id) && (
+                <div className="cursor-pointer group flex-shrink-0">
+                  {editableField === "cost" && editingId === purchase.id ? (
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      value={editingValue}
+                      onChange={(e) => setEditingValue(e.target.value)}
+                      onBlur={() => {
+                        handleCellUpdate("cost", editingValue);
+                        setEditableField(null);
+                        setEditingId(null);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.target.blur();
+                        }
+                      }}
+                      className="w-20 px-2 py-1.5 border dark:border-gray-600 rounded-lg bg-white dark:bg-slate-600 text-gray-800 dark:text-white text-sm focus:ring-2 focus:ring-blue-500"
+                      min="0"
+                      step="0.01"
+                      autoFocus
+                    />
+                  ) : (
+                    <div
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleCellEditStart("cost", purchase);
+                      }}
+                      onTouchEnd={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleCellEditStart("cost", purchase);
+                      }}
+                      className="flex items-center gap-1 px-2 py-1 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-lg border border-green-200 dark:border-green-800 group-hover:shadow-sm transition-all active:scale-95 whitespace-nowrap"
+                    >
+                      <DollarSign size={12} className="text-green-600 dark:text-green-400 flex-shrink-0" />
+                      <span className="text-xs font-bold text-green-700 dark:text-green-400">
+                        {purchase.cost.toFixed(2)}
+                      </span>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -696,7 +743,7 @@ const PurchasesList = () => {
           )}
         </div>
 
-        {/* Item Name and Cost */}
+        {/* Item Name Only */}
         <div className="flex items-center gap-2">
           {/* Item Name */}
           <div className="flex-1 min-w-0 cursor-pointer group">
@@ -729,56 +776,12 @@ const PurchasesList = () => {
                   e.stopPropagation();
                   handleCellEditStart("itemName", purchase);
                 }}
-                className="flex items-center gap-2 active:opacity-70 transition-opacity"
+                className="flex items-center gap-2 active:opacity-70 transition-opacity px-4"
               >
                 <Tag size={14} className="text-gray-400 dark:text-gray-500 flex-shrink-0" />
-                <h3 className="text-base font-bold text-gray-900 dark:text-white leading-snug truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                <h3 className="text-sm font-medium text-gray-900 dark:text-white leading-snug truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                   {purchase.item_name}
                 </h3>
-              </div>
-            )}
-          </div>
-
-          {/* Cost */}
-          <div className="cursor-pointer group flex-shrink-0">
-            {editableField === "cost" && editingId === purchase.id ? (
-              <input
-                type="number"
-                inputMode="decimal"
-                value={editingValue}
-                onChange={(e) => setEditingValue(e.target.value)}
-                onBlur={() => {
-                  handleCellUpdate("cost", editingValue);
-                  setEditableField(null);
-                  setEditingId(null);
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.target.blur();
-                  }
-                }}
-                className="w-24 px-2 py-2 border dark:border-gray-600 rounded-lg bg-white dark:bg-slate-600 text-gray-800 dark:text-white text-base focus:ring-2 focus:ring-blue-500"
-                min="0"
-                step="0.01"
-                autoFocus
-              />
-            ) : (
-              <div
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleCellEditStart("cost", purchase);
-                }}
-                onTouchEnd={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  handleCellEditStart("cost", purchase);
-                }}
-                className="flex items-center gap-1 px-2 py-1.5 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-lg border border-green-200 dark:border-green-800 group-hover:shadow-sm transition-all active:scale-95 whitespace-nowrap"
-              >
-                <DollarSign size={14} className="text-green-600 dark:text-green-400 flex-shrink-0" />
-                <span className="text-sm font-bold text-green-700 dark:text-green-400">
-                  {purchase.cost.toFixed(2)}
-                </span>
               </div>
             )}
           </div>

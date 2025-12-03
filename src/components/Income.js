@@ -410,10 +410,10 @@ function Income() {
         </div>
         <button
           onClick={handleAddTax}
-          className="p-2 bg-blue-500 dark:bg-blue-600 hover:bg-blue-600 dark:hover:bg-blue-700 text-white rounded-lg transition-all"
+          className="p-2 bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 text-gray-700 dark:text-gray-300 rounded-lg transition-all"
           title="Add Tax"
         >
-          <PlusCircle size={18} />
+          <PlusCircle size={13} className="w-4 h-4 md:w-5 md:h-5" />
         </button>
       </div>
       
@@ -565,7 +565,7 @@ function Income() {
   return (
     <div className="space-y-2 md:space-y-4">
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 md:gap-2">
           <div className="bg-green-50/50 dark:bg-green-900/10 p-2 md:p-4 rounded-lg">
             <div className="text-[10px] md:text-xs font-medium text-green-600 dark:text-green-400 mb-0.5 md:mb-1 uppercase tracking-wide">
               Annual Take Home

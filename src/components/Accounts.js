@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import supabase from "../supabaseClient";
-import { Trash2, PlusCircle, X, Search, ArrowUpDown, ArrowUp, ArrowDown, TrendingUp, Link as LinkIcon, AlertCircle } from "lucide-react";
+import { Trash2, PlusCircle, X, Search, ArrowUpDown, ArrowUp, ArrowDown, Link as LinkIcon, DollarSign, Tag } from "lucide-react";
 import { useAuth } from "../AuthContext";
 import { useData } from "../DataContext";
 import { encryptValue, decryptValue, decryptString } from "../utils/encryption";
@@ -32,7 +32,6 @@ function Accounts() {
   const [tempInterestRates, setTempInterestRates] = useState({});
   const [tempTypes, setTempTypes] = useState({});
   const [tempMonthlyContributions, setTempMonthlyContributions] = useState({});
-  const [projectionMonths, setProjectionMonths] = useState(12);
   const [showMobileSearch, setShowMobileSearch] = useState(false);
   const debounceTimers = useRef({});
   
@@ -625,91 +624,6 @@ function Accounts() {
     }).format(value);
   };
 
-  // Calculate future value for an account at a given month
-  const calculateFutureValue = (account, months) => {
-    const presentValue = Number(account.value) || 0;
-    const annualRate = Number(account.interest_rate) || 0;
-    const monthlyRate = annualRate / 100 / 12; // Convert percentage to decimal and annual to monthly
-    const monthlyContribution = Number(account.montly_contribution) || 0;
-    
-    // For loans, we need to calculate month by month to stop at zero
-    if (['credit', 'loan'].includes(account.account_type)) {
-      let balance = presentValue;
-      
-      for (let i = 0; i < months; i++) {
-        if (balance <= 0) {
-          return 0; // Loan is paid off
-        }
-        
-        // Add interest
-        balance = balance * (1 + monthlyRate);
-        
-        // Subtract payment
-        balance = balance - monthlyContribution;
-      }
-      
-      // Loan can't go negative - it's paid off at 0
-      return Math.max(0, balance);
-    }
-    
-    // For investments, contributions add to the balance (positive growth)
-    if (monthlyRate === 0) {
-      // Simple calculation without interest
-      return presentValue + (monthlyContribution * months);
-    }
-    
-    // Compound interest formula with regular contributions
-    // FV = PV * (1 + r)^n + PMT * [((1 + r)^n - 1) / r]
-    const compoundFactor = Math.pow(1 + monthlyRate, months);
-    const futureValueFromPresent = presentValue * compoundFactor;
-    const futureValueFromContributions = monthlyContribution * ((compoundFactor - 1) / monthlyRate);
-    
-    return futureValueFromPresent + futureValueFromContributions;
-  };
-
-  // Generate projection data for investment and loan accounts only
-  const projectionData = useMemo(() => {
-    // Filter to only investment and loan accounts
-    const projectableAccounts = filteredAndSortedAccounts.filter(
-      acc => acc.account_type === 'investment' || acc.account_type === 'loan'
-    );
-    
-    let monthsToShow;
-    
-    if (projectionMonths <= 12) {
-      // For up to 1 year: show 1, 3, 6, 12 months
-      monthsToShow = [1, 3, 6, 12];
-    } else if (projectionMonths <= 36) {
-      // For up to 3 years: show 6, 12, 24, 36 months
-      monthsToShow = [6, 12, 24, 36];
-    } else if (projectionMonths <= 60) {
-      // For up to 5 years: show 12, 24, 36, 60 months
-      monthsToShow = [12, 24, 36, 60];
-    } else if (projectionMonths <= 120) {
-      // For up to 10 years: show 1yr, 3yr, 5yr, 10yr
-      monthsToShow = [12, 36, 60, 120];
-    } else if (projectionMonths <= 180) {
-      // For up to 15 years: show 1yr, 5yr, 10yr, 15yr
-      monthsToShow = [12, 60, 120, 180];
-    } else {
-      // For 20 years: show 1yr, 5yr, 10yr, 15yr, 20yr
-      monthsToShow = [12, 60, 120, 180, 240];
-    }
-    
-    const relevantMonths = monthsToShow.filter(m => m <= projectionMonths);
-    if (!relevantMonths.includes(projectionMonths)) {
-      relevantMonths.push(projectionMonths);
-      relevantMonths.sort((a, b) => a - b);
-    }
-    
-    return projectableAccounts.map(account => ({
-      account,
-      projections: relevantMonths.map(months => ({
-        month: months,
-        value: calculateFutureValue(account, months)
-      }))
-    }));
-  }, [filteredAndSortedAccounts, projectionMonths]);
 
   // Sort icon component
   const SortIcon = ({ columnKey }) => {
@@ -737,7 +651,7 @@ function Accounts() {
       <div className="grid grid-cols-3 gap-2 md:gap-4">
         <div className="bg-green-50/50 dark:bg-green-900/10 p-2 md:p-4 rounded-lg">
           <div className="text-[10px] md:text-xs font-medium text-green-600 dark:text-green-400 mb-0.5 md:mb-1 uppercase tracking-wide">
-            Total Investments
+            Total Invested
           </div>
           <div className="text-sm md:text-2xl font-bold text-green-700 dark:text-green-300">
             ${formatCurrency(totals.totalInvestments)}
@@ -775,9 +689,9 @@ function Accounts() {
         </div>
       </div>
 
-      {/* Main Accounts Card */}
-      <div className="w-full mx-auto p-4 md:p-6 bg-white dark:bg-slate-800 shadow-xl rounded-lg border border-gray-200 dark:border-gray-700">
-        <div className="flex flex-col gap-4 mb-2">
+      {/* Accounts Header Card */}
+      <div className="w-full mx-auto p-4 md:p-6 bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-gray-700">
+        <div className="flex flex-col gap-4">
           <div className="flex justify-between items-center">
             <h1 className="text-2xl md:text-3xl font-bold text-gray-800 dark:text-white">
               Accounts
@@ -794,377 +708,359 @@ function Accounts() {
                 </button>
               )}
               <button
-                onClick={handleAddAccount}
-                className="flex items-center gap-1 md:gap-2 bg-blue-500 dark:bg-blue-600 hover:bg-blue-600 dark:hover:bg-blue-700 hover:shadow-lg text-white px-3 md:px-5 py-2 md:py-2.5 rounded-lg transition-all font-medium text-sm md:text-base"
+                onClick={() => setShowModal(true)}
+                className="flex items-center gap-1 md:gap-2 bg-blue-500 dark:bg-blue-600 hover:bg-blue-600 dark:hover:bg-blue-700 hover:shadow-lg text-white px-3 md:p-2.5 md:px-4 py-2 md:py-2.5 rounded-lg transition-all font-medium text-sm md:text-base"
               >
                 <PlusCircle size={18} className="md:w-5 md:h-5" />
-                <span className="hidden sm:inline">Add Manually</span>
+                <span className="hidden sm:inline">Add Account</span>
                 <span className="sm:hidden">Add</span>
               </button>
             </div>
           </div>
-        </div>
 
-      {/* Filter and Search Controls */}
-      <div className="mb-4 space-y-3">
-        <div className="flex flex-wrap items-center gap-2">
-          {/* Mobile search icon (left) */}
-          <button
-            onClick={() => setShowMobileSearch((prev) => !prev)}
-            className="sm:hidden p-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-slate-700 text-gray-600 dark:text-gray-200"
-            aria-label="Toggle search"
-          >
-            <Search size={16} />
-          </button>
+          {/* Search and Filter Controls */}
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Mobile search icon */}
+            <button
+              onClick={() => setShowMobileSearch((prev) => !prev)}
+              className="sm:hidden p-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-slate-700 text-gray-600 dark:text-gray-200"
+              aria-label="Toggle search"
+            >
+              <Search size={16} />
+            </button>
 
-          {/* Desktop search bar (left) */}
-          <div className="hidden sm:flex flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500" size={20} />
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search accounts..."
-              className="w-full pl-10 pr-4 p-2 bg-white dark:bg-slate-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-800 dark:text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition-all"
-            />
+            {/* Desktop search bar (left) */}
+            <div className="hidden sm:flex flex-1 relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500" size={20} />
+              <input
+                type="text"
+                placeholder="Search accounts..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-slate-700 text-gray-800 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:focus:border-blue-400 focus:outline-none transition-all"
+              />
+            </div>
+
+            {/* Filter buttons */}
+            <div className="flex flex-1 gap-2 min-w-0">
+              <button
+                onClick={() => setFilterType("All")}
+                className={`flex-shrink-0 sm:flex-none px-2 p-2 rounded-lg font-medium text-[11px] sm:text-base transition-all ${
+                  filterType === "All"
+                    ? "bg-blue-500 dark:bg-blue-600 text-white shadow-md"
+                    : "bg-white dark:bg-slate-700 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-slate-600"
+                }`}
+              >
+                All ({accounts.length})
+              </button>
+              <button
+                onClick={() => setFilterType("Investment")}
+                className={`flex-shrink-0 sm:flex-none px-3 p-2 rounded-lg font-medium text-[11px] sm:text-base transition-all ${
+                  filterType === "Investment"
+                    ? "bg-green-500 dark:bg-green-600 text-white shadow-md"
+                    : "bg-white dark:bg-slate-700 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-slate-600"
+                }`}
+              >
+                Investments ({accounts.filter(a => ['checking', 'savings', 'investment', 'other'].includes(a.account_type)).length})
+              </button>
+              <button
+                onClick={() => setFilterType("Loan")}
+                className={`flex-shrink-0 sm:flex-none px-2 p-2 rounded-lg font-medium text-[11px] sm:text-base transition-all ${
+                  filterType === "Loan"
+                    ? "bg-red-500 dark:bg-red-600 text-white shadow-md"
+                    : "bg-white dark:bg-slate-700 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-slate-600"
+                }`}
+              >
+                Loans ({accounts.filter(a => ['credit', 'loan'].includes(a.account_type)).length})
+              </button>
+            </div>
           </div>
 
-          <div className="flex flex-1 gap-1 min-w-0">
-            <button
-              onClick={() => setFilterType("All")}
-              className={`flex-shrink-0 sm:flex-none px-2 p-2 rounded-lg font-medium text-[11px] sm:text-base transition-all ${
-                filterType === "All"
-                  ? "bg-blue-500 dark:bg-blue-600 text-white shadow-md"
-                  : "bg-white dark:bg-slate-700 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-slate-600"
-              }`}
-            >
-              All ({accounts.length})
-            </button>
-            <button
-              onClick={() => setFilterType("Investment")}
-              className={`flex-shrink-0 sm:flex-none px-3 p-2 rounded-lg font-medium text-[11px] sm:text-base transition-all ${
-                filterType === "Investment"
-                  ? "bg-green-500 dark:bg-green-600 text-white shadow-md"
-                  : "bg-white dark:bg-slate-700 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-slate-600"
-              }`}
-            >
-              Investments ({accounts.filter(a => ['checking', 'savings', 'investment', 'other'].includes(a.account_type)).length})
-            </button>
-            <button
-              onClick={() => setFilterType("Loan")}
-              className={`flex-shrink-0 sm:flex-none px-2 p-2 rounded-lg font-medium text-[11px] sm:text-base transition-all ${
-                filterType === "Loan"
-                  ? "bg-red-500 dark:bg-red-600 text-white shadow-md"
-                  : "bg-white dark:bg-slate-700 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-slate-600"
-              }`}
-            >
-              Loans ({accounts.filter(a => ['credit', 'loan'].includes(a.account_type)).length})
-            </button>
-          </div>
+          {/* Mobile Search Bar */}
+          {showMobileSearch && (
+            <div className="sm:hidden relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500" size={20} />
+              <input
+                type="text"
+                placeholder="Search accounts..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-slate-700 text-gray-800 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:focus:border-blue-400 focus:outline-none transition-all"
+              />
+            </div>
+          )}
         </div>
-        {showMobileSearch && (
-          <div className="sm:hidden relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500" size={18} />
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search accounts..."
-              className="w-full pl-9 pr-3 py-2.5 bg-white dark:bg-slate-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-800 dark:text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none text-sm transition-all"
-            />
+      </div>
+
+      {/* Accounts List - Desktop */}
+      <div className="w-full mx-auto mt-4 hidden md:block">
+        {filteredAndSortedAccounts.length === 0 ? (
+          <div className="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-gray-700 p-8">
+            <div className="text-center">
+              <div className="flex flex-col items-center gap-3">
+                <div className="text-gray-400 dark:text-gray-500">
+                  {accounts.length === 0 ? (
+                    <PlusCircle size={40} />
+                  ) : (
+                    <Search size={40} />
+                  )}
+                </div>
+                <p className="text-gray-500 dark:text-gray-400 text-base">
+                  {accounts.length === 0 
+                    ? "No accounts yet" 
+                    : "No accounts found"}
+                </p>
+                <p className="text-gray-400 dark:text-gray-500 text-sm">
+                  {accounts.length === 0 
+                    ? "Click 'Add Account' above to start tracking your loans and investments."
+                    : "Try adjusting your search or filter."}
+                </p>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <tbody>
+                  {filteredAndSortedAccounts.map((account, index) => (
+                    <tr
+                      key={account.id}
+                      className={`border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors ${
+                        index % 2 === 0 ? 'bg-white dark:bg-slate-800' : 'bg-gray-50/50 dark:bg-slate-700/50'
+                      }`}
+                    >
+                      <td className="px-4 py-3" style={{ minWidth: "200px" }}>
+                        <div className="flex items-center gap-2">
+                          {account.is_simplefin_synced && (
+                            <div className="flex-shrink-0 w-2 h-2 bg-green-500 rounded-full" title="Synced from SimpleFin"></div>
+                          )}
+                          <input
+                            type="text"
+                            value={tempNames[account.id] ?? account.name}
+                            onChange={(e) => handleNameChange(account.id, e.target.value)}
+                            className="w-full min-w-0 px-3 py-2 bg-white dark:bg-slate-600 hover:bg-gray-50 dark:hover:bg-slate-500 rounded-md text-gray-800 dark:text-white border border-gray-300 dark:border-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition-all"
+                            placeholder="Account name"
+                          />
+                        </div>
+                      </td>
+                      <td className="px-4 py-3" style={{ minWidth: "150px" }}>
+                        <select
+                          value={tempTypes[account.id] ?? account.account_type ?? "investment"}
+                          onChange={(e) => handleTypeChange(account.id, e.target.value)}
+                          className="w-full min-w-0 px-3 py-2 bg-white dark:bg-slate-600 hover:bg-gray-50 dark:hover:bg-slate-500 rounded-md text-gray-800 dark:text-white border border-gray-300 dark:border-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition-all cursor-pointer"
+                        >
+                          <option value="checking" className="bg-white dark:bg-slate-700">
+                            Checking
+                          </option>
+                          <option value="savings" className="bg-white dark:bg-slate-700">
+                            Savings
+                          </option>
+                          <option value="credit" className="bg-white dark:bg-slate-700">
+                            Credit Card
+                          </option>
+                          <option value="investment" className="bg-white dark:bg-slate-700">
+                            Investment
+                          </option>
+                          <option value="loan" className="bg-white dark:bg-slate-700">
+                            Loan
+                          </option>
+                          <option value="other" className="bg-white dark:bg-slate-700">
+                            Other
+                          </option>
+                        </select>
+                      </td>
+                      <td className="px-4 py-3" style={{ minWidth: "140px" }}>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 font-medium">
+                            $
+                          </span>
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={tempValues[account.id] ?? account.value ?? 0}
+                            onChange={(e) => handleValueChange(account.id, e.target.value)}
+                            disabled={account.is_simplefin_synced}
+                            readOnly={account.is_simplefin_synced}
+                            className={`w-full min-w-0 pl-7 pr-3 py-2 rounded-md text-gray-800 dark:text-white border transition-all ${
+                              account.is_simplefin_synced 
+                                ? 'bg-gray-100 dark:bg-slate-700 border-gray-200 dark:border-gray-600 cursor-not-allowed'
+                                : 'bg-white dark:bg-slate-600 hover:bg-gray-50 dark:hover:bg-slate-500 border-gray-300 dark:border-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none'
+                            }`}
+                            placeholder="0.00"
+                            title={account.is_simplefin_synced ? "Value is synced from SimpleFin" : ""}
+                          />
+                        </div>
+                      </td>
+                      <td className="px-4 py-3" style={{ minWidth: "300px" }}>
+                        {(account.account_type === 'investment' || account.account_type === 'loan') ? (
+                          <div className="flex gap-2">
+                            <div className="relative flex-1">
+                              <input
+                                type="number"
+                                step="0.01"
+                                value={tempInterestRates[account.id] ?? account.interest_rate ?? 0}
+                                onChange={(e) => handleInterestRateChange(account.id, e.target.value)}
+                                className="w-full px-3 py-2 pr-8 bg-white dark:bg-slate-600 hover:bg-gray-50 dark:hover:bg-slate-500 rounded-md text-gray-800 dark:text-white border border-gray-300 dark:border-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition-all"
+                                placeholder="Rate %"
+                              />
+                              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 font-medium">
+                                %
+                              </span>
+                            </div>
+                            <div className="relative flex-1">
+                              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 font-medium">
+                                $
+                              </span>
+                              <input
+                                type="number"
+                                step="0.01"
+                                value={tempMonthlyContributions[account.id] ?? account.montly_contribution ?? 0}
+                                onChange={(e) => handleMonthlyContributionChange(account.id, e.target.value)}
+                                className="w-full pl-7 pr-3 py-2 bg-white dark:bg-slate-600 hover:bg-gray-50 dark:hover:bg-slate-500 rounded-md text-gray-800 dark:text-white border border-gray-300 dark:border-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition-all"
+                                placeholder="Monthly"
+                              />
+                            </div>
+                          </div>
+                        ) : (
+                          <span className="text-gray-400 dark:text-gray-500 text-sm italic">N/A</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <button
+                          onClick={() => {
+                            if (window.confirm(`Are you sure you want to delete "${account.name}"?`)) {
+                              handleDeleteAccount(account.id);
+                            }
+                          }}
+                          className="inline-flex items-center justify-center p-2 text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all hover:scale-110"
+                          title="Delete account"
+                        >
+                          <Trash2 size={20} />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </div>
 
-      {/* Accounts Table - Desktop */}
-      <div className="hidden md:block bg-gray-50 dark:bg-slate-700/50 rounded-lg border border-gray-200 dark:border-gray-600 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full table-auto">
-            <thead>
-              <tr className="bg-gray-200 dark:bg-slate-600 border-b-2 border-gray-300 dark:border-gray-500">
-                <th 
-                  onClick={() => handleSort("name")}
-                  className="px-4 py-4 font-semibold text-left text-gray-700 dark:text-gray-200 text-sm uppercase tracking-wider cursor-pointer hover:bg-gray-300 dark:hover:bg-slate-500 transition-colors select-none whitespace-nowrap"
-                >
-                  <div className="flex items-center gap-2">
-                    Account Name
-                    <SortIcon columnKey="name" />
-                  </div>
-                </th>
-                <th 
-                  onClick={() => handleSort("account_type")}
-                  className="px-4 py-4 font-semibold text-left text-gray-700 dark:text-gray-200 text-sm uppercase tracking-wider cursor-pointer hover:bg-gray-300 dark:hover:bg-slate-500 transition-colors select-none whitespace-nowrap"
-                >
-                  <div className="flex items-center gap-2">
-                    Type
-                    <SortIcon columnKey="account_type" />
-                  </div>
-                </th>
-                <th 
-                  onClick={() => handleSort("value")}
-                  className="px-4 py-4 font-semibold text-left text-gray-700 dark:text-gray-200 text-sm uppercase tracking-wider cursor-pointer hover:bg-gray-300 dark:hover:bg-slate-500 transition-colors select-none whitespace-nowrap"
-                >
-                  <div className="flex items-center gap-2">
-                    Value
-                    <SortIcon columnKey="value" />
-                  </div>
-                </th>
-                <th className="px-4 py-4 font-semibold text-left text-gray-700 dark:text-gray-200 text-sm uppercase tracking-wider whitespace-nowrap">
-                  Interest Rate / Monthly Contribution
-                </th>
-                <th className="px-4 py-4 font-semibold text-center text-gray-700 dark:text-gray-200 text-sm uppercase tracking-wider whitespace-nowrap w-24">
-                  
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white dark:bg-slate-700">
-              {filteredAndSortedAccounts.length === 0 ? (
-                <tr>
-                  <td colSpan="6" className="p-12 text-center">
-                    <div className="flex flex-col items-center gap-3">
-                      <div className="text-gray-400 dark:text-gray-500">
-                        {accounts.length === 0 ? (
-                          <PlusCircle size={48} />
-                        ) : (
-                          <Search size={48} />
-                        )}
-                      </div>
-                      <p className="text-gray-500 dark:text-gray-400 text-lg">
-                        {accounts.length === 0 
-                          ? "No accounts yet" 
-                          : "No accounts found"}
-                      </p>
-                      <p className="text-gray-400 dark:text-gray-500 text-sm">
-                        {accounts.length === 0 
-                          ? "Click \"Add Account\" above to get started tracking your loans and investments"
-                          : "Try adjusting your search or filter"}
-                      </p>
-                    </div>
-                  </td>
-                </tr>
-              ) : (
-                filteredAndSortedAccounts.map((account, index) => (
-                  <tr 
-                    key={account.id} 
-                    className={`border-b border-gray-200 dark:border-gray-600 transition-colors hover:bg-gray-50 dark:hover:bg-slate-600/50 ${
-                      index % 2 === 0 ? 'bg-white dark:bg-slate-700' : 'bg-gray-50/50 dark:bg-slate-700/50'
-                    }`}
-                  >
-                    <td className="px-4 py-3" style={{ minWidth: "200px" }}>
-                      <div className="flex items-center gap-2">
-                        {account.is_simplefin_synced && (
-                          <div className="flex-shrink-0 w-2 h-2 bg-green-500 rounded-full" title="Synced from SimpleFin"></div>
-                        )}
-                        <input
-                          type="text"
-                          value={tempNames[account.id] ?? account.name}
-                          onChange={(e) => handleNameChange(account.id, e.target.value)}
-                          className="w-full min-w-0 px-3 py-2 bg-white dark:bg-slate-600 hover:bg-gray-50 dark:hover:bg-slate-500 rounded-md text-gray-800 dark:text-white border border-gray-300 dark:border-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition-all"
-                          placeholder="Account name"
-                        />
-                      </div>
-                    </td>
-                    <td className="px-4 py-3" style={{ minWidth: "150px" }}>
-                      <select
-                        value={tempTypes[account.id] ?? account.account_type ?? "investment"}
-                        onChange={(e) => handleTypeChange(account.id, e.target.value)}
-                        className="w-full min-w-0 px-3 py-2 bg-white dark:bg-slate-600 hover:bg-gray-50 dark:hover:bg-slate-500 rounded-md text-gray-800 dark:text-white border border-gray-300 dark:border-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition-all cursor-pointer"
-                      >
-                        <option value="checking" className="bg-white dark:bg-slate-700">
-                          Checking
-                        </option>
-                        <option value="savings" className="bg-white dark:bg-slate-700">
-                          Savings
-                        </option>
-                        <option value="credit" className="bg-white dark:bg-slate-700">
-                          Credit Card
-                        </option>
-                        <option value="investment" className="bg-white dark:bg-slate-700">
-                          Investment
-                        </option>
-                        <option value="loan" className="bg-white dark:bg-slate-700">
-                          Loan
-                        </option>
-                        <option value="other" className="bg-white dark:bg-slate-700">
-                          Other
-                        </option>
-                      </select>
-                    </td>
-                    <td className="px-4 py-3" style={{ minWidth: "140px" }}>
-                      <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 font-medium">
-                          $
-                        </span>
-                        <input
-                          type="number"
-                          step="0.01"
-                          value={tempValues[account.id] ?? account.value ?? 0}
-                          onChange={(e) => handleValueChange(account.id, e.target.value)}
-                          disabled={account.is_simplefin_synced}
-                          readOnly={account.is_simplefin_synced}
-                          className={`w-full min-w-0 pl-7 pr-3 py-2 rounded-md text-gray-800 dark:text-white border transition-all ${
-                            account.is_simplefin_synced 
-                              ? 'bg-gray-100 dark:bg-slate-700 border-gray-200 dark:border-gray-600 cursor-not-allowed'
-                              : 'bg-white dark:bg-slate-600 hover:bg-gray-50 dark:hover:bg-slate-500 border-gray-300 dark:border-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none'
-                          }`}
-                          placeholder="0.00"
-                          title={account.is_simplefin_synced ? "Value is synced from SimpleFin" : ""}
-                        />
-                      </div>
-                    </td>
-                    <td className="px-4 py-3" style={{ minWidth: "300px" }}>
-                      {(account.account_type === 'investment' || account.account_type === 'loan') ? (
-                        <div className="flex gap-2">
-                          <div className="relative flex-1">
-                            <input
-                              type="number"
-                              step="0.01"
-                              value={tempInterestRates[account.id] ?? account.interest_rate ?? 0}
-                              onChange={(e) => handleInterestRateChange(account.id, e.target.value)}
-                              className="w-full px-3 py-2 pr-8 bg-white dark:bg-slate-600 hover:bg-gray-50 dark:hover:bg-slate-500 rounded-md text-gray-800 dark:text-white border border-gray-300 dark:border-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition-all"
-                              placeholder="Rate %"
-                            />
-                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 font-medium">
-                              %
-                            </span>
-                          </div>
-                          <div className="relative flex-1">
-                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 font-medium">
-                              $
-                            </span>
-                            <input
-                              type="number"
-                              step="0.01"
-                              value={tempMonthlyContributions[account.id] ?? account.montly_contribution ?? 0}
-                              onChange={(e) => handleMonthlyContributionChange(account.id, e.target.value)}
-                              className="w-full pl-7 pr-3 py-2 bg-white dark:bg-slate-600 hover:bg-gray-50 dark:hover:bg-slate-500 rounded-md text-gray-800 dark:text-white border border-gray-300 dark:border-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition-all"
-                              placeholder="Monthly"
-                            />
-                          </div>
-                        </div>
-                      ) : (
-                        <span className="text-gray-400 dark:text-gray-500 text-sm italic">N/A</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      <button
-                        onClick={() => {
-                          if (window.confirm(`Are you sure you want to delete "${account.name}"?`)) {
-                            handleDeleteAccount(account.id);
-                          }
-                        }}
-                        className="inline-flex items-center justify-center p-2 text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all hover:scale-110"
-                        title="Delete account"
-                      >
-                        <Trash2 size={20} />
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
       {/* Accounts List - Mobile */}
-      <div className="md:hidden space-y-2">
+      <div className="w-full mx-auto mt-4 md:hidden space-y-2">
         {filteredAndSortedAccounts.length === 0 ? (
-          <div className="text-center py-8 bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-gray-700">
-            <div className="flex flex-col items-center gap-3">
-              <div className="text-gray-400 dark:text-gray-500">
-                {accounts.length === 0 ? (
-                  <PlusCircle size={40} />
-                ) : (
-                  <Search size={40} />
-                )}
+          <div className="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-gray-700 p-8">
+            <div className="text-center">
+              <div className="flex flex-col items-center gap-3">
+                <div className="text-gray-400 dark:text-gray-500">
+                  {accounts.length === 0 ? (
+                    <PlusCircle size={40} />
+                  ) : (
+                    <Search size={40} />
+                  )}
+                </div>
+                <p className="text-gray-500 dark:text-gray-400 text-base">
+                  {accounts.length === 0 
+                    ? "No accounts yet" 
+                    : "No accounts found"}
+                </p>
+                <p className="text-gray-400 dark:text-gray-500 text-xs px-4">
+                  {accounts.length === 0 
+                    ? "Tap 'Add' above to start tracking your loans and investments."
+                    : "Try adjusting your search or filter."}
+                </p>
               </div>
-              <p className="text-gray-500 dark:text-gray-400 text-base">
-                {accounts.length === 0 
-                  ? "No accounts yet" 
-                  : "No accounts found"}
-              </p>
-              <p className="text-gray-400 dark:text-gray-500 text-xs px-4">
-                {accounts.length === 0 
-                  ? "Tap \"Add\" above to start tracking your loans and investments."
-                  : "Try adjusting your search or filter."}
-              </p>
             </div>
           </div>
         ) : (
           filteredAndSortedAccounts.map((account) => (
             <div
               key={account.id}
-              className="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-gray-700 p-3 shadow-sm"
+              className={`bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-gray-700 p-1`}
             >
-              <div className="flex items-center justify-between gap-2 mb-2">
-                <div className="flex items-center gap-2 min-w-0">
-                  {account.is_simplefin_synced && (
-                    <div
-                      className="flex-shrink-0 w-2 h-2 bg-green-500 rounded-full"
-                      title="Synced from SimpleFin"
-                    ></div>
-                  )}
-                  <input
-                    type="text"
-                    value={tempNames[account.id] ?? account.name}
-                    onChange={(e) => handleNameChange(account.id, e.target.value)}
-                    className="w-full min-w-0 px-2 py-1.5 bg-gray-50 dark:bg-slate-700 rounded text-gray-800 dark:text-white border border-gray-300 dark:border-gray-500 focus:border-blue-500 dark:focus:border-blue-400 focus:outline-none text-sm"
-                    placeholder="Account name"
-                  />
+              {/* Header: Account Name, Type, Amount, and Delete */}
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 flex-1 min-w-0">
+                  {/* Account Name Pill */}
+                  <div className="flex items-center gap-1.5 px-2 py-1 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800 active:scale-95 transition-all whitespace-nowrap">
+                    {account.is_simplefin_synced ? (
+                      <div className="w-2 h-2 bg-green-500 rounded-full flex-shrink-0" title="Synced from SimpleFin"></div>
+                    ) : (
+                      <Tag size={12} className="text-blue-600 dark:text-blue-400 flex-shrink-0" />
+                    )}
+                    <input
+                      type="text"
+                      value={tempNames[account.id] ?? account.name}
+                      onChange={(e) => handleNameChange(account.id, e.target.value)}
+                      className="text-xs font-bold text-blue-700 dark:text-blue-200 bg-transparent border-none outline-none min-w-[60px] w-[80px]"
+                      placeholder="Account name"
+                    />
+                  </div>
+
+                  {/* Account Type and Amount */}
+                  <div className="flex items-center gap-2">
+                    {/* Account Type Pill */}
+                    <div className="cursor-pointer flex-shrink-0">
+                      <select
+                        value={tempTypes[account.id] ?? account.account_type ?? "investment"}
+                        onChange={(e) => handleTypeChange(account.id, e.target.value)}
+                        className="px-2 py-1 bg-gray-50 dark:bg-slate-700 rounded-lg text-gray-800 dark:text-white border border-gray-300 dark:border-gray-500 text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none cursor-pointer appearance-none"
+                      >
+                        <option value="checking">Checking</option>
+                        <option value="savings">Savings</option>
+                        <option value="credit">Credit Card</option>
+                        <option value="investment">Investment</option>
+                        <option value="loan">Loan</option>
+                        <option value="other">Other</option>
+                      </select>
+                    </div>
+
+                    {/* Amount Pill */}
+                    <div className="flex items-center gap-1 px-2 py-1 bg-gray-100 dark:bg-slate-700 rounded-lg border border-gray-200 dark:border-gray-600 whitespace-nowrap flex-shrink-0">
+                      <DollarSign size={12} className="text-gray-500 dark:text-gray-400 flex-shrink-0" />
+                      {account.is_simplefin_synced ? (
+                        <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
+                          {Number(account.value || 0).toFixed(2)}
+                        </span>
+                      ) : (
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={tempValues[account.id] ?? account.value ?? 0}
+                          onChange={(e) => handleValueChange(account.id, e.target.value)}
+                          className="bg-transparent border-none outline-none text-xs font-medium text-gray-600 dark:text-gray-400 min-w-[40px] w-[50px]"
+                          placeholder="0"
+                        />
+                      )}
+                    </div>
+                  </div>
                 </div>
-                <button
-                  onClick={() => {
-                    if (window.confirm(`Are you sure you want to delete "${account.name}"?`)) {
-                      handleDeleteAccount(account.id);
-                    }
-                  }}
-                  className="p-1.5 text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors flex-shrink-0"
-                  aria-label="Delete account"
-                >
-                  <Trash2 size={16} />
-                </button>
+
+                {/* Delete Button */}
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      if (window.confirm(`Are you sure you want to delete "${account.name}"?`)) {
+                        handleDeleteAccount(account.id);
+                      }
+                    }}
+                    className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all active:scale-95 flex-shrink-0"
+                    title="Delete account"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
               </div>
 
-              <div className="flex items-center gap-2 mb-2">
-                <select
-                  value={tempTypes[account.id] ?? account.account_type ?? "investment"}
-                  onChange={(e) => handleTypeChange(account.id, e.target.value)}
-                  className="flex-1 min-w-0 px-2 py-1.5 bg-gray-50 dark:bg-slate-700 rounded text-gray-800 dark:text-white border border-gray-300 dark:border-gray-500 focus:border-blue-500 dark:focus:border-blue-400 focus:outline-none text-xs"
-                >
-                  <option value="checking">Checking</option>
-                  <option value="savings">Savings</option>
-                  <option value="credit">Credit Card</option>
-                  <option value="investment">Investment</option>
-                  <option value="loan">Loan</option>
-                  <option value="other">Other</option>
-                </select>
-                <div className="relative w-28">
-                  <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 text-xs">
-                    $
-                  </span>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={tempValues[account.id] ?? account.value ?? 0}
-                    onChange={(e) => handleValueChange(account.id, e.target.value)}
-                    disabled={account.is_simplefin_synced}
-                    readOnly={account.is_simplefin_synced}
-                    className={`w-full pl-4 pr-2 py-1.5 rounded text-gray-800 dark:text-white border text-xs ${
-                      account.is_simplefin_synced
-                        ? "bg-gray-100 dark:bg-slate-700 border-gray-200 dark:border-gray-600 cursor-not-allowed"
-                        : "bg-gray-50 dark:bg-slate-700 border-gray-300 dark:border-gray-500 focus:border-blue-500 dark:focus:border-blue-400 focus:outline-none"
-                    }`}
-                    placeholder="0.00"
-                    title={account.is_simplefin_synced ? "Value is synced from SimpleFin" : ""}
-                  />
-                </div>
-              </div>
-
+              {/* Interest Rate & Monthly Contribution - Only for Investment/Loan */}
               {(account.account_type === "investment" ||
                 account.account_type === "loan") && (
-                <div className="grid grid-cols-2 gap-2 mt-1">
-                  <div className="relative">
+                <div className="flex gap-2 mt-2">
+                  {/* Interest Rate Pill */}
+                  <div className="flex items-center gap-1 px-2 py-1 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-800 flex-shrink-0">
+                    <span className="text-xs font-medium text-orange-600 dark:text-orange-400">Rate</span>
                     <input
                       type="number"
                       step="0.01"
@@ -1172,17 +1068,18 @@ function Accounts() {
                       onChange={(e) =>
                         handleInterestRateChange(account.id, e.target.value)
                       }
-                      className="w-full px-2 py-1.5 pr-6 bg-gray-50 dark:bg-slate-700 rounded text-gray-800 dark:text-white border border-gray-300 dark:border-gray-500 focus:border-blue-500 dark:focus:border-blue-400 focus:outline-none text-xs"
-                      placeholder="Rate"
+                      className="bg-transparent border-none outline-none text-xs font-bold text-orange-700 dark:text-orange-200 min-w-[30px] w-[50px]"
+                      placeholder="0"
                     />
-                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 text-xs">
-                      %
-                    </span>
+                    <span className="text-xs font-medium text-orange-600 dark:text-orange-400">%</span>
                   </div>
-                  <div className="relative">
-                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 text-xs">
-                      $
+                  
+                  {/* Monthly Contribution Pill */}
+                  <div className="flex items-center gap-1 px-2 py-1 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800 flex-shrink-0">
+                    <span className="text-xs font-medium text-purple-600 dark:text-purple-400">
+                      {account.account_type === "loan" ? "Pay" : "Add"}
                     </span>
+                    <span className="text-xs font-medium text-purple-600 dark:text-purple-400">$</span>
                     <input
                       type="number"
                       step="0.01"
@@ -1194,214 +1091,16 @@ function Accounts() {
                       onChange={(e) =>
                         handleMonthlyContributionChange(account.id, e.target.value)
                       }
-                      className="w-full pl-4 pr-2 py-1.5 bg-gray-50 dark:bg-slate-700 rounded text-gray-800 dark:text-white border border-gray-300 dark:border-gray-500 focus:border-blue-500 dark:focus:border-blue-400 focus:outline-none text-xs"
-                      placeholder="Monthly"
+                      className="bg-transparent border-none outline-none text-xs font-bold text-purple-700 dark:text-purple-200 min-w-[30px] w-[60px]"
+                      placeholder="0"
                     />
+                    <span className="text-xs font-medium text-purple-600 dark:text-purple-400">/mo</span>
                   </div>
                 </div>
               )}
             </div>
           ))
         )}
-      </div>
-
-      {/* Future Value Projections */}
-      {filteredAndSortedAccounts.filter(acc => acc.account_type === 'investment' || acc.account_type === 'loan').length > 0 && (
-        <div className="mt-8">
-          <div className="flex justify-between items-center mb-6">
-            <div>
-              <div className="flex items-center gap-3 mb-2">
-                <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
-                  <TrendingUp className="w-6 h-6 text-purple-600 dark:text-purple-400" />
-                </div>
-                <h2 className="text-2xl font-bold text-gray-800 dark:text-white">
-                  Future Value Projections
-                </h2>
-              </div>
-              <p className="text-sm text-gray-600 dark:text-gray-400 ml-14">
-                Projected account values based on interest rates and monthly contributions
-              </p>
-            </div>
-            <div className="flex items-center gap-3">
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                Project up to:
-              </label>
-              <select
-                value={projectionMonths}
-                onChange={(e) => setProjectionMonths(Number(e.target.value))}
-                className="px-4 py-2 bg-white dark:bg-slate-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-800 dark:text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition-all cursor-pointer"
-              >
-                <option value={6}>6 months</option>
-                <option value={12}>1 year</option>
-                <option value={24}>2 years</option>
-                <option value={36}>3 years</option>
-                <option value={60}>5 years</option>
-                <option value={120}>10 years</option>
-                <option value={180}>15 years</option>
-                <option value={240}>20 years</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="bg-gray-50 dark:bg-slate-700/50 rounded-lg border border-gray-200 dark:border-gray-600 overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full table-auto">
-                <thead>
-                  <tr className="bg-gray-200 dark:bg-slate-600 border-b-2 border-gray-300 dark:border-gray-500">
-                    <th className="px-4 py-4 font-semibold text-left text-gray-700 dark:text-gray-200 text-sm uppercase tracking-wider whitespace-nowrap sticky left-0 bg-gray-200 dark:bg-slate-600">
-                      Account
-                    </th>
-                    <th className="px-4 py-4 font-semibold text-center text-gray-700 dark:text-gray-200 text-sm uppercase tracking-wider whitespace-nowrap">
-                      Current Value
-                    </th>
-                    {projectionData[0]?.projections.map((proj) => (
-                      <th
-                        key={proj.month}
-                        className="px-4 py-4 font-semibold text-center text-gray-700 dark:text-gray-200 text-sm uppercase tracking-wider whitespace-nowrap"
-                      >
-                        {proj.month} {proj.month === 1 ? "Month" : "Months"}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="bg-white dark:bg-slate-700">
-                  {projectionData.map((item, index) => (
-                    <tr
-                      key={item.account.id}
-                      className={`border-b border-gray-200 dark:border-gray-600 transition-colors hover:bg-gray-50 dark:hover:bg-slate-600/50 ${
-                        index % 2 === 0
-                          ? "bg-white dark:bg-slate-700"
-                          : "bg-gray-50/50 dark:bg-slate-700/50"
-                      }`}
-                    >
-                      <td className={`px-4 py-3 font-medium text-gray-800 dark:text-white whitespace-nowrap sticky left-0 ${
-                        index % 2 === 0
-                          ? "bg-white dark:bg-slate-700"
-                          : "bg-gray-50 dark:bg-slate-700"
-                      }`}>
-                        <div className="flex items-center gap-2">
-                          {item.account.name}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-center whitespace-nowrap">
-                        <div className="font-semibold text-gray-800 dark:text-white">
-                          ${formatCurrency(Number(item.account.value || 0))}
-                        </div>
-                      </td>
-                      {item.projections.map((proj) => {
-                        const initialValue = Number(item.account.value || 0);
-                        const monthlyContribution = Number(item.account.montly_contribution || 0);
-                        const totalContributions = monthlyContribution * proj.month;
-                        
-                        // Calculate interest differently for loans vs investments
-                        let totalInterest;
-                        if (['credit', 'loan'].includes(item.account.account_type)) {
-                          // For loans: interest is what was paid beyond the principal reduction
-                          // Total paid = contributions, Principal reduction = initial - final
-                          // Interest = Total paid - Principal reduction
-                          const principalReduction = initialValue - proj.value;
-                          totalInterest = totalContributions - principalReduction;
-                        } else {
-                          // For investments: interest is the growth beyond contributions
-                          totalInterest = proj.value - initialValue - totalContributions;
-                        }
-                        
-                        return (
-                          <td
-                            key={proj.month}
-                            className="px-4 py-3 text-center whitespace-nowrap"
-                          >
-                            <div className="font-semibold text-gray-800 dark:text-white mb-1">
-                              ${formatCurrency(proj.value)}
-                            </div>
-                            <div className="text-xs space-y-0.5">
-                              <div className="text-blue-600 dark:text-blue-400">
-                                Contributions: ${formatCurrency(totalContributions)}
-                              </div>
-                              <div className={`${
-                                ['credit', 'loan'].includes(item.account.account_type)
-                                  ? "text-red-600 dark:text-red-400"
-                                  : "text-green-600 dark:text-green-400"
-                              }`}>
-                                {['credit', 'loan'].includes(item.account.account_type) ? "Interest Paid" : "Interest Earned"}: ${formatCurrency(Math.abs(totalInterest))}
-                              </div>
-                            </div>
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  ))}
-                  
-                  {/* Total Row */}
-                  <tr className="bg-blue-50 dark:bg-blue-900/20 border-t-2 border-blue-300 dark:border-blue-700 font-bold">
-                    <td className="px-4 py-4 text-gray-800 dark:text-white whitespace-nowrap sticky left-0 bg-blue-50 dark:bg-blue-900/20">
-                      Total Net Worth
-                    </td>
-                    <td className="px-4 py-4 text-center text-gray-800 dark:text-white whitespace-nowrap">
-                      <div className="font-bold">
-                        ${formatCurrency(netWorth)}
-                      </div>
-                    </td>
-                    {projectionData[0]?.projections.map((proj) => {
-                      let totalFuture = 0;
-                      let totalContributions = 0;
-                      let totalInterest = 0;
-                      
-                      projectionData.forEach((item) => {
-                        const projValue = item.projections.find(p => p.month === proj.month)?.value || 0;
-                        const monthlyContribution = Number(item.account.montly_contribution || 0);
-                        const contributions = monthlyContribution * proj.month;
-                        const initialValue = Number(item.account.value || 0);
-                        
-                        if (['credit', 'loan'].includes(item.account.account_type)) {
-                          // Loans subtract from net worth
-                          totalFuture -= projValue;
-                          totalContributions += contributions;
-                          // Interest paid on loan
-                          const principalReduction = initialValue - projValue;
-                          const interestPaid = contributions - principalReduction;
-                          totalInterest -= interestPaid; // Negative because it's a cost
-                        } else {
-                          // Investments add to net worth
-                          totalFuture += projValue;
-                          totalContributions += contributions;
-                          // Interest earned on investment
-                          const interestEarned = projValue - initialValue - contributions;
-                          totalInterest += interestEarned;
-                        }
-                      });
-                      
-                      return (
-                        <td
-                          key={proj.month}
-                          className="px-4 py-4 text-center whitespace-nowrap"
-                        >
-                          <div className="font-bold text-gray-800 dark:text-white mb-1">
-                            ${formatCurrency(totalFuture)}
-                          </div>
-                          <div className="text-xs space-y-0.5">
-                            <div className="text-blue-600 dark:text-blue-400">
-                              Contributions: ${formatCurrency(totalContributions)}
-                            </div>
-                            <div className={`${
-                              totalInterest >= 0
-                                ? "text-green-600 dark:text-green-400"
-                                : "text-red-600 dark:text-red-400"
-                            }`}>
-                              Net Interest: ${formatCurrency(Math.abs(totalInterest))}
-                            </div>
-                          </div>
-                        </td>
-                      );
-                    })}
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      )}
-
       </div>
 
       {/* Add Account Modal */}
