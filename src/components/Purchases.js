@@ -1,8 +1,9 @@
-import React, { useState, useMemo, useEffect, useRef } from "react";
+import React, { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import supabase from "../supabaseClient.js";
-import { Trash2, ChevronLeft, ChevronRight, Edit2, Search, X, Calendar, DollarSign, Tag, ArrowUpDown, RotateCcw, Plus } from "lucide-react";
+import { Trash2, ChevronLeft, ChevronRight, Edit2, Search, X, Calendar, DollarSign, Tag, ArrowUpDown, RotateCcw, Plus, Sparkles } from "lucide-react";
 import { useData } from "../DataContext";
 import AddPurchase from "./AddPurchase";
+import { generateImprovedDisplayName, categorizePurchaseWithAI } from "../utils/agentService";
 
 const PurchasesList = () => {
   const { purchases, budgetGroups, refetchPurchases, userId } = useData();
@@ -18,6 +19,8 @@ const PurchasesList = () => {
   const [deletedPurchases, setDeletedPurchases] = useState([]);
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   const [groupBy, setGroupBy] = useState("budget"); // "budget" (categorized) or "simple" (by date)
+  const [processingAI, setProcessingAI] = useState(new Set()); // Track purchases being processed by AI
+  const [categorizingAI, setCategorizingAI] = useState(new Set()); // Track purchases being categorized by AI
   const hasAutoSetCurrentMonth = useRef(false);
   const lastFiltersRef = useRef({ searchTerm: "", filterBudgetItem: "", showDeleted: false });
 
@@ -31,6 +34,7 @@ const PurchasesList = () => {
         .select(`
           id,
           item_name,
+          display_name,
           cost,
           timestamp,
           budget_item_id,
@@ -57,6 +61,119 @@ const PurchasesList = () => {
       console.error("Error fetching deleted purchases:", error);
     }
   };
+
+  // Generate AI display name for a purchase
+  const generateAIDisplayName = useCallback(async (purchase) => {
+    if (processingAI.has(purchase.id) || purchase.display_name) {
+      return; // Skip if already processing or has display name
+    }
+
+    setProcessingAI(prev => new Set(prev).add(purchase.id));
+
+    try {
+      const category = purchase.budget_items?.budget_groups?.name || null;
+      const improvedName = await generateImprovedDisplayName(
+        purchase.item_name,
+        purchase.cost,
+        category
+      );
+
+      if (improvedName) {
+        const { error } = await supabase
+          .from("purchases")
+          .update({ display_name: improvedName })
+          .eq("id", purchase.id);
+
+        if (!error) {
+          await refetchPurchases(); // Refresh data to show updated display name
+        }
+      }
+    } catch (error) {
+      console.error("Error generating AI display name:", error);
+    } finally {
+      setProcessingAI(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(purchase.id);
+        return newSet;
+      });
+    }
+  }, [processingAI, refetchPurchases]);
+
+  // Generate display names for purchases that don't have them - EXTREMELY CONSERVATIVE
+  useEffect(() => {
+    const purchasesWithoutDisplayName = purchases.filter(
+      p => !p.display_name && !processingAI.has(p.id)
+    );
+
+    // Only process 1 every 5 minutes to stay well under rate limits
+    const toProcess = purchasesWithoutDisplayName.slice(0, 1);
+    
+    console.log('Purchases without display name:', purchasesWithoutDisplayName.length);
+    console.log('To process:', toProcess.map(p => ({ id: p.id, name: p.item_name })));
+    
+    if (toProcess.length > 0) {
+      setTimeout(() => {
+        generateAIDisplayName(toProcess[0]);
+      }, Math.random() * 10000 + 60000); // 1-1.6 minutes delay
+    }
+  }, [purchases, generateAIDisplayName, processingAI]);
+
+  // Categorize uncategorized purchases with AI
+  const categorizePurchaseWithAIFunc = useCallback(async (purchase) => {
+    if (categorizingAI.has(purchase.id) || purchase.budget_item_id) {
+      return; // Skip if already processing or already categorized
+    }
+
+    setCategorizingAI(prev => new Set(prev).add(purchase.id));
+
+    try {
+      const displayName = purchase.display_name || purchase.item_name;
+      const suggestedItem = await categorizePurchaseWithAI(
+        displayName,
+        purchase.cost,
+        budgetGroups
+      );
+
+      if (suggestedItem) {
+        // Only update if we got a valid categorization (not uncategorized)
+        if (!suggestedItem.is_uncategorized) {
+          const { error } = await supabase
+            .from("purchases")
+            .update({ budget_item_id: suggestedItem.id })
+            .eq("id", purchase.id);
+
+          if (!error) {
+            await refetchPurchases(); // Refresh data to show updated category
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Error categorizing purchase with AI:", error);
+    } finally {
+      setCategorizingAI(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(purchase.id);
+        return newSet;
+      });
+    }
+  }, [categorizingAI, budgetGroups, refetchPurchases]);
+
+  // Auto-categorize uncategorized purchases (DISABLED - RATE LIMITING)
+  useEffect(() => {
+    // TEMPORARILY DISABLED to prevent rate limiting
+    const uncategorizedPurchases = [];
+    
+    console.log('Categorization temporarily disabled - rate limiting protection');
+    
+    // Process only 1 every 5 minutes to stay well under rate limits
+    const toCategorize = uncategorizedPurchases.slice(0, 1);
+    
+    if (toCategorize.length > 0) {
+      setTimeout(() => {
+        categorizePurchaseWithAIFunc(toCategorize[0]);
+      }, Math.random() * 10000 + 60000); // 1-1.6 minutes delay
+    }
+  }, [purchases, budgetGroups, categorizingAI, processingAI, categorizePurchaseWithAIFunc]);
 
   const handleDelete = async (id) => {
     try {
@@ -105,7 +222,7 @@ const PurchasesList = () => {
         setEditingValue(new Date(purchase.timestamp).toISOString().split("T")[0]);
         break;
       case "itemName":
-        setEditingValue(purchase.item_name);
+        setEditingValue(purchase.display_name || purchase.item_name);
         break;
       case "cost":
         setEditingValue(purchase.cost);
@@ -129,12 +246,16 @@ const PurchasesList = () => {
           break;
         case "itemName":
           updateData.item_name = value.trim();
+          updateData.display_name = value.trim();
           break;
         case "cost":
           updateData.cost = parseFloat(value) || 0;
           break;
         case "budgetItemId":
           updateData.budget_item_id = value || null;
+          break;
+        default:
+          console.warn(`Unknown field: ${field}`);
           break;
       }
 
@@ -164,7 +285,7 @@ const PurchasesList = () => {
     if (searchTerm) {
       filtered = filtered.filter(
         (p) =>
-          p.item_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (p.display_name || p.item_name)?.toLowerCase().includes(searchTerm.toLowerCase()) ||
           p.budget_items?.name?.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
@@ -188,8 +309,8 @@ const PurchasesList = () => {
           bValue = new Date(b.timestamp);
           break;
         case "item_name":
-          aValue = a.item_name?.toLowerCase() || "";
-          bValue = b.item_name?.toLowerCase() || "";
+          aValue = (a.display_name || a.item_name)?.toLowerCase() || "";
+          bValue = (b.display_name || b.item_name)?.toLowerCase() || "";
           break;
         case "cost":
           aValue = a.cost;
@@ -431,10 +552,32 @@ const PurchasesList = () => {
           />
         ) : (
           <div className="flex items-center gap-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-            <span className="text-sm font-medium text-gray-900 dark:text-white">
-              {purchase.item_name}
-            </span>
-            <Edit2 size={14} className="opacity-0 group-hover:opacity-50 transition-opacity" />
+            {processingAI.has(purchase.id) ? (
+              <div className="flex items-center gap-2">
+                <Sparkles size={14} className="text-purple-500 animate-pulse" />
+                <span className="text-sm font-medium text-gray-500 dark:text-gray-400 italic">
+                  Improving name...
+                </span>
+              </div>
+            ) : (
+              <>
+                <span className="text-sm font-medium text-gray-900 dark:text-white">
+                  {purchase.display_name || purchase.item_name}
+                </span>
+                {!purchase.display_name && (
+                  <Sparkles 
+                    size={14} 
+                    className="text-purple-400 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                    title="Generate improved name with AI"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      generateAIDisplayName(purchase);
+                    }}
+                  />
+                )}
+                <Edit2 size={14} className="opacity-0 group-hover:opacity-50 transition-opacity" />
+              </>
+            )}
           </div>
         )}
       </td>
@@ -507,10 +650,36 @@ const PurchasesList = () => {
           </select>
         ) : (
           <div className="flex items-center gap-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-purple-100 dark:bg-purple-900/50 text-purple-800 dark:text-purple-200">
-              {purchase.budget_items?.name || "Uncategorized"}
-            </span>
-            <Edit2 size={14} className="opacity-0 group-hover:opacity-50 transition-opacity" />
+            {categorizingAI.has(purchase.id) ? (
+              <div className="flex items-center gap-2">
+                <Sparkles size={14} className="text-green-500 animate-pulse" />
+                <span className="text-sm font-medium text-gray-500 dark:text-gray-400 italic">
+                  Categorizing...
+                </span>
+              </div>
+            ) : !purchase.budget_item_id ? (
+              <div className="flex items-center gap-2">
+                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
+                  Uncategorized
+                </span>
+                <Sparkles 
+                  size={14} 
+                  className="text-green-400 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                  title="Auto-categorize with AI"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    categorizePurchaseWithAIFunc(purchase);
+                  }}
+                />
+              </div>
+            ) : (
+              <>
+                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-purple-100 dark:bg-purple-900/50 text-purple-800 dark:text-purple-200">
+                  {purchase.budget_items?.name || "Uncategorized"}
+                </span>
+                <Edit2 size={14} className="opacity-0 group-hover:opacity-50 transition-opacity" />
+              </>
+            )}
           </div>
         )}
       </td>
@@ -652,9 +821,29 @@ const PurchasesList = () => {
                     }}
                     className="inline-flex items-center px-2 py-1 rounded-lg text-xs font-semibold bg-gradient-to-r from-purple-100 to-indigo-100 dark:from-purple-900/40 dark:to-indigo-900/40 text-purple-700 dark:text-purple-200 border border-purple-200 dark:border-purple-800 shadow-sm active:scale-95 transition-all max-w-[80px] sm:max-w-[100px]"
                   >
-                    <span className="truncate">
-                      {purchase.budget_items?.name || "Uncategorized"}
-                    </span>
+                    {categorizingAI.has(purchase.id) ? (
+                      <div className="flex items-center gap-1">
+                        <Sparkles size={10} className="text-green-500 animate-pulse" />
+                        <span className="truncate">AI...</span>
+                      </div>
+                    ) : purchase.budget_item_id ? (
+                      <span className="truncate">
+                        {purchase.budget_items?.name || "Uncategorized"}
+                      </span>
+                    ) : (
+                      <div className="flex items-center gap-1">
+                        <span className="truncate">Uncategorized</span>
+                        <Sparkles 
+                          size={10} 
+                          className="text-green-400 flex-shrink-0"
+                          title="Auto-categorize with AI"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            categorizePurchaseWithAIFunc(purchase);
+                          }}
+                        />
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -779,9 +968,31 @@ const PurchasesList = () => {
                 className="flex items-center gap-2 active:opacity-70 transition-opacity px-4"
               >
                 <Tag size={14} className="text-gray-400 dark:text-gray-500 flex-shrink-0" />
-                <h3 className="text-sm font-medium text-gray-900 dark:text-white leading-snug truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                  {purchase.item_name}
-                </h3>
+                {processingAI.has(purchase.id) ? (
+                  <div className="flex items-center gap-2">
+                    <Sparkles size={14} className="text-purple-500 animate-pulse" />
+                    <span className="text-sm font-medium text-gray-500 dark:text-gray-400 italic">
+                      Improving name...
+                    </span>
+                  </div>
+                ) : (
+                  <>
+                    <h3 className="text-sm font-medium text-gray-900 dark:text-white leading-snug truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                      {purchase.display_name || purchase.item_name}
+                    </h3>
+                    {!purchase.display_name && (
+                      <Sparkles 
+                        size={14} 
+                        className="text-purple-400 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer flex-shrink-0"
+                        title="Generate improved name with AI"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          generateAIDisplayName(purchase);
+                        }}
+                      />
+                    )}
+                  </>
+                )}
               </div>
             )}
           </div>

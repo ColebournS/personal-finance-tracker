@@ -214,6 +214,7 @@ export const DataProvider = ({ children }) => {
             `
             id,
             item_name,
+            display_name,
             cost,
             timestamp,
             budget_item_id,

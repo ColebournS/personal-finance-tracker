@@ -25,6 +25,7 @@ const AddPurchase = ({ isOpen, onClose }) => {
       const currentDate = new Date().toISOString().split("T")[0];
       const purchaseData = {
         item_name: formData.itemName.trim(),
+        display_name: formData.itemName.trim(),
         user_id: userId,
         cost: parseFloat(formData.cost) || 0,
         budget_item_id: formData.budgetItemId,

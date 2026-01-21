@@ -2,13 +2,6 @@ import React, { useState, useEffect, lazy, Suspense } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import {
   Loader2,
-  DollarSign,
-  CreditCard,
-  List,
-  Settings,
-  BarChart3,
-  Wallet,
-  TrendingUp,
 } from "lucide-react";
 import { AuthProvider } from "./AuthContext";
 import { DataProvider, useData } from "./DataContext";
@@ -27,6 +20,7 @@ const SettingsMobile = lazy(() => import("./components/SettingsMobile"));
 const TopNav = lazy(() => import("./components/TopNav"));
 const Accounts = lazy(() => import("./components/Accounts"));
 const Projections = lazy(() => import("./components/Projections"));
+const AIAssistant = lazy(() => import("./components/AIAssistant"));
 const NotFound = lazy(() => import("./components/NotFound"));
 
 const BottomNav = () => {
@@ -155,6 +149,17 @@ const BottomNav = () => {
         }`}
       >
         <span className="text-sm font-medium whitespace-nowrap">Settings</span>
+      </Link>
+      <Link
+        to="/ai-assistant"
+        data-active={isActive("/ai-assistant")}
+        className={`flex items-center justify-center px-3 py-1 rounded-full border border-gray-400/30 dark:border-gray-500/30 mr-6 md:mr-0 ${
+          isActive("/ai-assistant")
+            ? "bg-black dark:bg-white text-white dark:text-black"
+            : "bg-white dark:bg-black text-gray-600 dark:text-gray-300 hover:text-blue-500 dark:hover:text-blue-400"
+        }`}
+      >
+        <span className="text-sm font-medium whitespace-nowrap">AI Assistant</span>
       </Link>
     </div>
   );
@@ -287,6 +292,18 @@ function AppContent({ isMobile, takeHomePay, setTakeHomePay }) {
                       </div>
                     }
                   />
+                  <Route
+                    path="/AI-Assistant"
+                    element={
+                      <div className="bg-white dark:bg-black min-h-screen pt-14 pb-5">
+                        <div className="flex flex-col gap-4 px-4">
+                          <Suspense fallback={<LoadingSpinner />}>
+                            <AIAssistant />
+                          </Suspense>
+                        </div>
+                      </div>
+                    }
+                  />
                   {/* Lowercase routes (redirects for desktop compatibility) */}
                   <Route
                     path="/budget"
@@ -307,6 +324,10 @@ function AppContent({ isMobile, takeHomePay, setTakeHomePay }) {
                   <Route
                     path="/projections"
                     element={<Navigate to="/Projections" replace />}
+                  />
+                  <Route
+                    path="/ai-assistant"
+                    element={<Navigate to="/AI-Assistant" replace />}
                   />
                   {/* Mobile Accounts and Projections routes (no redirect) */}
                   <Route
@@ -424,6 +445,18 @@ function AppContent({ isMobile, takeHomePay, setTakeHomePay }) {
                         </div>
                       }
                     />
+                    <Route
+                      path="/ai-assistant"
+                      element={
+                        <div className="max-w-4xl mx-auto px-6">
+                          <div className="flex flex-col gap-4 my-5">
+                            <Suspense fallback={<LoadingSpinner />}>
+                              <AIAssistant />
+                            </Suspense>
+                          </div>
+                        </div>
+                      }
+                    />
                     {/* Capitalized routes (redirects for mobile compatibility) */}
                     <Route
                       path="/Income"
@@ -444,6 +477,10 @@ function AppContent({ isMobile, takeHomePay, setTakeHomePay }) {
                     <Route
                       path="/Projections"
                       element={<Navigate to="/projections" replace />}
+                    />
+                    <Route
+                      path="/AI-Assistant"
+                      element={<Navigate to="/ai-assistant" replace />}
                     />
                     <Route
                       path="/Settings"

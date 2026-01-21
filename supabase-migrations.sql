@@ -40,3 +40,10 @@ ON profiles FOR SELECT
 TO authenticated
 USING (auth.uid() = id);
 
+-- Add display_name column to purchases table for improved UI naming
+ALTER TABLE purchases
+ADD COLUMN IF NOT EXISTS display_name TEXT;
+
+-- Create index for faster display_name lookups
+CREATE INDEX IF NOT EXISTS idx_purchases_display_name ON purchases(display_name);
+

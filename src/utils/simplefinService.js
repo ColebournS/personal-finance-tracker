@@ -251,6 +251,7 @@ export function mapSimpleFinTransaction(sfTransaction, accountId, simpleFinAccou
     simplefin_transaction_id: sfTransaction.id,
     simplefin_account_id: simpleFinAccountId,
     item_name: sfTransaction.description || sfTransaction.payee || 'Unknown Transaction',
+    display_name: sfTransaction.description || sfTransaction.payee || 'Unknown Transaction',
     cost: amount,
     timestamp: transactionDate.toISOString(),
     is_simplefin_synced: true,
