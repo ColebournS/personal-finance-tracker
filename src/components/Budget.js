@@ -105,11 +105,33 @@ function Budget() {
     
     // Debounce the database update
     debounceUpdate(`group-${groupId}`, async () => {
-      await supabase
-        .from("budget_groups")
-        .update({ name: value })
-        .eq("id", groupId);
-      refetchBudgetGroups();
+      try {
+        const { error } = await supabase
+          .from("budget_groups")
+          .update({ name: value })
+          .eq("id", groupId)
+          .eq("user_id", userId);
+        
+        if (error) {
+          console.error("Error updating budget group name:", error);
+          // Revert temp state on error
+          setTempGroupNames((prev) => {
+            const newState = { ...prev };
+            delete newState[groupId];
+            return newState;
+          });
+        } else {
+          refetchBudgetGroups();
+        }
+      } catch (err) {
+        console.error("Unexpected error updating budget group name:", err);
+        // Revert temp state on error
+        setTempGroupNames((prev) => {
+          const newState = { ...prev };
+          delete newState[groupId];
+          return newState;
+        });
+      }
     });
   };
 
@@ -122,24 +144,56 @@ function Budget() {
     
     // Debounce the database update
     debounceUpdate(`item-${itemId}`, async () => {
-      await supabase
-        .from("budget_items")
-        .update({ name: value })
-        .eq("id", itemId);
-      refetchBudgetGroups();
+      try {
+        const { error } = await supabase
+          .from("budget_items")
+          .update({ name: value })
+          .eq("id", itemId)
+          .eq("user_id", userId);
+        
+        if (error) {
+          console.error("Error updating budget item name:", error);
+          // Revert temp state on error
+          setTempItemNames((prev) => {
+            const newState = { ...prev };
+            delete newState[itemId];
+            return newState;
+          });
+        } else {
+          refetchBudgetGroups();
+        }
+      } catch (err) {
+        console.error("Unexpected error updating budget item name:", err);
+        // Revert temp state on error
+        setTempItemNames((prev) => {
+          const newState = { ...prev };
+          delete newState[itemId];
+          return newState;
+        });
+      }
     });
   };
 
   const handleItemBudgetChange = (itemId, value) => {
     debounceUpdate(`budget-${itemId}`, async () => {
-      const numericValue = parseFloat(value) || 0;
-      // Encrypt the budget value before saving
-      const encryptedBudget = encryptValue(numericValue, userId);
-      await supabase
-        .from("budget_items")
-        .update({ budget: encryptedBudget })
-        .eq("id", itemId);
-      refetchBudgetGroups();
+      try {
+        const numericValue = parseFloat(value) || 0;
+        // Encrypt the budget value before saving
+        const encryptedBudget = encryptValue(numericValue, userId);
+        const { error } = await supabase
+          .from("budget_items")
+          .update({ budget: encryptedBudget })
+          .eq("id", itemId)
+          .eq("user_id", userId);
+        
+        if (error) {
+          console.error("Error updating budget amount:", error);
+        } else {
+          refetchBudgetGroups();
+        }
+      } catch (err) {
+        console.error("Unexpected error updating budget amount:", err);
+      }
     });
   };
     
