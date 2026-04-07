@@ -232,6 +232,7 @@ function Income() {
       yearlySalary = 0,
       retirementContribution = 0,
       employerMatch = 0,
+      payFrequency = 'Monthly',
     } = data;
 
     const annualRetirementContribution =
@@ -247,6 +248,24 @@ function Income() {
     const takeHomePay =
       yearlySalary - totalTaxes - annualRetirementContribution;
 
+    // Calculate monthly take-home based on actual pay frequency
+    let monthlyTakeHomePay;
+    switch (payFrequency) {
+      case "Weekly":
+        monthlyTakeHomePay = Number(((takeHomePay / 52) * 4).toFixed(4)); // 4 weeks per month
+        break;
+      case "Bi-Weekly":
+        monthlyTakeHomePay = Number(((takeHomePay / 26) * 2).toFixed(4)); // 2 paychecks per month
+        break;
+      case "Semi-Monthly":
+        monthlyTakeHomePay = Number((takeHomePay / 24).toFixed(4)); // 24 pay periods per year
+        break;
+      case "Monthly":
+      default:
+        monthlyTakeHomePay = Number((takeHomePay / 12).toFixed(4)); // 12 months per year
+        break;
+    }
+
     // Calculate individual tax amounts
     const taxAmounts = taxes.reduce((acc, tax) => {
       acc[tax.id] = yearlySalary * (tax.percent / 100);
@@ -256,7 +275,7 @@ function Income() {
     return {
       totalAnnual401K: Number(totalAnnual401K.toFixed(2)),
       takeHomePay: Number(takeHomePay.toFixed(2)),
-      monthlyTakeHomePay: Number((takeHomePay / 12).toFixed(4)),
+      monthlyTakeHomePay,
       totalTaxes: Number(totalTaxes.toFixed(2)),
       taxAmounts,
     };
@@ -582,6 +601,11 @@ function Income() {
             <div className="text-sm md:text-2xl font-bold text-blue-700 dark:text-blue-300">
               ${formatCurrency(monthlyTakeHomePay)}
             </div>
+            {incomeData.payFrequency === "Bi-Weekly" && (
+              <div className="text-[8px] md:text-xs text-blue-600 dark:text-blue-400 mt-1">
+                Based on 2 paychecks/month
+              </div>
+            )}
           </div>
 
           <div className="bg-cyan-50/50 dark:bg-cyan-900/10 p-2 md:p-4 rounded-lg">
