@@ -27,6 +27,11 @@ function Budget() {
     }).format(value || 0);
   };
 
+  // Round down to nearest $5
+  const roundDownToNearestFive = (value) => {
+    return Math.floor(value / 5) * 5;
+  };
+
   useEffect(() => {
     const checkScreenSize = () => {
       // Adjust these breakpoints as needed
@@ -309,7 +314,7 @@ function Budget() {
     };
   }, [groups]);
 
-  const budgetRemaining = income - totals.totalBudget;
+  const budgetRemaining = roundDownToNearestFive(income - totals.totalBudget);
 
   // Render a budget group (used for both mobile and desktop)
   const renderBudgetGroup = (group) => {
